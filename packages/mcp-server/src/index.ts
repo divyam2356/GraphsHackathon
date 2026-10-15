@@ -8,3 +8,5 @@ import { demoMode, runTool } from "@blackbox/graph/src/run";
 
 if (demoMode()) console.error("blackbox MCP: DEMO=1, serving the offline fixture (not the graph)");
 await buildServer((name, args) => runTool(name, (args ?? {}) as Record<string, unknown>)).connect(new StdioServerTransport());
+// The DB client keeps the event loop alive, so exit when the client closes our stdin.
+process.stdin.on("end", () => process.exit(0));

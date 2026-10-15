@@ -5,50 +5,54 @@ import { z } from "zod";
 // Read tools return evidence paths (every hop has a source for the UI animation).
 // Write tools append agent memory (PRECURSOR_OF, Alert, FailureMode, Case…).
 // Approval transitions (approve/defer/merge) are UI-only — NOT exposed to the agent.
+// The descriptions are what the model reads when it picks a tool, so they say what
+// each tool answers and the exact id / location formats it expects.
 
 export function buildServer(query: (name: string, args: unknown) => Promise<unknown>) {
   const s = new McpServer({ name: "blackbox", version: "0.1.0" });
-  const asOf = z.string().describe("ISO date, time-machine cutoff");
+  const asOf = z.string().describe("ISO date YYYY-MM-DD. Time-machine cutoff: only records dated before it are visible");
+  const bin = z.string().describe('Location key: "737/53" (model family/ATA chapter, 53 = fuselage), "737/53/S4L" (stringer 4 left), "737/53/S4L/BS620" (20-inch body-station bin). Results roll up to any level');
+  const tool = (name: string, description: string, shape: z.ZodRawShape) =>
+    s.tool(name, description, shape, async (a) => ({ content: [{ type: "text", text: JSON.stringify(await query(name, a)) }] }));
 
-  s.tool("search_accidents", { text: z.string(), asOf: asOf.optional() },
-    async (a) => ({ content: [{ type: "text", text: JSON.stringify(await query("search_accidents", a)) }] }));
-  s.tool("get_accident", { ev_id: z.string() },
-    async (a) => ({ content: [{ type: "text", text: JSON.stringify(await query("get_accident", a)) }] }));
-  s.tool("prior_reports", { tail: z.string(), bin: z.string().optional(), asOf, windowDays: z.number().default(730) },
-    async (a) => ({ content: [{ type: "text", text: JSON.stringify(await query("prior_reports", a)) }] }));
-  s.tool("fleet_reports", { family: z.string(), bin: z.string(), from: z.string(), to: z.string() },
-    async (a) => ({ content: [{ type: "text", text: JSON.stringify(await query("fleet_reports", a)) }] }));
-  s.tool("hotspots", { family: z.string(), asOf },
-    async (a) => ({ content: [{ type: "text", text: JSON.stringify(await query("hotspots", a)) }] }));
-  s.tool("similar_reports", { text: z.string(), asOf: asOf.optional() },
-    async (a) => ({ content: [{ type: "text", text: JSON.stringify(await query("similar_reports", a)) }] }));
-  s.tool("fix_orders", { family: z.string(), bin: z.string().optional(), asOf },
-    async (a) => ({ content: [{ type: "text", text: JSON.stringify(await query("fix_orders", a)) }] }));
-  s.tool("explain_path", { from: z.string(), to: z.string() },
-    async (a) => ({ content: [{ type: "text", text: JSON.stringify(await query("explain_path", a)) }] }));
-  s.tool("rank_failure_modes", { tail: z.string(), family: z.string(), phase: z.string(), narrative: z.string(), asOf },
-    async (a) => ({ content: [{ type: "text", text: JSON.stringify(await query("rank_failure_modes", a)) }] }));
-  s.tool("failure_mode_candidates", { caseId: z.string() },
-    async (a) => ({ content: [{ type: "text", text: JSON.stringify(await query("failure_mode_candidates", a)) }] }));
-  s.tool("who_fixed", { bin: z.string() },
-    async (a) => ({ content: [{ type: "text", text: JSON.stringify(await query("who_fixed", a)) }] }));
-  s.tool("why_task", { task_id: z.string() },
-    async (a) => ({ content: [{ type: "text", text: JSON.stringify(await query("why_task", a)) }] }));
-  s.tool("stale_tasks", {},
-    async () => ({ content: [{ type: "text", text: JSON.stringify(await query("stale_tasks", {})) }] }));
+  // Read
+  tool("search_accidents", "Keyword search over NTSB probable-cause text of mechanical accidents and incidents since 2008. Returns ev_id, NTSB number, date, findings.",
+    { text: z.string().describe("keywords, e.g. 'lap joint fatigue'"), asOf: asOf.optional() });
+  tool("get_accident", "One NTSB event by ev_id: aircraft (tail, variant), probable cause text, and each cause/factor finding with its ATA chapter and location key.",
+    { ev_id: z.string().describe("NTSB ev_id, e.g. 20110401X24330") });
+  tool("prior_reports", "FAA maintenance reports (Service Difficulty Reports) filed on one aircraft before asOf, newest first, optionally only at or inside a location. Use it to find warning signs on the same plane.",
+    { tail: z.string().describe("US tail number, e.g. N632SW"), bin: bin.optional(), asOf, windowDays: z.number().default(730).describe("look-back window in days") });
+  tool("fleet_reports", "How many reports and distinct aircraft of the whole fleet reported trouble at a location in a date range. Use it to see whether a plane's problem was fleet-wide.",
+    { family: z.string().describe("model family, e.g. 737"), bin, from: z.string().describe("ISO date, inclusive"), to: z.string().describe("ISO date, exclusive") });
+  tool("hotspots", "Rising locations for a model family: distinct aircraft reporting in the last window before asOf vs the window before. Filter part='SKIN', condition='CRACK' to rank structural damage.",
+    { family: z.string(), asOf, chapter: z.string().optional().describe("ATA chapter, e.g. 53"), part: z.string().optional(), condition: z.string().optional(), windowDays: z.number().optional() });
+  tool("similar_reports", "Keyword-similar maintenance reports across the fleet (full-text index), before asOf.",
+    { text: z.string(), asOf: asOf.optional() });
+  tool("fix_orders", "FAA airworthiness directives (fix orders) for a model family issued up to asOf, with the location they target and the orders they replace.",
+    { family: z.string(), bin: bin.optional(), asOf });
+  tool("explain_path", "Shortest evidence path between two records (report id, ev_id, AD number or location key) over evidence edges. Use it to show how a warning sign connects to an accident.",
+    { from: z.string(), to: z.string() });
+  tool("rank_failure_modes", "Confirmed failure modes with their signature locations, for scoring which known mode an event matches.",
+    { tail: z.string(), family: z.string(), phase: z.string(), narrative: z.string(), asOf });
+  tool("failure_mode_candidates", "Dormant and proposed failure modes (not yet confirmed by a human). Check these before proposing a new one.",
+    { caseId: z.string() });
+  tool("who_fixed", "Engineers of the (fictional) maintenance company who worked at a location.", { bin });
+  tool("why_task", "Why a (fictional) maintenance task card exists: the fix order it cites and the orders that one replaced.",
+    { task_id: z.string() });
+  tool("stale_tasks", "Task cards that still cite a fix order that has since been replaced.", {});
 
-  // Write / action (agent memory + org actions)
-  s.tool("record_precursor", { reportId: z.string(), accidentId: z.string(), confidence: z.number(), reason: z.string(), asOf },
-    async (a) => ({ content: [{ type: "text", text: JSON.stringify(await query("record_precursor", a)) }] }));
-  s.tool("raise_alert", { tail: z.string(), modeId: z.string().optional(), hotspotId: z.string().optional(), reason: z.string() },
-    async (a) => ({ content: [{ type: "text", text: JSON.stringify(await query("raise_alert", a)) }] }));
-  s.tool("propose_failure_mode", { draft: z.object({ name: z.string(), system: z.string(), mechanism: z.string() }), evidence: z.array(z.string()) },
-    async (a) => ({ content: [{ type: "text", text: JSON.stringify(await query("propose_failure_mode", a)) }] }));
-  s.tool("add_support", { caseId: z.string(), modeId: z.string() },
-    async (a) => ({ content: [{ type: "text", text: JSON.stringify(await query("add_support", a)) }] }));
-  s.tool("record_observation", { tail: z.string(), bin: z.string(), text: z.string(), date: z.string() },
-    async (a) => ({ content: [{ type: "text", text: JSON.stringify(await query("record_observation", a)) }] }));
-  s.tool("create_work_order", { alertId: z.string(), team: z.string(), bin: z.string().optional() },
-    async (a) => ({ content: [{ type: "text", text: JSON.stringify(await query("create_work_order", a)) }] }));
+  // Write / action (agent memory + org actions). A human approves failure modes in the UI.
+  tool("record_precursor", "Save a judged warning sign: this report preceded this accident, with confidence 0-1 and a one-line reason.",
+    { reportId: z.string(), accidentId: z.string(), confidence: z.number(), reason: z.string(), asOf });
+  tool("raise_alert", "Open an alert on an aircraft that shows a known danger pattern.",
+    { tail: z.string(), modeId: z.string().optional(), hotspotId: z.string().optional(), reason: z.string() });
+  tool("propose_failure_mode", "Draft a NEW failure mode when no known or dormant mode fits. It stays 'proposed' until a human approves it.",
+    { draft: z.object({ name: z.string(), system: z.string(), mechanism: z.string() }), evidence: z.array(z.string()).describe("report ids / ev_ids supporting it") });
+  tool("add_support", "Attach new evidence (a case) to an existing dormant or proposed failure mode instead of creating a duplicate.",
+    { caseId: z.string(), modeId: z.string() });
+  tool("record_observation", "Log a mechanic's observation on an aircraft at a location.",
+    { tail: z.string(), bin, text: z.string(), date: z.string() });
+  tool("create_work_order", "Create a work order from an alert for a team; assigns the least-loaded engineer.",
+    { alertId: z.string(), team: z.string(), bin: bin.optional() });
   return s;
 }

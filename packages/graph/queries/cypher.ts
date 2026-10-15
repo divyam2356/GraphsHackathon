@@ -126,6 +126,47 @@ export const CYPHER: Record<string, string> = {
     OPTIONAL MATCH (d:Decision)-[:BASED_ON]->(f)
     RETURN t.title AS task, f.ad_no AS fix, collect(DISTINCT old.ad_no) AS replaces,
       count(d) AS decisions`,
+  // --- UI views (not agent tools) ---
+  // Fuselage map: per stringer x 20-inch station cell, distinct aircraft reporting in
+  // the window before $asOf. One live query per slider position.
+  fleet_map: `
+    MATCH (b:Location {level:'bin', family:$family, chapter:coalesce($chapter, '53')})
+    WHERE b.stringer IS NOT NULL
+    MATCH (r:Report)-[:AT]->(b)
+    WHERE r.date < $asOf AND r.date >= toString(date($asOf) - duration({days: coalesce($windowDays, 365)}))
+      AND ($part IS NULL OR r.part = $part) AND ($condition IS NULL OR r.condition CONTAINS $condition)
+    MATCH (r)-[:ON]->(a:Aircraft)
+    WHERE $variants IS NULL OR a.variant IN $variants
+    RETURN b.stringer AS stringer, b.side AS side, b.station_bin AS station, count(DISTINCT a) AS aircraft, count(r) AS reports`,
+  // Yearly distinct aircraft per line (e.g. S-4 vs the rest of the fuselage).
+  line_trend: `
+    MATCH (line:Location {level:'line', family:$family, chapter:coalesce($chapter, '53')})
+    MATCH (r:Report)-[:AT]->(:Location)-[:WITHIN*0..1]->(line)
+    WHERE ($part IS NULL OR r.part = $part) AND ($condition IS NULL OR r.condition CONTAINS $condition)
+      AND r.date >= coalesce($from, '2008-01-01') AND r.date < coalesce($to, '2013-01-01')
+    MATCH (r)-[:ON]->(a:Aircraft)
+    WHERE $variants IS NULL OR a.variant IN $variants
+    RETURN line.bin AS line, substring(r.date, 0, 4) AS year, count(DISTINCT a) AS aircraft`,
+  // Live node/edge counts for the data-model view.
+  graph_stats: `
+    MATCH (n) RETURN labels(n)[0] AS label, count(n) AS n`,
+  edge_stats: `
+    MATCH ()-[e]->() RETURN type(e) AS type, count(e) AS n`,
+  // Induced subgraph over the nodes an investigation touched (typed keys, indexed lookups).
+  subgraph: `
+    CALL {
+      MATCH (n:Accident) WHERE n.ev_id IN coalesce($accidents, []) RETURN n
+      UNION MATCH (n:Report) WHERE n.id IN coalesce($reports, []) RETURN n
+      UNION MATCH (n:Aircraft) WHERE n.id IN coalesce($aircraft, []) RETURN n
+      UNION MATCH (n:Location) WHERE n.bin IN coalesce($locations, []) RETURN n
+      UNION MATCH (n:FixOrder) WHERE n.ad_no IN coalesce($fixorders, []) RETURN n
+      UNION MATCH (n:FailureMode) WHERE n.id IN coalesce($modes, []) RETURN n
+      UNION MATCH (:Accident)-[:FOUND]->(n:Finding) WHERE split(n.id, '/')[0] IN coalesce($accidents, []) RETURN n
+    }
+    WITH collect(n) AS ns
+    UNWIND ns AS a
+    OPTIONAL MATCH (a)-[r]->(b) WHERE b IN ns
+    RETURN a AS node, collect(CASE WHEN r IS NULL THEN null ELSE {type: type(r), to: id(b)} END) AS out`,
   stale_tasks: `
     MATCH (t:TaskCard)-[:CITES]->(old:FixOrder)<-[:SUPERSEDES]-(new:FixOrder)
     RETURN t.id AS task, old.ad_no AS cited, new.ad_no AS current LIMIT 50`,
