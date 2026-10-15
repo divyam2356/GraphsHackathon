@@ -1,0 +1,703 @@
+{
+  "question": "Before each NTSB mechanical event, did the aircraft's own FAA reports name a system the NTSB later cited?",
+  "window_days": 365,
+  "gap_days": 7,
+  "shuffles": 1000,
+  "seed": 42,
+  "run": "2026-10-15T12:59:34.065Z",
+  "query_ms": 83,
+  "stages": [
+    {
+      "key": "naive",
+      "label": "Any earlier report, chance from any event",
+      "events": 198,
+      "families": 99,
+      "system": {
+        "events": 198,
+        "hits": 71,
+        "hit_rate": 0.359,
+        "chance": {
+          "hits_mean": 24.8,
+          "hits_sd": 4.2,
+          "rate": 0.125,
+          "p_value": 0.001,
+          "histogram": [
+            [
+              13,
+              1
+            ],
+            [
+              14,
+              5
+            ],
+            [
+              15,
+              7
+            ],
+            [
+              16,
+              10
+            ],
+            [
+              17,
+              15
+            ],
+            [
+              18,
+              24
+            ],
+            [
+              19,
+              37
+            ],
+            [
+              20,
+              52
+            ],
+            [
+              21,
+              65
+            ],
+            [
+              22,
+              80
+            ],
+            [
+              23,
+              88
+            ],
+            [
+              24,
+              114
+            ],
+            [
+              25,
+              95
+            ],
+            [
+              26,
+              82
+            ],
+            [
+              27,
+              70
+            ],
+            [
+              28,
+              69
+            ],
+            [
+              29,
+              52
+            ],
+            [
+              30,
+              48
+            ],
+            [
+              31,
+              28
+            ],
+            [
+              32,
+              11
+            ],
+            [
+              33,
+              22
+            ],
+            [
+              34,
+              12
+            ],
+            [
+              35,
+              4
+            ],
+            [
+              36,
+              6
+            ],
+            [
+              37,
+              3
+            ]
+          ]
+        },
+        "lift": 2.87,
+        "detectable_lift": 1.29,
+        "lead_days": {
+          "p25": 1,
+          "median": 1,
+          "p75": 122
+        }
+      },
+      "subsystem": {
+        "events": 183,
+        "hits": 35,
+        "hit_rate": 0.191,
+        "chance": {
+          "hits_mean": 5,
+          "hits_sd": 2,
+          "rate": 0.027,
+          "p_value": 0.001,
+          "histogram": [
+            [
+              0,
+              7
+            ],
+            [
+              1,
+              24
+            ],
+            [
+              2,
+              70
+            ],
+            [
+              3,
+              137
+            ],
+            [
+              4,
+              186
+            ],
+            [
+              5,
+              177
+            ],
+            [
+              6,
+              169
+            ],
+            [
+              7,
+              117
+            ],
+            [
+              8,
+              61
+            ],
+            [
+              9,
+              32
+            ],
+            [
+              10,
+              16
+            ],
+            [
+              11,
+              4
+            ]
+          ]
+        },
+        "lift": 6.98,
+        "detectable_lift": 1.79,
+        "lead_days": {
+          "p25": 1,
+          "median": 1,
+          "p75": 72
+        }
+      }
+    },
+    {
+      "key": "gap",
+      "label": "Reports at least 7 days before, chance from any event",
+      "events": 162,
+      "families": 76,
+      "system": {
+        "events": 162,
+        "hits": 33,
+        "hit_rate": 0.204,
+        "chance": {
+          "hits_mean": 20.5,
+          "hits_sd": 3.8,
+          "rate": 0.126,
+          "p_value": 0.002,
+          "histogram": [
+            [
+              10,
+              3
+            ],
+            [
+              11,
+              3
+            ],
+            [
+              12,
+              9
+            ],
+            [
+              13,
+              18
+            ],
+            [
+              14,
+              29
+            ],
+            [
+              15,
+              35
+            ],
+            [
+              16,
+              54
+            ],
+            [
+              17,
+              65
+            ],
+            [
+              18,
+              79
+            ],
+            [
+              19,
+              105
+            ],
+            [
+              20,
+              98
+            ],
+            [
+              21,
+              112
+            ],
+            [
+              22,
+              91
+            ],
+            [
+              23,
+              96
+            ],
+            [
+              24,
+              70
+            ],
+            [
+              25,
+              44
+            ],
+            [
+              26,
+              38
+            ],
+            [
+              27,
+              19
+            ],
+            [
+              28,
+              15
+            ],
+            [
+              29,
+              7
+            ],
+            [
+              30,
+              4
+            ],
+            [
+              31,
+              4
+            ],
+            [
+              32,
+              1
+            ],
+            [
+              34,
+              1
+            ]
+          ]
+        },
+        "lift": 1.61,
+        "detectable_lift": 1.32,
+        "lead_days": {
+          "p25": 62,
+          "median": 141,
+          "p75": 217
+        }
+      },
+      "subsystem": {
+        "events": 151,
+        "hits": 12,
+        "hit_rate": 0.079,
+        "chance": {
+          "hits_mean": 3.8,
+          "hits_sd": 1.9,
+          "rate": 0.025,
+          "p_value": 0.001,
+          "histogram": [
+            [
+              0,
+              11
+            ],
+            [
+              1,
+              91
+            ],
+            [
+              2,
+              152
+            ],
+            [
+              3,
+              200
+            ],
+            [
+              4,
+              203
+            ],
+            [
+              5,
+              157
+            ],
+            [
+              6,
+              104
+            ],
+            [
+              7,
+              47
+            ],
+            [
+              8,
+              22
+            ],
+            [
+              9,
+              11
+            ],
+            [
+              10,
+              1
+            ],
+            [
+              11,
+              1
+            ]
+          ]
+        },
+        "lift": 3.12,
+        "detectable_lift": 1.82,
+        "lead_days": {
+          "p25": 72,
+          "median": 162,
+          "p75": 277
+        }
+      }
+    },
+    {
+      "key": "fair",
+      "label": "Reports at least 7 days before, chance from the same aircraft family",
+      "events": 162,
+      "families": 76,
+      "system": {
+        "events": 112,
+        "hits": 20,
+        "hit_rate": 0.179,
+        "chance": {
+          "hits_mean": 22.6,
+          "hits_sd": 2.8,
+          "rate": 0.202,
+          "p_value": 0.8651,
+          "histogram": [
+            [
+              13,
+              1
+            ],
+            [
+              15,
+              6
+            ],
+            [
+              16,
+              4
+            ],
+            [
+              17,
+              17
+            ],
+            [
+              18,
+              45
+            ],
+            [
+              19,
+              62
+            ],
+            [
+              20,
+              83
+            ],
+            [
+              21,
+              129
+            ],
+            [
+              22,
+              138
+            ],
+            [
+              23,
+              126
+            ],
+            [
+              24,
+              126
+            ],
+            [
+              25,
+              123
+            ],
+            [
+              26,
+              63
+            ],
+            [
+              27,
+              33
+            ],
+            [
+              28,
+              28
+            ],
+            [
+              29,
+              9
+            ],
+            [
+              30,
+              5
+            ],
+            [
+              31,
+              1
+            ],
+            [
+              32,
+              1
+            ]
+          ]
+        },
+        "lift": 0.88,
+        "detectable_lift": 1.19,
+        "lead_days": {
+          "p25": 96,
+          "median": 174,
+          "p75": 253
+        }
+      },
+      "subsystem": {
+        "events": 103,
+        "hits": 4,
+        "hit_rate": 0.039,
+        "chance": {
+          "hits_mean": 4.2,
+          "hits_sd": 1.3,
+          "rate": 0.041,
+          "p_value": 0.7083,
+          "histogram": [
+            [
+              1,
+              11
+            ],
+            [
+              2,
+              76
+            ],
+            [
+              3,
+              205
+            ],
+            [
+              4,
+              306
+            ],
+            [
+              5,
+              236
+            ],
+            [
+              6,
+              111
+            ],
+            [
+              7,
+              45
+            ],
+            [
+              8,
+              8
+            ],
+            [
+              9,
+              2
+            ]
+          ]
+        },
+        "lift": 0.94,
+        "detectable_lift": 1.65,
+        "lead_days": {
+          "p25": 182,
+          "median": 277,
+          "p75": 360
+        }
+      }
+    }
+  ],
+  "examples": [
+    {
+      "ev": "20130901X95021",
+      "ntsb": "DCA13FA148",
+      "date": "2013-09-01",
+      "tail": "N169GL",
+      "family": "1900",
+      "cause": "Failure of the left main landing gear actuator internal lock to engage in the locked position for undetermined reasons.",
+      "cited": [
+        "323"
+      ],
+      "lead_days": 360,
+      "reports": [
+        {
+          "id": "GLBA201209071",
+          "date": "2012-09-06",
+          "jasc": "3230",
+          "text": "LANDING GEAR FAILED TO EXTEND NORMALY.  LANDING GEAR LIGHTS DID NOT ILLUMINATE.   MX INSPECTED ALL SYS WIRING AND REPLACED THE LANDING CONTROL HANDLE, PERFORMED SEVERAL GEAR SWINGS, OPS CHECKED GOOD."
+        }
+      ]
+    },
+    {
+      "ev": "20160827X31134",
+      "ntsb": "DCA16FA217",
+      "date": "2016-08-27",
+      "tail": "N766SW",
+      "family": "737",
+      "cause": "A low-cycle fatigue crack in the dovetail of fan blade No. 23, which resulted in the fan blade separating in flight and impacting the fan case. This impact caused the fan blade to fracture into fragments that traveled farther than expected into the inlet, which compromised the structural integrity of the inlet and led to the in-flight separation of inlet components. A portion of the inlet struck the fuselage and created a hole, causing the cabin to depressurize.",
+      "cited": [
+        "531",
+        "541",
+        "723"
+      ],
+      "lead_days": 277,
+      "reports": [
+        {
+          "id": "SWAA2015120946923",
+          "date": "2015-11-24",
+          "jasc": "5311",
+          "text": "FRAME WEB CRACKED AT BS 500A, STRINGER 8R.  REPAIRED FRAME IAW EA."
+        },
+        {
+          "id": "SWAA2015120946922",
+          "date": "2015-11-24",
+          "jasc": "5311",
+          "text": "FRAME WEB CRACKED AT BS 400, STRINGER 8L.  REPAIRED FRAME IAW EA."
+        },
+        {
+          "id": "SWAA2015120746845",
+          "date": "2015-11-24",
+          "jasc": "5311",
+          "text": "FRAME CRACKED AT BS 500C, STRINGER 8L.  REPAIRED FRAME IAW EA."
+        },
+        {
+          "id": "SWAA2015120346702",
+          "date": "2015-11-24",
+          "jasc": "5311",
+          "text": "FRAME WEB CRACKED AT BS 787, STRINGER 8R.  REPAIRED FRAME IAW EA."
+        },
+        {
+          "id": "SWAA2015120346701",
+          "date": "2015-11-24",
+          "jasc": "5311",
+          "text": "FRAME WEB CRACKED AT BS 747, STRINGER 8R.  REPAIRED FRAME IAW EA."
+        },
+        {
+          "id": "SWAA2015120346700",
+          "date": "2015-11-24",
+          "jasc": "5311",
+          "text": "FRAME WEB CRACKED AT BS 727D, STRINGER 8R.  REPAIRED FRAME IAW EA."
+        },
+        {
+          "id": "SWAA2015120346699",
+          "date": "2015-11-24",
+          "jasc": "5311",
+          "text": "FRAME WEB CRACKED AT BS 867, STRINGER 8L.  REPAIRED FRAME IAW EA."
+        },
+        {
+          "id": "SWAA2015120346698",
+          "date": "2015-11-24",
+          "jasc": "5311",
+          "text": "FRAME WEB CRACKED AT BS 727D, STRINGER 8L.  REPAIRED FRAME IAW EA."
+        },
+        {
+          "id": "SWAA2015120346697",
+          "date": "2015-11-24",
+          "jasc": "5311",
+          "text": "FRAME WEB CRACKED AT BS 480, STRINGER 8L.  REPAIRED FRAME IAW EA."
+        },
+        {
+          "id": "SWAA2015120346696",
+          "date": "2015-11-24",
+          "jasc": "5311",
+          "text": "FRAME WEB CRACKED AT BS 440, STRINGER 8.  REPAIRED FRAME IAW EA."
+        },
+        {
+          "id": "SWAA2015121747267",
+          "date": "2015-11-24",
+          "jasc": "5311",
+          "text": "FRAME WEB CRACKED AT BS 907, BETWEEN STRINGER 7R - 8R.  REPAIRED FRAME IAW EA."
+        }
+      ]
+    },
+    {
+      "ev": "20090714X83900",
+      "ntsb": "DCA09FA065",
+      "date": "2009-07-13",
+      "tail": "N387SW",
+      "family": "737",
+      "cause": "Fuselage skin failure due to preexisting fatigue at a chemically milled step.",
+      "cited": [
+        "533"
+      ],
+      "lead_days": 182,
+      "reports": [
+        {
+          "id": "SWAA090123",
+          "date": "2009-01-08",
+          "jasc": "5330",
+          "text": "DURING SCHEDULED 14Y CHECK, FOUND NOSE WHEEL WELL CEILING PANEL SKIN CRACKED AT SNUBBER ATTACH PLATE, LBL 7.75.  REPAIRED SKIN PER ACO."
+        },
+        {
+          "id": "SWAA090273",
+          "date": "2009-01-12",
+          "jasc": "5330",
+          "text": "DURING SCHEDULED 14Y CHECK, FOUND SKIN CHORD ANGLE CRACKED AT BS 303, LBL 60, WL 218.  REPAIRED SKIN PER EA."
+        }
+      ]
+    },
+    {
+      "ev": "20100923X91107",
+      "ntsb": "CEN10IA554",
+      "date": "2010-08-26",
+      "tail": "N409AM",
+      "family": "DA20",
+      "cause": "The cracked nose landing gear fork assembly found during the preflight inspection.",
+      "cited": [
+        "322"
+      ],
+      "lead_days": 141,
+      "reports": [
+        {
+          "id": "2010FA0001014",
+          "date": "2010-04-07",
+          "jasc": "3222",
+          "text": "(BNGR) NLG FORK ON BOTH LT AND RT ARMS CRACKED."
+        }
+      ]
+    }
+  ]
+}

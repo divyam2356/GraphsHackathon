@@ -6,6 +6,17 @@
 // `(r)-[:AT]->(:Location)-[:WITHIN*0..2]->(:Location {bin:$bin})` rolls a report up
 // to any level ("737/53/S4L" = stringer 4 left on the 737 fuselage). Absent optional
 // params arrive as null (db.ts withNulls).
+/** Every (from, type, to) edge in the graph model, for edge_stats. */
+const SCHEMA_EDGES: Array<[string, string, string]> = [
+  ["Report", "AT", "Location"], ["Report", "ON", "Aircraft"], ["Aircraft", "IS_A", "Model"],
+  ["Accident", "INVOLVED", "Aircraft"], ["Accident", "FOUND", "Finding"], ["Finding", "AT", "Location"],
+  ["Finding", "IN_SYSTEM", "System"], ["Location", "WITHIN", "Location"], ["Location", "IN_SYSTEM", "System"],
+  ["Location", "FOR", "Model"], ["FixOrder", "TARGETS", "Location"], ["FixOrder", "APPLIES_TO", "Model"],
+  ["FixOrder", "SUPERSEDES", "FixOrder"], ["FailureMode", "SIGNATURE", "Location"], ["FailureMode", "FOR", "Model"],
+  ["Report", "EVIDENCE_FOR", "FailureMode"], ["Accident", "EVIDENCE_FOR", "FailureMode"], ["Report", "PRECURSOR_OF", "Accident"],
+  ["Engineer", "MEMBER_OF", "Team"], ["TaskCard", "CITES", "FixOrder"], ["Decision", "BASED_ON", "FixOrder"],
+];
+
 export const CYPHER: Record<string, string> = {
   search_accidents: `
     CALL db.idx.fulltext.queryNodes('Accident', $text) YIELD node AS a, score
@@ -207,8 +218,10 @@ export const CYPHER: Record<string, string> = {
   // Live node/edge counts for the data-model view.
   graph_stats: `
     MATCH (n) RETURN labels(n)[0] AS label, count(n) AS n`,
-  edge_stats: `
-    MATCH (a)-[e]->(b) RETURN labels(a)[0] AS from, type(e) AS type, labels(b)[0] AS to, count(e) AS n`,
+  // One typed, labelled count per schema edge: ~0.1 s in all. A label-free scan of every edge
+  // takes ~0.8 s, at FalkorDB's 1 s read timeout. Add new edge types to SCHEMA_EDGES.
+  edge_stats: SCHEMA_EDGES.map(([a, t, b]) => `
+    MATCH (:${a})-[e:${t}]->(:${b}) RETURN '${a}' AS from, '${t}' AS type, '${b}' AS to, count(e) AS n`).join("\n    UNION ALL"),
   // The reports behind one map cell (or any location key), newest first.
   bin_reports: `
     MATCH (r:Report)-[:AT]->(:Location)-[:WITHIN*0..2]->(:Location {bin:$bin})

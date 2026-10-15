@@ -197,7 +197,21 @@ details pre { margin: 6px 0 0; padding: 9px 11px; background: var(--ink); color:
   .story-nav { padding: 8px 16px; }
 }
 
-/* ---------- approval card (story 7) ---------- */
+/* ---------- backtest (story 5) ---------- */
+.backtest { display: block; width: 100%; height: auto; }
+.backtest text { font-family: var(--ui); fill: var(--graphite); }
+.backtest .bt-label { fill: var(--ink); }
+.backtest .bt-lift { fill: var(--graphite); }
+.backtest .bt-lift.fair { fill: var(--ink); }
+.story-visual > .seg { justify-self: start; }
+.bt-title { margin: 6px 0 0; font-size: 15px; }
+.bt-hits { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 10px 22px; }
+.bt-hits li { border-top: 1px solid var(--alclad); padding-top: 8px; }
+.bt-cause { margin: 0 0 4px; font-family: var(--text); font-size: 14px; line-height: 1.45; }
+.bt-cause span { display: block; font-family: var(--ui); font-size: 11.5px; color: var(--graphite); }
+.bt-read { margin: 4px 0 0; font-size: 12.5px; color: var(--ink); }
+
+/* ---------- approval card (story 8) ---------- */
 .mini-steps { list-style: decimal; margin: 14px 0 0; padding-left: 20px; font-size: 13px; color: var(--graphite); display: grid; gap: 3px; }
 .mini-steps b { color: var(--ink); }
 .mode-card { background: var(--sheet); border: 1px solid var(--alclad); border-top: 4px solid var(--ink); border-radius: 3px; padding: 18px 22px; max-width: 760px; }

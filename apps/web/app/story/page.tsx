@@ -1,6 +1,7 @@
 "use client";
-// Story: the presentation. Eight steps, each a short narration beside a live view of
-// the graph (no screenshots: every number and picture is queried as it is shown).
+// Story: the presentation. Nine steps, each a short narration beside a live view of
+// the graph (no screenshots: every number and picture is queried as it is shown; step 5
+// shows the saved backtest run, from services/eval).
 // Keys: right/left arrows, space, page up/down. Deep link: /story#3.
 import { useEffect, useState } from "react";
 import { Header } from "../../components/Header";
@@ -9,6 +10,7 @@ import { TimeSlider } from "../../components/TimeSlider";
 import { TrendChart, busiest, riseRank, shortLine, useLineSeries } from "../../components/TrendChart";
 import { DetailMap } from "../../components/DetailMap";
 import { SchemaView } from "../../components/SchemaView";
+import { BacktestChart, BacktestHits, useBacktest } from "../../components/Backtest";
 import { AgentPanel } from "../../components/AgentPanel";
 import { EvidenceGraph, nodeKey, type SubRow } from "../../components/EvidenceGraph";
 import { RecordDrawer, type Open } from "../../components/RecordDrawer";
@@ -19,7 +21,7 @@ import type { Keys } from "@blackbox/agent/src/agent";
 
 const CLASSIC = ["737-300", "737-400", "737-500"];
 const SKIN = { family: "737", chapter: "53", variants: CLASSIC, part: "SKIN", condition: "CRACK" };
-const TITLES = ["Southwest 812", "The aircraft had said so", "So had the fleet", "Not the loudest line", "One graph", "Ask it", "A person decides", "Built on FalkorDB"];
+const TITLES = ["Southwest 812", "The aircraft had said so", "So had the fleet", "Not the loudest line", "Checked against chance", "One graph", "Ask it", "A person decides", "Built on FalkorDB"];
 interface PriorReport { id: string; date: string; text: string; bin: string }
 
 export default function Story() {
@@ -37,7 +39,7 @@ export default function Story() {
     return () => { window.removeEventListener("keydown", k); window.removeEventListener("hashchange", fromHash); };
   }, []);
   useEffect(() => { if (location.hash !== `#${i + 1}`) history.replaceState(null, "", `#${i + 1}`); }, [i]);
-  const S = [Rupture, OwnReports, Fleet, Loudest, OneGraph, AskIt, Decides, BuiltOn][i];
+  const S = [Rupture, OwnReports, Fleet, Loudest, Checked, OneGraph, AskIt, Decides, BuiltOn][i];
   return (
     <>
       <Header current="story" />
@@ -167,10 +169,40 @@ function Loudest() {
 }
 
 // 5 ---------------------------------------------------------------
-function OneGraph() {
+function Checked() {
+  const r = useBacktest();
+  const [level, setLevel] = useState<"system" | "subsystem">("system");
+  const at = (k: string) => r?.stages.find((s) => s.key === k);
+  const naive = at("naive")?.system, fair = at("fair")?.system, sub = at("fair")?.subsystem;
   return (
     <>
       <Text n={5}>
+        <p>One case proves nothing. So we asked the graph about all {naive?.events ?? "the"} NTSB mechanical events whose aircraft had FAA reports in the year before: did those reports name the system the NTSB later cited?</p>
+        <p>The naive test says yes, {naive ? `${naive.lift.toFixed(1)} times` : "…"} more often than chance. Two leaks made that number: a report filed the day before is often the event itself, and each aircraft family keeps reporting the same systems.</p>
+        <p>Close both and it falls to {fair ? `${fair.lift.toFixed(1)} times` : "…"}: no better than chance. The test would have caught a lift as small as {fair ? `${fair.detectable_lift.toFixed(1)} times` : "…"}.</p>
+        <p>So a match on a whole system is not a warning sign. Southwest 812 stood out on one stringer line, and the NTSB&apos;s public findings name systems, not stringers, so that cannot be backtested at scale. Black Box shows the evidence; a person judges it.</p>
+      </Text>
+      <div className="story-visual">
+        {r ? <>
+          <div className="seg" role="group" aria-label="Match level">
+            <button aria-pressed={level === "system"} onClick={() => setLevel("system")}>Same system (ATA chapter)</button>
+            <button aria-pressed={level === "subsystem"} onClick={() => setLevel("subsystem")}>Same subsystem (ATA section)</button>
+          </div>
+          <BacktestChart r={r} level={level} />
+          <p className="caption">Grey bars: hit rates in {r.shuffles.toLocaleString("en-US")} shuffles, where each event gets another event&apos;s cited systems. Line: what happened. Window {r.window_days} days. From <code>npm run backtest</code> on {fmtDate(r.run.slice(0, 10))}.</p>
+          {sub && <h2 className="bt-title">The {sub.hits} subsystem matches that survive the fair test. Chance predicts {sub.chance.hits_mean.toFixed(1)}.</h2>}
+          <BacktestHits r={r} />
+        </> : <p className="caption">Loading the backtest</p>}
+      </div>
+    </>
+  );
+}
+
+// 6 ---------------------------------------------------------------
+function OneGraph() {
+  return (
+    <>
+      <Text n={6}>
         <p>Accident investigations and maintenance reports were never meant to be read together. They are published by different offices, in different formats.</p>
         <p>In FalkorDB they meet at two things: the aircraft, by tail and serial number, and the location, from model and ATA chapter down to stringer and a 20-inch body-station bin.</p>
         <p>Locations form a hierarchy, so a question about stringer S-4L includes every bin along it.</p>
@@ -180,7 +212,7 @@ function OneGraph() {
   );
 }
 
-// 6 ---------------------------------------------------------------
+// 7 ---------------------------------------------------------------
 function AskIt() {
   const [steps, setSteps] = useState<Step[]>([]);
   const [sub, setSub] = useState<SubRow[]>([]);
@@ -201,8 +233,8 @@ function AskIt() {
   return (
     <>
       <div className="story-text story-text-wide">
-        <p className="story-n">6 of {TITLES.length}</p>
-        <h1>{TITLES[5]}</h1>
+        <p className="story-n">7 of {TITLES.length}</p>
+        <h1>{TITLES[6]}</h1>
         <p className="lede">An agent investigates through our MCP server. Every tool runs fixed Cypher, so the model never writes a query, and the date limit is enforced in code.</p>
         <AgentPanel asOf={SWA812.date} steps={steps} onStep={(s) => setSteps((p) => [...p, s])} onReset={() => setSteps([])} onOpen={openId} />
       </div>
@@ -214,7 +246,7 @@ function AskIt() {
   );
 }
 
-// 7 ---------------------------------------------------------------
+// 8 ---------------------------------------------------------------
 /** First sentence of a record, for evidence lists (the drawer has the full text). */
 const firstSentence = (t: string) => (t.match(/^.*?[.;](?=\s|$)/)?.[0] ?? t).slice(0, 300);
 interface ModeCard { mode: Record<string, string | number | null>; evidence: Array<{ label: string; id: string; date?: string; text?: string }> }
@@ -250,7 +282,7 @@ function Decides() {
   const decided = m && (m.status === "confirmed" || m.status === "dormant");
   return (
     <>
-      <Text n={7}>
+      <Text n={8}>
         <p>The agent can draft a failure mode from what it found, with its evidence linked in the graph. It cannot approve one: there is no such tool on its MCP server.</p>
         <p>A person reads the evidence and decides. The decision, who made it and why are written to the graph, and only confirmed modes are used to rank future investigations.</p>
         {!card && <button className="go" onClick={draft} disabled={busy}>{busy ? "Drafting" : "Draft a failure mode from this investigation"}</button>}
@@ -291,7 +323,7 @@ function Decides() {
   );
 }
 
-// 8 ---------------------------------------------------------------
+// 9 ---------------------------------------------------------------
 function BuiltOn() {
   const stats = useView<Array<{ label: string; n: number }>>("graph_stats", {});
   const n = (l: string) => stats.rows?.find((r) => r.label === l)?.n.toLocaleString("en-US") ?? "…";
@@ -310,7 +342,7 @@ function BuiltOn() {
   }, []);
   return (
     <>
-      <Text n={8}>
+      <Text n={9}>
         <p>Public data only: {n("Accident")} mechanical NTSB events since 2008 and {n("Report")} FAA maintenance reports, joined in one FalkorDB graph.</p>
         <p>The agent reaches the graph only through our MCP server: {tools.length || "its"} tools, each a fixed Cypher query.</p>
         <p>While building it we found a FalkorDB bug: with a range index on a string property, <code>r.date &lt; &apos;2011-04-01&apos;</code> matched every row (1,000 instead of 198 in our repro, v4.14.6). We dropped the date indexes and recomputed every number in this story.</p>

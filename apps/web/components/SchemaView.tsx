@@ -16,7 +16,9 @@ const AT: Record<string, [number, number]> = {
 const NAMES: Record<string, string> = { Accident: "NTSB events", Report: "Maintenance reports", Aircraft: "Aircraft", Location: "Locations", Finding: "NTSB findings", Model: "Models", System: "Systems (ATA)", FixOrder: "Fix orders", FailureMode: "Failure modes" };
 const r = (n: number) => 7 + 5.2 * Math.log10(Math.max(1, n));
 // Where along each edge its label sits (0 = at `from`), chosen to keep labels apart.
-const LABEL_AT: Record<string, number> = { "Report ON Aircraft": 0.22, "FixOrder APPLIES_TO Model": 0.2, "FailureMode SIGNATURE Location": 0.35, "FixOrder TARGETS Location": 0.45, "FailureMode FOR Model": 0.5 };
+const LABEL_AT: Record<string, number> = { "Report ON Aircraft": 0.22, "FixOrder APPLIES_TO Model": 0.2, "FailureMode SIGNATURE Location": 0.35, "FixOrder TARGETS Location": 0.45, "FailureMode FOR Model": 0.5, "Report PRECURSOR_OF Accident": 0.3 };
+// Edges that would run straight through another node are drawn as arcs (bow in px; sign picks the side).
+const BOW: Record<string, number> = { "Report PRECURSOR_OF Accident": -75 };
 
 /** Counts up to the target once (one orchestrated moment); instant with reduced motion. */
 function useCount(target: number) {
@@ -54,11 +56,14 @@ export function SchemaView() {
             );
           }
           const w = Math.max(0.8, Math.log10(e.n + 1) * 0.9);
-          const t = LABEL_AT[`${e.from} ${e.type} ${e.to}`] ?? 0.5, vertical = Math.abs(x1 - x2) < 1;
-          const mx = x1 + (x2 - x1) * t, my = y1 + (y2 - y1) * t;
+          const id = `${e.from} ${e.type} ${e.to}`, t = LABEL_AT[id] ?? 0.5, bow = BOW[id] ?? 0;
+          // quadratic arc: control point pushed off the midpoint along the normal (bow 0 = straight)
+          const len = Math.hypot(x2 - x1, y2 - y1), cx = (x1 + x2) / 2 + ((y2 - y1) / len) * 2 * bow, cy = (y1 + y2) / 2 - ((x2 - x1) / len) * 2 * bow;
+          const vertical = !bow && Math.abs(x1 - x2) < 1;
+          const mx = (1 - t) ** 2 * x1 + 2 * (1 - t) * t * cx + t ** 2 * x2, my = (1 - t) ** 2 * y1 + 2 * (1 - t) * t * cy + t ** 2 * y2;
           return (
             <g key={e.from + e.type + e.to}>
-              <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="var(--graphite)" strokeOpacity={0.55} strokeWidth={w} />
+              <path d={`M${x1},${y1} Q${cx},${cy} ${x2},${y2}`} fill="none" stroke="var(--graphite)" strokeOpacity={0.55} strokeWidth={w} />
               <text x={vertical ? mx + 7 : mx} y={vertical ? my + 4 : my - 5} fontSize={10.5} textAnchor={vertical ? "start" : "middle"} className="elabel">{e.type} <Count n={e.n} /></text>
             </g>
           );

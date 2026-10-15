@@ -1,1 +1,1 @@
-{"name":"eval","private":true,"type":"module","scripts":{"eval":"tsx src/all.ts"}}
+{"name":"eval","private":true,"type":"module","scripts":{"eval":"tsx src/all.ts","backtest":"tsx src/backtest.ts"}}
