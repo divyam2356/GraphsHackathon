@@ -1,1 +1,1 @@
-{"name":"@blackbox/graph","version":"0.1.0","type":"module","scripts":{"indexes":"tsx src/indexes.ts","build":"tsc -p tsconfig.json"},"dependencies":{"falkordb":"^1.0.0"}}
+{"name":"@blackbox/graph","version":"0.1.0","type":"module","scripts":{"indexes":"tsx src/indexes.ts","build":"tsc -p tsconfig.json"},"dependencies":{"falkordb":"^6.8.0"}}

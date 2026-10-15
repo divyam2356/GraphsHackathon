@@ -1,7 +1,7 @@
 // CLI smoke test: npm run demo -- "crown skin crack S-4L 737"
 // Runs investigate + leads against demo store (no DB, no LLM key needed).
-import { runInvestigate, runLeads } from "./loop.js";
-import { DEMO } from "@blackbox/graph/src/demo.js";
+import { runInvestigate, runLeads } from "./loop";
+import { DEMO } from "@blackbox/graph/src/demo";
 
 const tools: Record<string, { name: string; call: (a: Record<string, unknown>) => Promise<unknown> }> = {
   get_accident: { name: "x", call: async () => DEMO.accidents[0] },

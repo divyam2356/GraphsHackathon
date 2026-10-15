@@ -1,7 +1,7 @@
 // Northwind Aero (fictional): 15 engineers, 3 teams, ~40 task cards citing REAL
 // fix orders, ~300 work orders/shift notes on fictional tails of REAL models.
 // Every node: synthetic:true. Minimum viable: the 3 flow-D questions work.
-import { connect } from "@blackbox/graph/src/db.js";
+import { connect } from "@blackbox/graph/src/db";
 const TEAMS = ["Structures", "Propulsion", "Avionics"];
 const NAMES = ["A. Rao", "M. Chen", "J. Okafor", "S. Iyer", "L. Park", "R. Das", "K. Mehta", "T. Nguyen", "P. Shah", "D. Kim", "N. Rao", "E. Silva", "F. Ahmed", "G. Nair", "H. Zhou"];
 const db = await connect();

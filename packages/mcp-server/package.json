@@ -3,5 +3,5 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": { "serve": "tsx src/index.ts", "build": "tsc -p tsconfig.json" },
-  "dependencies": { "@modelcontextprotocol/sdk": "^1.0.0", "falkordb": "^1.0.0", "zod": "^3.0.0" }
+  "dependencies": { "@modelcontextprotocol/sdk": "^1.18.0", "falkordb": "^6.8.0", "zod": "^3.0.0" }
 }

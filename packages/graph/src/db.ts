@@ -3,7 +3,7 @@
 // client.selectGraph(name), graph.query() / graph.roQuery(), result.data.
 // Returns null when unreachable -> MCP server falls back to the demo store,
 // so agent + UI + video work on a fresh laptop. Real DB wins when up.
-import { GRAPH_NAME } from "./index.js";
+import { GRAPH_NAME } from "./index";
 
 export interface Db {
   query(cypher: string, params?: Record<string, unknown>): Promise<unknown[]>;
@@ -37,8 +37,8 @@ export async function connect(url = process.env.FALKORDB_URL ?? "redis://localho
       roQuery(c: string, o?: unknown): Promise<{ data: unknown[] }>;
     };
     return {
-      query: async (c, p) => (await g.query(c, { params: p ?? {} })).data,
-      roQuery: async (c, p) => (await g.roQuery(c, { params: p ?? {} })).data,
+      query: async (c, p) => (await g.query(c, { params: p ?? {} })).data ?? [],
+      roQuery: async (c, p) => (await g.roQuery(c, { params: p ?? {} })).data ?? [],
       close: async () => { await client.close?.(); },
     };
   } catch {

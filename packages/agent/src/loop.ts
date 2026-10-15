@@ -1,7 +1,7 @@
 // Tool-calling loop. LLM via Anthropic API when ANTHROPIC_API_KEY is set,
 // else rule-based demo path (formula scoring + canned tool sequence) so everything
 // runs offline. The LLM judges relevance; the FORMULA sets every score.
-import { rank, type Candidate } from "./scoring.js";
+import { rank, type Candidate } from "./scoring";
 
 export interface Tool { name: string; call(args: Record<string, unknown>): Promise<unknown> }
 

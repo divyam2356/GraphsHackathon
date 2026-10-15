@@ -2,8 +2,8 @@
 // SUPERSEDES + TARGETS via regex ("supersedes AD YYYY-NN-NN", "fuselage station")
 // plus LLM extraction on summaries for the long tail. FR API caps count at 10k.
 // Usage: npm run ingest:fixorders
-import { connect } from "@blackbox/graph/src/db.js";
-import { DEMO } from "@blackbox/graph/src/demo.js";
+import { connect } from "@blackbox/graph/src/db";
+import { DEMO } from "@blackbox/graph/src/demo";
 
 export function parseSupersedes(summary: string): string[] {
   return [...summary.matchAll(/[Ss]upersedes\s+(AD\s?\d{4}-\d{2}-\d{2})/g)].map((m) => m[1].replace(/\s/g, "-").toUpperCase().replace(/^AD-?/, "AD-"));

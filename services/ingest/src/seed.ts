@@ -2,8 +2,8 @@
 // (family, system, location bin, mechanism keyword) -> FailureMode origin:seed.
 // Approval-gated modes (accident/observation origin) are drafted by the agent
 // via propose_failure_mode and confirmed in the UI — never auto-confirmed here.
-import { connect } from "@blackbox/graph/src/db.js";
-import { DEMO } from "@blackbox/graph/src/demo.js";
+import { connect } from "@blackbox/graph/src/db";
+import { DEMO } from "@blackbox/graph/src/demo";
 const db = await connect();
 if (db) {
   for (const m of DEMO.failureModes) {

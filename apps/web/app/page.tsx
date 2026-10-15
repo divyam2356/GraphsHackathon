@@ -1,5 +1,7 @@
 "use client";
 import { useState } from "react";
+// Force dynamic: results depend on asOf + live graph; nothing to prerender.
+export const dynamic = "force-dynamic";
 // Chat + time-machine slider + ranked leads + approval card, one page.
 // Data comes from /api/* (demo store when FalkorDB is down, real graph when up).
 export default function Page() {

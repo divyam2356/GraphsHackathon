@@ -3,9 +3,9 @@
 // ("BS 727A, STR 4L"). Embeddings: local bge-small (384d) on structures+engines
 // only by default — full 1.17M ≈ 1.8GB vectors (see embeddings.ts).
 // Usage: npm run ingest:reports -- --csv data/raw/sdr2024.csv [--systems structures,engines]
-import { connect } from "@blackbox/graph/src/db.js";
-import { DEMO } from "@blackbox/graph/src/demo.js";
-import { mockEmbed } from "./embeddings.js";
+import { connect } from "@blackbox/graph/src/db";
+import { DEMO } from "@blackbox/graph/src/demo";
+import { mockEmbed } from "./embeddings";
 
 const db = await connect();
 if (db) {

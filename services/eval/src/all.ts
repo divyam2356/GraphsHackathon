@@ -1,10 +1,10 @@
 // 3 time-machine backtests on the demo graph (swap DEMO for full data later).
 // 1 precursor-hit · 2 leads-top3 · 3 novelty-replay. Thresholds swept, not hardcoded.
-import { runLeads } from "@blackbox/agent/src/loop.js";
-import { DEMO } from "@blackbox/graph/src/demo.js";
+import { runLeads } from "@blackbox/agent/src/loop";
+import { DEMO } from "@blackbox/graph/src/demo";
 const tools: Record<string, { name: string; call: (a: Record<string, unknown>) => Promise<unknown> }> = {
   rank_failure_modes: { name: "x", call: async () => DEMO.failureModes },
-  prior_reports: { name: "x", call: async () => DEMO.priorReports },
+  prior_reports: { name: "x", call: async (a) => DEMO.priorReports.filter((r) => !a.tail || r.tail === a.tail) },
 };
 // T1 precursor hit: asOf day-before — was S-4L flagged? demo: 2/2 priors at S-4L bins
 const priors = (await tools.prior_reports.call({})) as Array<{ bin?: string }>;

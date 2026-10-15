@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { runLeads } from "@blackbox/agent/src/loop.js";
-import { DEMO } from "@blackbox/graph/src/demo.js";
+import { runLeads } from "@blackbox/agent/src/loop";
+import { DEMO } from "@blackbox/graph/src/demo";
 // Demo-backed today; swap each tool.call for an MCP client call at deploy.
 const tools: Record<string, { name: string; call: (a: Record<string, unknown>) => Promise<unknown> }> = {
   rank_failure_modes: { name: "x", call: async () => DEMO.failureModes },

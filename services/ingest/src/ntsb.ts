@@ -4,8 +4,8 @@
 // Usage: npm run ingest:ntsb -- --csv data/raw/avall.csv [--limit N]
 // Without --csv (no download yet) it loads the SWA-812 demo accident so the
 // pipeline is testable end to end before the big files arrive.
-import { connect } from "@blackbox/graph/src/db.js";
-import { DEMO } from "@blackbox/graph/src/demo.js";
+import { connect } from "@blackbox/graph/src/db";
+import { DEMO } from "@blackbox/graph/src/demo";
 import { readFileSync, existsSync } from "node:fs";
 
 const limit = Number(process.argv.find((a) => a.startsWith("--limit="))?.split("=")[1] ?? 0) || 0;

@@ -1,7 +1,11 @@
 // Creates indexes from schema.cypher (idempotent — safe to re-run).
-import { connect } from "./db.js";
+import { connect } from "./db";
 const db = await connect();
-if (!db) { console.log("no FalkorDB — demo mode, nothing to index"); process.exit(0); }
+if (!db) {
+  console.log("no FalkorDB — demo mode, nothing to index");
+  process.exit(0);
+}
+const gdb: NonNullable<typeof db> = db;
 for (const q of [
   "CREATE INDEX FOR (a:Accident) ON (a.ev_id)",
   "CREATE INDEX FOR (t:Aircraft) ON (t.tail)",
@@ -12,7 +16,7 @@ for (const q of [
   "CALL db.idx.fulltext.createNodeIndex('Finding', 'text')",
   "CREATE VECTOR INDEX FOR (r:Report) ON (r.embedding) OPTIONS {dimension:384, similarityFunction:'cosine'}",
 ]) {
-  try { await db.query(q); console.log("ok:", q.slice(0, 60)); }
-  catch (e) { console.log("exists/skip:", q.slice(0, 60)); }
+  try { await gdb.query(q); console.log("ok:", q.slice(0, 60)); }
+  catch { console.log("exists/skip:", q.slice(0, 60)); }
 }
-await db.close();
+await gdb.close();

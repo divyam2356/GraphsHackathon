@@ -1,8 +1,8 @@
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { buildServer } from "./tools.js";
-import { connect } from "@blackbox/graph/src/db.js";
-import { CYPHER } from "@blackbox/graph/queries/cypher.js";
-import { DEMO } from "@blackbox/graph/src/demo.js";
+import { buildServer } from "./tools";
+import { connect } from "@blackbox/graph/src/db";
+import { CYPHER } from "@blackbox/graph/queries/cypher";
+import { DEMO } from "@blackbox/graph/src/demo";
 
 // Demo fallback store: serves the SWA-812 story when FalkorDB is unreachable,
 // so the agent + UI + video all work on a fresh laptop. Real DB wins when up.
@@ -26,7 +26,7 @@ async function query(name: string, args: unknown) {
   if (db && cypher) {
     try {
       const r = await db.query(cypher, (args ?? {}) as Record<string, unknown>);
-      return r.data;
+      return r;
     } catch { /* fall through to demo */ }
   }
   return demo(name, (args ?? {}) as Record<string, unknown>);

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { runInvestigate } from "@blackbox/agent/src/loop.js";
-import { DEMO } from "@blackbox/graph/src/demo.js";
+import { runInvestigate } from "@blackbox/agent/src/loop";
+import { DEMO } from "@blackbox/graph/src/demo";
 const tools: Record<string, { name: string; call: (a: Record<string, unknown>) => Promise<unknown> }> = {
   get_accident: { name: "x", call: async () => DEMO.accidents[0] },
   prior_reports: { name: "x", call: async () => DEMO.priorReports },
