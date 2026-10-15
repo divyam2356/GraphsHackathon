@@ -20,7 +20,7 @@ export function buildServer(query: (name: string, args: unknown) => Promise<unkn
     async (a) => ({ content: [{ type: "text", text: JSON.stringify(await query("fleet_reports", a)) }] }));
   s.tool("hotspots", { family: z.string(), asOf },
     async (a) => ({ content: [{ type: "text", text: JSON.stringify(await query("hotspots", a)) }] }));
-  s.tool("similar_reports", { text: z.string(), k: z.number().default(10) },
+  s.tool("similar_reports", { text: z.string(), asOf: asOf.optional() },
     async (a) => ({ content: [{ type: "text", text: JSON.stringify(await query("similar_reports", a)) }] }));
   s.tool("fix_orders", { family: z.string(), bin: z.string().optional(), asOf },
     async (a) => ({ content: [{ type: "text", text: JSON.stringify(await query("fix_orders", a)) }] }));
@@ -48,7 +48,7 @@ export function buildServer(query: (name: string, args: unknown) => Promise<unkn
     async (a) => ({ content: [{ type: "text", text: JSON.stringify(await query("add_support", a)) }] }));
   s.tool("record_observation", { tail: z.string(), bin: z.string(), text: z.string(), date: z.string() },
     async (a) => ({ content: [{ type: "text", text: JSON.stringify(await query("record_observation", a)) }] }));
-  s.tool("create_work_order", { alertId: z.string(), team: z.string() },
+  s.tool("create_work_order", { alertId: z.string(), team: z.string(), bin: z.string().optional() },
     async (a) => ({ content: [{ type: "text", text: JSON.stringify(await query("create_work_order", a)) }] }));
   return s;
 }

@@ -5,7 +5,9 @@
 
 const ANTHROPIC_API = "https://api.anthropic.com/v1/messages";
 const OA_BASE = process.env.LLM_BASE_URL ?? "https://api.openai.com/v1";
-const OA_MODEL = process.env.LLM_MODEL ?? process.env.ANTHROPIC_MODEL ?? "claude-3-5-haiku-latest";
+// Haiku: the judge runs once per joined report, so it is a high-volume classifier.
+const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL ?? "claude-haiku-5-5";
+const OA_MODEL = process.env.LLM_MODEL ?? "llama-3.1-8b-instant";
 
 export function hasKey(): boolean {
   return Boolean(process.env.ANTHROPIC_API_KEY || process.env.LLM_API_KEY);
@@ -19,7 +21,11 @@ async function chatAnthropic(system: string, user: string): Promise<string> {
       "x-api-key": process.env.ANTHROPIC_API_KEY!,
       "anthropic-version": "2023-06-01",
     },
-    body: JSON.stringify({ model: process.env.ANTHROPIC_MODEL ?? OA_MODEL, max_tokens: 1000, system, messages: [{ role: "user", content: user }] }),
+    body: JSON.stringify({
+      model: ANTHROPIC_MODEL, max_tokens: 2000, system, messages: [{ role: "user", content: user }],
+      // thinking is on by default (effort medium); low keeps a keep/drop call short
+      output_config: { effort: "low" },
+    }),
   });
   if (!r.ok) throw new Error(`LLM ${r.status}`);
   const j = (await r.json()) as { content: Array<{ text?: string }> };
@@ -45,6 +51,12 @@ async function chat(system: string, user: string): Promise<string> {
 
 export interface Judgment { keep: boolean; reason: string }
 
+// Models sometimes wrap JSON in ``` fences or add a sentence; take the first {...}.
+function parseJson(text: string): unknown {
+  const m = text.match(/\{[\s\S]*\}/);
+  return JSON.parse(m ? m[0] : text);
+}
+
 // Relevance judge: is this maintenance report a plausible warning sign for an
 // accident with this cause? Drops unrelated same-system matches (UPS1354/SWA1380)
 // and self-matches (EC135). Warning signs only — never causes.
@@ -54,7 +66,7 @@ export async function judgeRelevance(report: string, cause: string): Promise<Jud
   const usr = `Report: ${report}\nAccident cause: ${cause}`;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const j = JSON.parse(await chat(sys, usr)) as Judgment;
+      const j = parseJson(await chat(sys, usr)) as Judgment;
       return { keep: Boolean(j.keep), reason: String(j.reason ?? "llm").slice(0, 200) };
     } catch {
       if (attempt === 0) await new Promise((r) => setTimeout(r, 1500)); // free-tier hiccup retry

@@ -16,7 +16,7 @@ weather are the most common NTSB causes and maintenance reports can't predict th
 ## Repo map
 
 ```
-apps/web/               Next.js UI: chat · animated graph path · time-machine slider · alerts · approval cards
+apps/web/               Next.js UI (early): date picker + flows A/B/E as JSON. Planned: chat, evidence path, approval cards
 packages/mcp-server/    Our MCP server — the ONLY way the agent touches FalkorDB (fixed Cypher, no raw queries)
 packages/agent/         Tool-calling loop + explainable scoring + decision rule + backtest harness glue
 packages/graph/         Schema, indexes, canned Cypher, algorithm jobs (single source of truth for the model)
@@ -63,8 +63,8 @@ A community FalkorDB MCP server (see FalkorDB GitHub) can run alongside in read-
 1. Clone, install, build: `git clone <repo> && npm install && npm run build`
    (Windows: use `npm.cmd` if `.ps1` scripts are blocked.)
 2. Start the database: `docker compose up -d` — or skip Docker and use FalkorDB Cloud,
-   then set `FALKORDB_URL` in your `.env`. No data needed yet: everything runs on a
-   built-in demo story (SWA 812) until real CSVs are ingested.
+   then set `FALKORDB_URL` in your `.env`. Load the data (Quickstart step 4). Everything
+   reads the graph; without data, `DEMO=1` serves a small offline SWA 812 fixture.
 3. `cp .env.example .env` — an LLM key is **optional** (see below); leave it blank and all flows still run.
 4. Verify your setup with two commands:
    `npm run agent:demo -- "crown skin S-4L"` (agent investigate + leads in terminal)
@@ -137,12 +137,14 @@ never delete.
   graph. The agent has no other storage — memory (PRECURSOR_OF, HotSpot, Alert,
   FailureMode, Case) is written back to the same graph.
 - Rule 3 (graph does real work): every multi-hop join (accident → priors → fleet →
-  fix chain), keyword search (fulltext index), similar-report search (vector index),
+  fix chain), keyword search and similar reports (fulltext index; vector index once
+  real embeddings are loaded),
   fix-order paths (`algo.SPpaths`), and hotspot clusters (`algo.labelPropagation`
   over temp per-window edges, `packages/graph/src/hotspotJob.ts`) executes inside
   FalkorDB as fixed Cypher in the MCP server. Remove FalkorDB and the agent has no
-  evidence paths, no rankings, no alerts — the demo fixture only carries the one
-  SWA-812 story for offline UI work and cannot answer new questions.
+  evidence paths, no rankings, no alerts: a failed query is returned as an error,
+  never swapped for fixture data (`packages/graph/src/run.ts`). The SWA 812 fixture
+  is served only when `DEMO=1` is set explicitly.
 - Rule 5 (tracks): entering all three — T1 Agents That Act, T2 Memory & Coordination,
   T3 Company Brain (single shared graph, `synthetic:true` org layer).
 

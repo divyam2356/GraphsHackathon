@@ -49,9 +49,14 @@ export const CYPHER: Record<string, string> = {
     WHERE ac >= coalesce($minAircraft, 5)
     RETURN line.bin AS bin, ac, ac_prev, round(100.0 * (ac + 1) / (ac_prev + 1)) / 100 AS lift
     ORDER BY lift DESC, ac DESC LIMIT 25`,
+  // Keyword similarity (full-text index) until real embeddings are loaded; then swap to
+  // CALL db.idx.vector.queryNodes('Report', 'embedding', $k, vecf32($vec)).
   similar_reports: `
-    CALL db.idx.vector.queryNodes('Report', 'embedding', $k, vecf32($vec)) YIELD node AS r, score
-    RETURN r.id AS id, r.text AS text, score ORDER BY score DESC`,
+    CALL db.idx.fulltext.queryNodes('Report', $text) YIELD node AS r, score
+    WHERE $asOf IS NULL OR r.date < $asOf
+    MATCH (r)-[:ON]->(a:Aircraft), (r)-[:AT]->(l:Location)
+    RETURN r.id AS id, r.date AS date, r.text AS text, a.tail AS tail, a.variant AS variant, l.bin AS bin, score
+    ORDER BY score DESC LIMIT 25`,
   fix_orders: `
     MATCH (f:FixOrder)-[:APPLIES_TO]->(:Model {family:$family})
     WHERE $asOf IS NULL OR f.date <= $asOf
@@ -96,13 +101,24 @@ export const CYPHER: Record<string, string> = {
     MATCH (t:Aircraft {tail:$tail}), (l:Location {bin:$bin})
     CREATE (o:Observation {id:randomUUID(), text:$text, date:$date})-[:ON]->(t)
     CREATE (o)-[:AT]->(l) RETURN o.id AS id`,
+  // One engineer per work order (least loaded on the team), placed at $bin or else at the
+  // matched failure mode's strongest signature location, so who_fixed can find it.
   create_work_order: `
     MATCH (al:Alert {id:$alertId})-[:FOR]->(t:Aircraft)
+    OPTIONAL MATCH (al)-[:MATCHES]->(:FailureMode)-[s:SIGNATURE]->(ml:Location)
+    WITH al, t, ml ORDER BY s.weight DESC LIMIT 1
+    OPTIONAL MATCH (bl:Location {bin:$bin})
+    WITH al, t, coalesce(bl, ml) AS l
+    MATCH (e:Engineer)-[:MEMBER_OF]->(:Team {name:$team})
+    OPTIONAL MATCH (e)-[:SIGNED_OFF]->(prev:WorkOrder)
+    WITH al, t, l, e, count(prev) AS load ORDER BY load ASC LIMIT 1
     CREATE (w:WorkOrder {id:randomUUID(), team:$team, date:toString(date()), synthetic:true})-[:ON]->(t)
-    WITH w MATCH (e:Engineer)-[:MEMBER_OF]->(:Team {name:$team})
-    CREATE (e)-[:SIGNED_OFF]->(w) RETURN w.id AS id`,
+    CREATE (e)-[:SIGNED_OFF]->(w)
+    CREATE (w)-[:FROM]->(al)
+    FOREACH (_ IN CASE WHEN l IS NULL THEN [] ELSE [1] END | CREATE (w)-[:AT]->(l))
+    RETURN w.id AS id, e.name AS engineer, l.bin AS bin`,
   who_fixed: `
-    MATCH (e:Engineer)-[:SIGNED_OFF]->(:WorkOrder)-[:AT]->(l:Location {bin:$bin})
+    MATCH (e:Engineer)-[:SIGNED_OFF]->(:WorkOrder)-[:AT]->(:Location)-[:WITHIN*0..2]->(:Location {bin:$bin})
     RETURN e.name AS engineer, count(*) AS jobs ORDER BY jobs DESC LIMIT 10`,
   why_task: `
     MATCH (t:TaskCard {id:$task_id})-[:CITES]->(f:FixOrder)

@@ -1,14 +1,12 @@
 import { NextResponse } from "next/server";
 import { runInvestigate } from "@blackbox/agent/src/loop";
-import { DEMO } from "@blackbox/graph/src/demo";
-const tools: Record<string, { name: string; call: (a: Record<string, unknown>) => Promise<unknown> }> = {
-  get_accident: { name: "x", call: async () => DEMO.accidents[0] },
-  prior_reports: { name: "x", call: async () => DEMO.priorReports },
-  fleet_reports: { name: "x", call: async () => ({ note: DEMO.fleetNote }) },
-  fix_orders: { name: "x", call: async () => DEMO.fixOrders },
-  rank_failure_modes: { name: "x", call: async () => DEMO.failureModes },
-};
+import { graphTools } from "@blackbox/graph/src/run";
+// Flow A on the real graph (DEMO=1 for the offline fixture). 503 when FalkorDB is down.
 export async function POST(req: Request) {
   const b = (await req.json()) as { ev_id: string; asOf: string };
-  return NextResponse.json(await runInvestigate(tools, b));
+  try {
+    return NextResponse.json(await runInvestigate(graphTools(), b));
+  } catch (e) {
+    return NextResponse.json({ error: (e as Error).message }, { status: 503 });
+  }
 }

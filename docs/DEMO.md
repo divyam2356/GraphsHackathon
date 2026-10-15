@@ -6,4 +6,4 @@
 1:50 flow F — aft-cargo-door observation -> weak match -> propose -> approval card (Approve/Not now/Same as X). Show dormant re-offer rule.
 2:20 flow B+D — hotspot alert -> work order; why_task TC-53-041; stale TC-53-009 flagged.
 2:50 backtests — T1 hit, T2 top-3, T3 novelty; 18-month CAROL assumption stated.
-Record with demo store (no DB needed): `npm run dev` -> localhost:3001.
+Record on the real graph (load data first, see README): `npm run dev` -> localhost:3001. `DEMO=1` = offline fixture, not for the video.
