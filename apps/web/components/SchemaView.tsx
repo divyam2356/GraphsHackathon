@@ -43,7 +43,7 @@ export function SchemaView() {
   const shown = (edges.rows ?? []).filter((e) => AT[e.from] && AT[e.to]);
   return (
     <figure className="schema">
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Graph data model with live counts">
+      <div className="scroll-x"><svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Graph data model with live counts">
         {shown.map((e) => {
           const [x1, y1] = AT[e.from], [x2, y2] = AT[e.to];
           if (e.from === e.to) {
@@ -79,7 +79,7 @@ export function SchemaView() {
             </g>
           );
         })}
-      </svg>
+      </svg></div>
       <figcaption>{labels.rows ? <>Live from FalkorDB: <Count n={total.nodes} /> nodes and <Count n={total.edges} /> edges, counted in {(labels.ms ?? 0) + (edges.ms ?? 0)} ms.</> : "Counting the graph"}</figcaption>
     </figure>
   );

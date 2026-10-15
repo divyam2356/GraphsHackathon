@@ -1,9 +1,34 @@
-# Demo script (3 min video)
+# Demo video script (about 3 minutes)
 
-0:00 framing — "warning signs and leads worth review, never causes; mechanical/structural only."
-0:20 flow A — Investigate SWA 812 (asOf 2011-03-31): accident -> 2 prior S-4L reports on N632SW -> fleet note -> AD chain. Animate path, source per hop.
-1:10 flow E — hide cause, feed "rapid decompression, crown skin" -> ranked modes; crown S-4L top with score breakdown (0.4/0.4/0.2).
-1:50 flow F — aft-cargo-door observation -> weak match -> propose -> approval card (Approve/Not now/Same as X). Show dormant re-offer rule.
-2:20 flow B+D — hotspot alert -> work order; why_task TC-53-041; stale TC-53-009 flagged.
-2:50 backtests — T1 hit, T2 top-3, T3 novelty; 18-month CAROL assumption stated.
-Record on the real graph (load data first, see README): `npm run dev` -> localhost:3001. `DEMO=1` = offline fixture, not for the video.
+The video follows the Story (`/story`), with one stop on the Board for the live, interactive
+part. Narration is about 440 words, at a calm pace. Every number on screen is a live query, so
+the narration must match what the screen shows on the day; check the figures marked ✓ before recording.
+
+## Before recording
+
+- [ ] FalkorDB and the app running (`docker compose up -d`, `npm run dev`); close other heavy
+      apps so FalkorDB stays out of swap.
+- [ ] Browser at 1440×900 or 1920×1080, zoom 100%, no bookmarks bar, no extensions in view.
+- [ ] Warm the caches: open each Story step once and play the Board slider once.
+- [ ] Story step 8: if the drafted failure mode shows "Confirmed" or "Deferred", press Reopen
+      so the recording starts from "waiting for a person".
+- [ ] Board agent panel on **Recorded** (the default). It replays a real Nemotron run.
+
+## Script
+
+| Time | Screen | Narration |
+|---|---|---|
+| 0:00 | Story 1: rupture close-up | Flight recorders are painted orange, not black, so they can be found after an accident. We wanted to find the warning signs before it. On 1 April 2011, Southwest 812 lost a five-foot strip of its roof at 34,000 feet. Everyone survived. The NTSB found fatigue cracks along one lap joint, stringer S-4L. |
+| 0:20 | Story 2: the two reports, then open the Cypher | A year earlier, mechanics working on this same aircraft found two cracked clips on that exact stringer, 24 inches from where the skin later tore. Two public datasets, never read together: NTSB investigations and FAA maintenance reports. In FalkorDB this is one query. |
+| 0:40 | Story 3: let the heat replay run to 1 April 2011 | Across the fleet, the number of 737s reporting skin cracks on stringer 4 went from 9 to 18 to 31 ✓ between 2008 and 2010. Each frame is a live Cypher query over 225,000 reports. |
+| 1:00 | Story 4: trend chart | It was not the loudest line; other stringers had more cracks. What stood out was the rise: second of 37 lines ✓, three months before the accident. A lead worth review, not a prediction. |
+| 1:15 | Story 5: backtest chart, row by row | Then we tried to fool ourselves. Across every NTSB event with earlier reports, the naive test says those reports named the failed system three times more often than chance. Two leaks made that: the accident's own report, and aircraft families that always report the same systems. Close them and it falls to 0.9 ✓, no better than chance. So a system-level match is not a warning sign. What mattered was the exact location and the fleet. |
+| 1:45 | Story 6: schema counts up | That is why the model is built around location: from aircraft model to stringer line to a 20-inch bin, so a question about S-4L rolls up every bin along it. A quarter of a million nodes, half a million edges ✓. |
+| 2:00 | Board: press Investigate (Recorded); drag the slider; click a hot S-4L cell, show the drawer | An agent investigates through our MCP server. It picks the tools; each runs fixed Cypher, and it cannot see past the investigation date. This is a real run of NVIDIA Nemotron on OpenRouter's free tier. Every call shows its query and time, and the records it touches build this evidence graph. When its first answer used causal language, our harness made it rewrite: we report warning signs, never causes. |
+| 2:30 | Story 8: Draft, then type a name and reason, Approve; open "The query behind the button" | The agent can draft a failure mode with its evidence linked in the graph. It cannot approve one: there is no such tool. A person decides, and who, when and why are written to the graph. |
+| 2:50 | Story 9: Cypher, timings, the bug note | Everything here is FalkorDB: multi-hop joins, variable-length paths, shortest paths, full-text search, and date windows that hide everything after the investigation date. Most answers come back in tens of milliseconds. We even found a bug in string range indexes on the way. Black Box: warning signs in maintenance records, before the accident. |
+
+## After recording
+
+- Story step 8: press Reopen so the drafted mode goes back to "waiting for a person".
+- Upload the video and put its link in the README and the submission form (Manish).

@@ -51,6 +51,7 @@ export function TrendChart({ series, highlight = ["737/53/S4L", "737/53/S4R"] }:
     .forEach((p, i, a) => { if (i && p.y - a[i - 1].y < 14) p.y = a[i - 1].y + 14; ly.set(p.l, p.y); });
 
   return (
+    <div className="scroll-x">
     <svg className="trend" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Aircraft per stringer line, 12-month window, 2009 to 2012" onMouseLeave={() => setHover(null)}>
       <rect x={x(ACCIDENT)} y={MT} width={x(N - 1) - x(ACCIDENT)} height={H - MT - MB} fill="var(--alclad)" opacity={0.28} />
       {Array.from({ length: max / 10 + 1 }, (_, i) => i * 10).map((v) => (
@@ -77,6 +78,7 @@ export function TrendChart({ series, highlight = ["737/53/S4L", "737/53/S4R"] }:
       {hover && !labelled.includes(hover) && series.get(hover) && <text x={W - MR + 8} y={y(series.get(hover)![N - 1]) + 4} fontSize={12} style={{ fill: "var(--ink)" }}>{shortLine(hover)}</text>}
       <text x={ML} y={H - 2} fontSize={11}>Aircraft with skin-crack reports on each stringer line, 12 months to each month. Grey: every other line.</text>
     </svg>
+    </div>
   );
 }
 

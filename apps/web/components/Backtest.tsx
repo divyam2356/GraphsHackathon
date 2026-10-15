@@ -36,7 +36,7 @@ export function BacktestChart({ r, level }: { r: BacktestResult; level: "system"
   const H = TOP + r.stages.length * ROW + 30;
   const ticks = Array.from({ length: Math.round(max * 10) + 1 }, (_, k) => k / 10);
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="backtest" role="img" aria-label={`Hit rate against chance at the ${level} level, for three tests`}>
+    <div className="scroll-x"><svg viewBox={`0 0 ${W} ${H}`} className="backtest" role="img" aria-label={`Hit rate against chance at the ${level} level, for three tests`}>
       {ticks.map((t) => <g key={t}><line x1={x(t)} x2={x(t)} y1={TOP} y2={H - 26} stroke="var(--alclad)" strokeWidth={t === 0 ? 1.2 : 0.6} /><text x={x(t)} y={H - 10} textAnchor="middle" fontSize={11}>{Math.round(t * 100)}%</text></g>)}
       {r.stages.map((s, k) => {
         const st = s[level], y0 = TOP + k * ROW, base = y0 + ROW - 22;
@@ -57,7 +57,7 @@ export function BacktestChart({ r, level }: { r: BacktestResult; level: "system"
           </g>
         );
       })}
-    </svg>
+    </svg></div>
   );
 }
 
