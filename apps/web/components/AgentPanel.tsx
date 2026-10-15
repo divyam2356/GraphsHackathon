@@ -36,6 +36,8 @@ export function AgentPanel({ asOf, steps, onStep, onReset, onOpen, replayUrl = "
   const [mode, setMode] = useState<Mode>("scripted");
   const [busy, setBusy] = useState(false);
   const abort = useRef<AbortController | null>(null);
+  const list = useRef<HTMLOListElement>(null);
+  useEffect(() => { const el = list.current; if (el && el.scrollHeight > el.clientHeight) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" }); }, [steps.length]);
 
   useEffect(() => {
     fetch("/api/agent").then((r) => r.json()).then((j) => { setLive(j); if (j.live) setMode("agent"); }, () => setLive({ live: false, model: "" }));
@@ -88,7 +90,7 @@ export function AgentPanel({ asOf, steps, onStep, onReset, onOpen, replayUrl = "
         </p>
       </form>
 
-      <ol className="steps">
+      <ol className="steps" ref={list}>
         {rows.map((r, i) => {
           if (r.kind !== "tool") return <li key={i} className={`step-${r.kind}`}>{r.kind === "answer" ? <Linked text={r.text} onOpen={onOpen} /> : r.text}</li>;
           n++;

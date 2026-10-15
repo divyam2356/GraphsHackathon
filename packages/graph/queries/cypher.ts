@@ -64,14 +64,23 @@ export const CYPHER: Record<string, string> = {
     OPTIONAL MATCH (f)-[:SUPERSEDES*1..5]->(old:FixOrder)
     RETURN f.ad_no AS ad, f.date AS date, l.bin AS bin, collect(DISTINCT old.ad_no) AS replaces`,
   explain_path: `
-    MATCH (a) WHERE a.id = $from OR a.ev_id = $from OR a.ad_no = $from OR a.bin = $from
-    MATCH (b) WHERE b.id = $to OR b.ev_id = $to OR b.ad_no = $to OR b.bin = $to
-    // Evidence edges only: hub types (IS_A, IN_SYSTEM, FOR) and pathCount > 1 make the
-    // search enumerate thousands of paths through Model/System nodes and time out.
-    CALL algo.SPpaths({sourceNode:a, targetNode:b, relDirection:'both', maxLen:6, pathCount:1,
+    // Endpoints by indexed key (an unlabelled OR scan of 250k nodes cost ~80 ms).
+    CALL { MATCH (x:Report {id:$from}) RETURN x UNION MATCH (x:Accident {ev_id:$from}) RETURN x
+      UNION MATCH (x:FixOrder {ad_no:$from}) RETURN x UNION MATCH (x:Location {bin:$from}) RETURN x } WITH x AS a
+    CALL { MATCH (x:Report {id:$to}) RETURN x UNION MATCH (x:Accident {ev_id:$to}) RETURN x
+      UNION MATCH (x:FixOrder {ad_no:$to}) RETURN x UNION MATCH (x:Location {bin:$to}) RETURN x } WITH a, x AS b
+    // Search from the end with fewer edges: event -> stringer line takes 1 ms, line -> event 650 ms.
+    OPTIONAL MATCH (a)-[ea]-() WITH a, b, count(ea) AS da
+    OPTIONAL MATCH (b)-[eb]-() WITH a, b, da, count(eb) AS db
+    WITH da <= db AS fwd, CASE WHEN da <= db THEN a ELSE b END AS s, CASE WHEN da <= db THEN b ELSE a END AS t
+    // Evidence edges only, maxLen 4 (every evidence path we use is <= 4 hops). FalkorDB's
+    // shortestPath() is directed-only and these paths mix directions, so SPpaths with
+    // relDirection 'both'; maxLen 5+ explodes through hub nodes (6 s vs 10-130 ms at 4).
+    CALL algo.SPpaths({sourceNode:s, targetNode:t, relDirection:'both', maxLen:4, pathCount:1,
       relTypes:['ON','INVOLVED','AT','WITHIN','FOUND','PRECURSOR_OF','TARGETS','SUPERSEDES','CITES','MATCHES','SIGNATURE']}) YIELD path
-    RETURN [n IN nodes(path) | {labels:labels(n), id:coalesce(n.id, n.ev_id, n.ad_no, n.bin)}] AS hops,
-      [r IN relationships(path) | type(r)] AS rels`,
+    WITH fwd, nodes(path) AS ns, [r IN relationships(path) | type(r)] AS rs
+    RETURN [n IN CASE WHEN fwd THEN ns ELSE reverse(ns) END | {labels:labels(n), id:coalesce(n.id, n.ev_id, n.ad_no, n.bin)}] AS hops,
+      CASE WHEN fwd THEN rs ELSE reverse(rs) END AS rels`,
   rank_failure_modes: `
     MATCH (m:FailureMode) WHERE m.status = 'confirmed'
     OPTIONAL MATCH (m)-[s:SIGNATURE]->(l:Location)
@@ -91,9 +100,19 @@ export const CYPHER: Record<string, string> = {
     WITH al OPTIONAL MATCH (m:FailureMode {id:$modeId})
     FOREACH (_ IN CASE WHEN m IS NULL THEN [] ELSE [1] END | CREATE (al)-[:MATCHES]->(m))
     RETURN al.id AS id`,
+  // MERGE by name: proposing the same mode twice adds evidence instead of a duplicate.
+  // Evidence (report ids / ev_ids) is linked EVIDENCE_FOR. A person decides in the UI (decide_mode).
   propose_failure_mode: `
-    CREATE (m:FailureMode {id:randomUUID(), name:$draft.name, system:$draft.system, mechanism:$draft.mechanism,
-      status:'proposed', origin:'accident', support_at_decision:0}) RETURN m.id AS id`,
+    MERGE (m:FailureMode {name:$draft.name})
+      ON CREATE SET m.id = randomUUID(), m.system = $draft.system, m.mechanism = $draft.mechanism,
+        m.status = 'proposed', m.origin = 'accident', m.proposed_at = toString(date()), m.support_at_decision = 0
+    WITH m
+    OPTIONAL MATCH (r:Report) WHERE r.id IN coalesce($evidence, [])
+    WITH m, collect(r) AS rs
+    OPTIONAL MATCH (a:Accident) WHERE a.ev_id IN coalesce($evidence, [])
+    WITH m, rs, collect(a) AS acc
+    FOREACH (x IN rs + acc | MERGE (x)-[:EVIDENCE_FOR]->(m))
+    RETURN m.id AS id, m.name AS name, m.status AS status, size(rs) + size(acc) AS linked`,
   add_support: `
     MATCH (c:Case {id:$caseId}), (m:FailureMode {id:$modeId})
     MERGE (c)-[:SUPPORTS]->(m) RETURN c.id AS ok`,
@@ -158,6 +177,33 @@ export const CYPHER: Record<string, string> = {
     MATCH (r)-[:ON]->(a:Aircraft)
     WHERE $variants IS NULL OR a.variant IN $variants
     RETURN line.bin AS line, substring(r.date, 0, 4) AS year, count(DISTINCT a) AS aircraft`,
+  // Distinct aircraft per calendar year across a set of lines (e.g. S-4L and S-4R together).
+  lines_by_year: `
+    MATCH (line:Location) WHERE line.bin IN $lines
+    MATCH (r:Report)-[:AT]->(:Location)-[:WITHIN*0..1]->(line)
+    WHERE ($part IS NULL OR r.part = $part) AND ($condition IS NULL OR r.condition CONTAINS $condition)
+      AND r.date >= coalesce($from, '2008-01-01') AND r.date < coalesce($to, '2013-01-01')
+    MATCH (r)-[:ON]->(a:Aircraft)
+    WHERE $variants IS NULL OR a.variant IN $variants
+    RETURN substring(r.date, 0, 4) AS year, count(DISTINCT a) AS aircraft, count(DISTINCT r) AS reports ORDER BY year`,
+  // One failure mode with its evidence, for the approval card.
+  mode_card: `
+    MATCH (m:FailureMode {id:$id})
+    OPTIONAL MATCH (e)-[:EVIDENCE_FOR]->(m)
+    RETURN m {.*} AS mode, collect({label: labels(e)[0], id: coalesce(e.id, e.ev_id), date: e.date, text: coalesce(e.text, e.cause_text)}) AS evidence`,
+  // UI only, never an MCP tool: a person approves (confirmed) or defers (dormant) a proposed
+  // mode, or reopens it; who, when, why and the evidence count are stored on the node.
+  decide_mode: `
+    MATCH (m:FailureMode {id:$id})
+    WHERE ($decision = 'reopen' AND m.status IN ['confirmed', 'dormant'] AND m.origin <> 'seed')
+       OR ($decision <> 'reopen' AND m.status IN ['proposed', 'dormant'])
+    OPTIONAL MATCH (e)-[:EVIDENCE_FOR]->(m)
+    WITH m, count(e) AS support
+    SET m.status = CASE $decision WHEN 'approve' THEN 'confirmed' WHEN 'defer' THEN 'dormant' ELSE 'proposed' END,
+      m.approved_by = CASE $decision WHEN 'approve' THEN $by ELSE null END,
+      m.approved_at = CASE $decision WHEN 'approve' THEN $at ELSE null END,
+      m.decided_by = $by, m.decided_at = $at, m.decision_reason = $reason, m.support_at_decision = support
+    RETURN m.id AS id, m.status AS status, support`,
   // Live node/edge counts for the data-model view.
   graph_stats: `
     MATCH (n) RETURN labels(n)[0] AS label, count(n) AS n`,

@@ -30,7 +30,7 @@ export function buildServer(query: (name: string, args: unknown) => Promise<unkn
     { text: z.string(), asOf: asOf.optional() });
   tool("fix_orders", "FAA airworthiness directives (fix orders) for a model family issued up to asOf, with the location they target and the orders they replace.",
     { family: z.string(), bin: bin.optional(), asOf });
-  tool("explain_path", "Shortest evidence path between two records (report id, ev_id, AD number or location key) over evidence edges. Use it to show how a warning sign connects to an accident.",
+  tool("explain_path", "Shortest evidence path (up to 4 hops) between two records (report id, ev_id, AD number or location key) over evidence edges. Use it to show how a warning sign connects to an accident.",
     { from: z.string(), to: z.string() });
   tool("rank_failure_modes", "Confirmed failure modes with their signature locations, for scoring which known mode an event matches.",
     { tail: z.string(), family: z.string(), phase: z.string(), narrative: z.string(), asOf });

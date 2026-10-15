@@ -123,7 +123,7 @@ export async function runAgent(question: string, asOf: string, emit: Emit, maxSt
 }
 
 /** The same method with no model: a fixed tool sequence for one accident. Labelled "scripted" in the UI. */
-export async function runScripted(evId: string, asOf: string, emit: Emit): Promise<void> {
+export async function runScripted(evId: string, asOf: string, emit: Emit, opts: { draft?: boolean } = {}): Promise<void> {
   const c = await mcp();
   const { tools } = await c.listTools();
   const schemas = new Map(tools.map((t) => [t.name, t.inputSchema as Record<string, unknown>]));
@@ -149,6 +149,16 @@ export async function runScripted(evId: string, asOf: string, emit: Emit): Promi
   if (fleet?.aircraft) parts.push(`Across the fleet, ${fleet.aircraft} ${acc.family}s reported trouble on that line in the three years before.`);
   parts.push(orders.length ? `${orders.length} fix order(s) already covered it.` : "No fix order covered that line yet.");
   if (prior?.length) parts.push(`Leads worth review: ${line}.`);
+  if (opts.draft && prior?.length && line) {
+    // the method's last step: check known candidates, then draft one for a person to decide
+    await go("failure_mode_candidates", { caseId: evId });
+    const stringer = line.split("/")[2].replace(/^S(\d+)([LR])$/, "S-$1$2");
+    const r = (await go("propose_failure_mode", {
+      draft: { name: `Fatigue cracking at the ${stringer} lap joint, ${acc.family} Classic`, system: line.split("/")[1], mechanism: `Cracked stringer clips and skin along ${stringer} ahead of a skin fracture` },
+      evidence: [...prior.map((p) => p.id), evId],
+    })).data as Array<{ id: string; status: string }>;
+    if (r?.[0]) parts.push(`Drafted failure mode ${r[0].id} (${r[0].status}) for a person to review.`);
+  }
   emit({ type: "answer", text: parts.join(" ") });
 }
 

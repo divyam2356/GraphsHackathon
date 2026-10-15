@@ -6,8 +6,8 @@ import { CYPHER } from "@blackbox/graph/queries/cypher";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const VIEWS = new Set(["fleet_map", "line_window", "line_trend", "bin_reports", "graph_stats", "edge_stats", "subgraph", "get_accident", "prior_reports", "fix_orders", "hotspots", "failure_mode_candidates"]);
-const CACHED = new Set(["fleet_map", "line_window", "line_trend", "bin_reports"]);
+const VIEWS = new Set(["fleet_map", "line_window", "line_trend", "lines_by_year", "bin_reports", "graph_stats", "edge_stats", "subgraph", "get_accident", "prior_reports", "fix_orders", "hotspots", "failure_mode_candidates", "mode_card"]);
+const CACHED = new Set(["fleet_map", "line_window", "line_trend", "lines_by_year", "bin_reports"]);
 const cache = new Map<string, { rows: unknown; ms: number }>();
 
 export async function POST(req: Request) {

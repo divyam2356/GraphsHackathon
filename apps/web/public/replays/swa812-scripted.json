@@ -2,10 +2,10 @@
  "mode": "scripted",
  "asOf": "2011-04-01",
  "question": "Southwest 812 (NTSB ev_id 20110401X24330) lost part of its fuselage skin on 1 April 2011. Were there warning signs in the maintenance records before it?",
- "recorded": "2026-10-15T12:02:52.183Z",
+ "recorded": "2026-10-15T12:24:42.433Z",
  "steps": [
   {
-   "t": 199,
+   "t": 266,
    "step": {
     "type": "tool_call",
     "id": "s1",
@@ -17,12 +17,12 @@
    }
   },
   {
-   "t": 378,
+   "t": 547,
    "step": {
     "type": "tool_result",
     "id": "s1",
     "name": "get_accident",
-    "ms": 179,
+    "ms": 281,
     "isError": false,
     "rows": 1,
     "preview": {
@@ -62,7 +62,7 @@
    }
   },
   {
-   "t": 378,
+   "t": 547,
    "step": {
     "type": "tool_call",
     "id": "s2",
@@ -77,12 +77,12 @@
    }
   },
   {
-   "t": 444,
+   "t": 730,
    "step": {
     "type": "tool_result",
     "id": "s2",
     "name": "prior_reports",
-    "ms": 66,
+    "ms": 183,
     "isError": false,
     "rows": 2,
     "preview": [
@@ -122,7 +122,7 @@
    }
   },
   {
-   "t": 444,
+   "t": 731,
    "step": {
     "type": "tool_call",
     "id": "s3",
@@ -137,12 +137,12 @@
    }
   },
   {
-   "t": 568,
+   "t": 877,
    "step": {
     "type": "tool_result",
     "id": "s3",
     "name": "fleet_reports",
-    "ms": 124,
+    "ms": 146,
     "isError": false,
     "rows": 1,
     "preview": [
@@ -175,7 +175,7 @@
    }
   },
   {
-   "t": 568,
+   "t": 877,
    "step": {
     "type": "tool_call",
     "id": "s4",
@@ -189,12 +189,12 @@
    }
   },
   {
-   "t": 569,
+   "t": 879,
    "step": {
     "type": "tool_result",
     "id": "s4",
     "name": "fix_orders",
-    "ms": 1,
+    "ms": 2,
     "isError": false,
     "rows": 0,
     "preview": [],
@@ -212,7 +212,7 @@
    }
   },
   {
-   "t": 569,
+   "t": 879,
    "step": {
     "type": "tool_call",
     "id": "s5",
@@ -221,16 +221,16 @@
      "from": "SWAA101399",
      "to": "20110401X24330"
     },
-    "cypher": "MATCH (a) WHERE a.id = $from OR a.ev_id = $from OR a.ad_no = $from OR a.bin = $from\n    MATCH (b) WHERE b.id = $to OR b.ev_id = $to OR b.ad_no = $to OR b.bin = $to\n    // Evidence edges only: hub types (IS_A, IN_SYSTEM, FOR) and pathCount > 1 make the\n    // search enumerate thousands of paths through Model/System nodes and time out.\n    CALL algo.SPpaths({sourceNode:a, targetNode:b, relDirection:'both', maxLen:6, pathCount:1,\n      relTypes:['ON','INVOLVED','AT','WITHIN','FOUND','PRECURSOR_OF','TARGETS','SUPERSEDES','CITES','MATCHES','SIGNATURE']}) YIELD path\n    RETURN [n IN nodes(path) | {labels:labels(n), id:coalesce(n.id, n.ev_id, n.ad_no, n.bin)}] AS hops,\n      [r IN relationships(path) | type(r)] AS rels"
+    "cypher": "// Endpoints by indexed key (an unlabelled OR scan of 250k nodes cost ~80 ms).\n    CALL { MATCH (x:Report {id:$from}) RETURN x UNION MATCH (x:Accident {ev_id:$from}) RETURN x\n      UNION MATCH (x:FixOrder {ad_no:$from}) RETURN x UNION MATCH (x:Location {bin:$from}) RETURN x } WITH x AS a\n    CALL { MATCH (x:Report {id:$to}) RETURN x UNION MATCH (x:Accident {ev_id:$to}) RETURN x\n      UNION MATCH (x:FixOrder {ad_no:$to}) RETURN x UNION MATCH (x:Location {bin:$to}) RETURN x } WITH a, x AS b\n    // Search from the end with fewer edges: event -> stringer line takes 1 ms, line -> event 650 ms.\n    OPTIONAL MATCH (a)-[ea]-() WITH a, b, count(ea) AS da\n    OPTIONAL MATCH (b)-[eb]-() WITH a, b, da, count(eb) AS db\n    WITH da <= db AS fwd, CASE WHEN da <= db THEN a ELSE b END AS s, CASE WHEN da <= db THEN b ELSE a END AS t\n    // Evidence edges only, maxLen 4 (every evidence path we use is <= 4 hops). FalkorDB's\n    // shortestPath() is directed-only and these paths mix directions, so SPpaths with\n    // relDirection 'both'; maxLen 5+ explodes through hub nodes (6 s vs 10-130 ms at 4).\n    CALL algo.SPpaths({sourceNode:s, targetNode:t, relDirection:'both', maxLen:4, pathCount:1,\n      relTypes:['ON','INVOLVED','AT','WITHIN','FOUND','PRECURSOR_OF','TARGETS','SUPERSEDES','CITES','MATCHES','SIGNATURE']}) YIELD path\n    WITH fwd, nodes(path) AS ns, [r IN relationships(path) | type(r)] AS rs\n    RETURN [n IN CASE WHEN fwd THEN ns ELSE reverse(ns) END | {labels:labels(n), id:coalesce(n.id, n.ev_id, n.ad_no, n.bin)}] AS hops,\n      CASE WHEN fwd THEN rs ELSE reverse(rs) END AS rels"
    }
   },
   {
-   "t": 1192,
+   "t": 885,
    "step": {
     "type": "tool_result",
     "id": "s5",
     "name": "explain_path",
-    "ms": 623,
+    "ms": 6,
     "isError": false,
     "rows": 1,
     "preview": [
@@ -278,7 +278,7 @@
    }
   },
   {
-   "t": 1201,
+   "t": 894,
    "step": {
     "type": "answer",
     "text": "N632SW had 2 reports at 737/53/S4L in the two years before 1 April 2011: SWAA101400 (stringer clip cracked, 9 March 2010), SWAA101399 (stringer clip cracked, 9 March 2010). Across the fleet, 156 737s reported trouble on that line in the three years before. No fix order covered that line yet. Leads worth review: 737/53/S4L."

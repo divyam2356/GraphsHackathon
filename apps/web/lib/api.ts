@@ -17,7 +17,7 @@ export function view<T>(name: string, args: Record<string, unknown> = {}, fresh 
   return memo.get(key) as Promise<ViewResult<T>>;
 }
 
-export async function streamAgent(body: { mode: "agent" | "scripted"; question?: string; evId?: string; asOf: string }, onStep: (s: Step) => void, signal?: AbortSignal) {
+export async function streamAgent(body: { mode: "agent" | "scripted"; question?: string; evId?: string; asOf: string; draft?: boolean }, onStep: (s: Step) => void, signal?: AbortSignal) {
   const r = await fetch("/api/agent", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal });
   if (!r.ok || !r.body) throw new Error(`agent route failed (${r.status})`);
   const reader = r.body.getReader();
