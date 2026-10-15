@@ -3,26 +3,44 @@
 // (formula in scoring.ts) and never writes raw Cypher (fixed queries only).
 // No key / any API failure -> deterministic rule fallback, never a crash.
 
-const API = "https://api.anthropic.com/v1/messages";
-const MODEL = process.env.ANTHROPIC_MODEL ?? "claude-3-5-haiku-latest";
+const ANTHROPIC_API = "https://api.anthropic.com/v1/messages";
+const OA_BASE = process.env.LLM_BASE_URL ?? "https://api.openai.com/v1";
+const OA_MODEL = process.env.LLM_MODEL ?? process.env.ANTHROPIC_MODEL ?? "claude-3-5-haiku-latest";
 
 export function hasKey(): boolean {
-  return Boolean(process.env.ANTHROPIC_API_KEY);
+  return Boolean(process.env.ANTHROPIC_API_KEY || process.env.LLM_API_KEY);
 }
 
-async function chat(system: string, user: string): Promise<string> {
-  const r = await fetch(API, {
+async function chatAnthropic(system: string, user: string): Promise<string> {
+  const r = await fetch(ANTHROPIC_API, {
     method: "POST",
     headers: {
       "content-type": "application/json",
       "x-api-key": process.env.ANTHROPIC_API_KEY!,
       "anthropic-version": "2023-06-01",
     },
-    body: JSON.stringify({ model: MODEL, max_tokens: 300, system, messages: [{ role: "user", content: user }] }),
+    body: JSON.stringify({ model: process.env.ANTHROPIC_MODEL ?? OA_MODEL, max_tokens: 300, system, messages: [{ role: "user", content: user }] }),
   });
   if (!r.ok) throw new Error(`LLM ${r.status}`);
   const j = (await r.json()) as { content: Array<{ text?: string }> };
   return j.content.map((b) => b.text ?? "").join("");
+}
+
+// OpenAI-compatible chat completions (Groq / OpenRouter / Gemini-compat free tiers).
+async function chatOA(system: string, user: string): Promise<string> {
+  const r = await fetch(`${OA_BASE}/chat/completions`, {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${process.env.LLM_API_KEY!}` },
+    body: JSON.stringify({ model: OA_MODEL, max_tokens: 300, messages: [{ role: "system", content: system }, { role: "user", content: user }] }),
+  });
+  if (!r.ok) throw new Error(`LLM ${r.status}`);
+  const j = (await r.json()) as { choices: Array<{ message: { content: string } }> };
+  return j.choices[0]?.message.content ?? "";
+}
+
+async function chat(system: string, user: string): Promise<string> {
+  if (process.env.ANTHROPIC_API_KEY) return chatAnthropic(system, user);
+  return chatOA(system, user);
 }
 
 export interface Judgment { keep: boolean; reason: string }
