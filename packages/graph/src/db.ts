@@ -1,8 +1,8 @@
 // FalkorDB client wrapper (official `falkordb` npm package / falkordb-ts).
 // Docs: docs.falkordb.com/getting-started — FalkorDB.connect({host, port}),
 // client.selectGraph(name), graph.query() / graph.roQuery(), result.data.
-// Returns null when unreachable -> MCP server falls back to the demo store,
-// so agent + UI + video work on a fresh laptop. Real DB wins when up.
+// connect() returns null when FalkorDB is unreachable; callers fail loudly (run.ts).
+import "./env"; // the repo-root .env (FALKORDB_URL, FALKORDB_GRAPH) for every caller, the web routes included
 import { GRAPH_NAME } from "./index";
 
 export interface Db {
