@@ -1,0 +1,125 @@
+"use client";
+// The part of the graph an investigation touched: every node the agent's tool calls
+// returned, plus all edges among them (subgraph query), laid out with d3-force.
+// New nodes join as the agent works; nodes already placed keep their position.
+import { useEffect, useRef, useState } from "react";
+import { forceCollide, forceLink, forceManyBody, forceSimulation, forceX, forceY, type SimulationLinkDatum, type SimulationNodeDatum } from "d3-force";
+
+export interface GraphNode { id: number; labels: string[]; properties: Record<string, unknown> }
+export interface SubRow { node: GraphNode; out: Array<{ type: string; to: number } | null> }
+interface N extends SimulationNodeDatum { id: number; label: string; key: string; name: string }
+interface E extends SimulationLinkDatum<N> { type: string }
+
+const W = 760, H = 470;
+const DIST: Record<string, number> = { WITHIN: 70, AT: 90, ON: 100, INVOLVED: 110, FOUND: 80 };
+
+/** The id a node is known by in the UI (report id, ev_id, tail, location key, AD number). */
+export function nodeKey(n: GraphNode): string {
+  const p = n.properties;
+  return String(p.ev_id ?? p.ad_no ?? (n.labels[0] === "Location" ? p.bin : undefined) ?? (n.labels[0] === "Aircraft" ? p.tail : undefined) ?? p.id ?? n.id);
+}
+/** Short label drawn next to a node. */
+function nodeName(n: GraphNode): string {
+  const p = n.properties;
+  switch (n.labels[0]) {
+    case "Accident": return String(p.ntsb_no ?? p.ev_id);
+    case "Location": {
+      const parts = String(p.bin).split("/");
+      return parts.length === 2 ? "737 fuselage" : parts.slice(2).join(" ").replace(/^S(\d+)([LR])/, "S-$1$2").replace("BS", "BS ");
+    }
+    case "Finding": return p.cause_factor === "C" ? "Cause finding" : "Finding";
+    default: return nodeKey(n);
+  }
+}
+
+export function EvidenceGraph({ rows, kept, focus, onNode }: { rows: SubRow[]; kept?: Set<string>; focus?: string | null; onNode?: (n: GraphNode) => void }) {
+  const pos = useRef(new Map<number, { x: number; y: number }>());
+  const [g, setG] = useState<{ nodes: N[]; links: E[] }>({ nodes: [], links: [] });
+  const [, setFrame] = useState(0);
+  const byId = new Map(rows.map((r) => [r.node.id, r.node]));
+
+  useEffect(() => {
+    const nodes: N[] = rows.map((r) => {
+      const p = pos.current.get(r.node.id);
+      const a = Math.random() * Math.PI * 2;
+      return { id: r.node.id, label: r.node.labels[0], key: nodeKey(r.node), name: nodeName(r.node), x: p?.x ?? W / 2 + Math.cos(a) * 60, y: p?.y ?? H / 2 + Math.sin(a) * 60 };
+    });
+    const ids = new Set(nodes.map((n) => n.id));
+    const links: E[] = rows.flatMap((r) => r.out.flatMap((o) => (o && ids.has(o.to) ? [{ source: r.node.id, target: o.to, type: o.type }] : [])));
+    const sim = forceSimulation(nodes)
+      .force("link", forceLink<N, E>(links).id((d) => d.id).distance((l) => DIST[l.type] ?? 60).strength(0.8))
+      .force("charge", forceManyBody().strength(-520))
+      .force("collide", forceCollide(34))
+      .force("x", forceX(W / 2).strength(0.05))
+      .force("y", forceY(H / 2).strength(0.08))
+      .alpha(pos.current.size ? 0.6 : 1);
+    const keep = () => { for (const n of nodes) pos.current.set(n.id, { x: n.x!, y: n.y! }); };
+    setG({ nodes, links });
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      sim.stop().tick(300);
+      keep();
+      setFrame((f) => f + 1);
+      return;
+    }
+    let raf = 0;
+    sim.on("tick", () => { keep(); if (!raf) raf = requestAnimationFrame(() => { raf = 0; setFrame((f) => f + 1); }); });
+    return () => { sim.stop(); cancelAnimationFrame(raf); };
+  }, [rows]);
+
+  const few = g.nodes.length <= 28;
+  // Fit the view to the nodes (with room for labels), never zooming in past 1.6x.
+  const xs = g.nodes.map((n) => n.x!), ys = g.nodes.map((n) => n.y!);
+  let [x0, x1, y0, y1] = xs.length ? [Math.min(...xs) - 40, Math.max(...xs) + 120, Math.min(...ys) - 30, Math.max(...ys) + 30] : [0, W, 0, H];
+  const vw = Math.max(x1 - x0, W / 1.6), vh = Math.max(y1 - y0, H / 1.6), k = Math.max(vw / W, vh / H);
+  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+  [x0, y0] = [cx - (W * k) / 2, cy - (H * k) / 2];
+  return (
+    <div className="egraph">
+      <svg viewBox={`${x0} ${y0} ${W * k} ${H * k}`} role="img" aria-label={`Evidence graph, ${g.nodes.length} nodes`}>
+        {g.links.map((l, i) => {
+          const s = l.source as N, t = l.target as N;
+          return (
+            <g key={i}>
+              <line x1={s.x} y1={s.y} x2={t.x} y2={t.y} stroke="var(--graphite)" strokeOpacity={0.45} strokeWidth={1} />
+              {few && <text x={(s.x! + t.x!) / 2} y={(s.y! + t.y!) / 2 - 3} fontSize={8.5} textAnchor="middle" className="elabel">{l.type}</text>}
+            </g>
+          );
+        })}
+        {g.nodes.map((n) => {
+          const hot = kept?.has(n.key), on = focus === n.key;
+          const node = byId.get(n.id);
+          return (
+            <g key={n.id} transform={`translate(${n.x},${n.y})`} className="gnode" onClick={() => node && onNode?.(node)} tabIndex={0}
+              onKeyDown={(e) => { if (e.key === "Enter" && node) onNode?.(node); }} aria-label={`${n.label} ${n.name}`}>
+              <Shape label={n.label} hot={hot} />
+              {on && <circle r={15} fill="none" stroke="var(--ink)" strokeWidth={1.4} strokeDasharray="3 2" />}
+              <text x={11} y={4} fontSize={11} fontWeight={n.label === "Accident" || hot ? 700 : 400} className="nlabel">{n.name}</text>
+            </g>
+          );
+        })}
+        {!g.nodes.length && <text x={x0 + (W * k) / 2} y={y0 + (H * k) / 2} textAnchor="middle" fontSize={13} className="nlabel">The records the agent touches appear here, joined by their edges.</text>}
+      </svg>
+      <div className="glegend">
+        {["Accident", "Report", "Aircraft", "Location", "Finding", "FixOrder"].map((l) => (
+          <span key={l}><svg width="16" height="16" viewBox="-8 -8 16 16"><Shape label={l} small /></svg>{LEGEND[l]}</span>
+        ))}
+        <span><svg width="16" height="16" viewBox="-8 -8 16 16"><Shape label="Report" hot small /></svg>Earlier report at the same location</span>
+      </div>
+    </div>
+  );
+}
+
+const LEGEND: Record<string, string> = { Accident: "NTSB event", Report: "Maintenance report", Aircraft: "Aircraft", Location: "Location", Finding: "NTSB finding", FixOrder: "Fix order (AD)" };
+
+function Shape({ label, hot, small }: { label: string; hot?: boolean; small?: boolean }) {
+  const k = small ? 0.75 : 1;
+  switch (label) {
+    case "Accident": return <path d={`M0,${-9 * k} L${9 * k},0 L0,${9 * k} L${-9 * k},0 Z`} fill="var(--signal)" stroke="var(--signal-deep)" strokeWidth={1.2} />;
+    case "Report": return <circle r={6 * k} fill="var(--ink)" stroke={hot ? "var(--signal)" : "var(--sheet)"} strokeWidth={hot ? 3 : 1.2} />;
+    case "Aircraft": return <rect x={-6.5 * k} y={-6.5 * k} width={13 * k} height={13 * k} rx={2} fill="var(--sheet)" stroke="var(--ink)" strokeWidth={1.8} />;
+    case "Location": return <circle r={4.5 * k} fill="var(--graphite)" />;
+    case "Finding": return <circle r={4.5 * k} fill="var(--sheet)" stroke="var(--graphite)" strokeWidth={1.5} />;
+    case "FixOrder": return <rect x={-8 * k} y={-5 * k} width={16 * k} height={10 * k} fill="var(--sheet)" stroke="var(--ink)" strokeWidth={1.4} strokeDasharray="2.5 1.5" />;
+    default: return <circle r={5 * k} fill="var(--alclad)" />;
+  }
+}

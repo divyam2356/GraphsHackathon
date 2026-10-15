@@ -37,8 +37,8 @@ For a new pattern no known mode fits: failure_mode_candidates first, add_support
 
 Answer in under 150 words, plain sentences. Cite record ids exactly as the tools return them (report ids like SWAA101399, ev_ids, AD numbers, location keys) so the interface can link them. End with one line starting "Leads worth review:".`;
 
-// ---------- MCP client (one per process) ----------
-let client: Promise<Client> | null = null;
+// ---------- MCP client (one per process; on globalThis so Next dev reloads reuse it) ----------
+const g = globalThis as { __blackboxMcp?: Promise<Client> | null };
 
 function repoRoot(): string {
   let d = process.cwd();
@@ -52,7 +52,7 @@ function repoRoot(): string {
 
 /** Our MCP server as a child process; the env passes only what it needs. */
 export function mcp(): Promise<Client> {
-  return (client ??= (async () => {
+  return (g.__blackboxMcp ??= (async () => {
     const root = repoRoot();
     const env: Record<string, string> = { PATH: process.env.PATH ?? "", HOME: process.env.HOME ?? "" };
     for (const k of ["FALKORDB_URL", "FALKORDB_GRAPH", "DEMO"]) if (process.env[k]) env[k] = process.env[k]!;
@@ -62,7 +62,7 @@ export function mcp(): Promise<Client> {
       cwd: root, env, stderr: "inherit",
     }));
     return c;
-  })().catch((e) => { client = null; throw e; }));
+  })().catch((e) => { g.__blackboxMcp = null; throw e; }));
 }
 
 // ---------- one tool call through MCP, with the time machine enforced ----------
@@ -129,24 +129,27 @@ export async function runScripted(evId: string, asOf: string, emit: Emit): Promi
   const schemas = new Map(tools.map((t) => [t.name, t.inputSchema as Record<string, unknown>]));
   let n = 0;
   const go = (name: string, args: Record<string, unknown>) => call(c, name, args, asOf, emit, `s${++n}`, schemas);
-  emit({ type: "note", text: "Scripted run: a fixed sequence of the same MCP tools, no model." });
   const acc = (await go("get_accident", { ev_id: evId })).data as { tail?: string; family?: string; findings?: Array<{ at?: string; kind?: string }> } | null;
   if (!acc?.tail) { emit({ type: "error", text: `No mechanical NTSB event ${evId} in the graph` }); return; }
   const at = acc.findings?.find((f) => f.kind === "cause")?.at ?? acc.findings?.[0]?.at;
   const line = at?.split("/").slice(0, 3).join("/");
-  const prior = (await go("prior_reports", { tail: acc.tail, bin: line, asOf, windowDays: 730 })).data as Array<{ id: string }>;
+  const prior = (await go("prior_reports", { tail: acc.tail, bin: line, asOf, windowDays: 730 })).data as Array<{ id: string; date: string; part?: string; condition?: string }>;
+  let fleet: { aircraft?: number } | undefined, orders: unknown[] = [];
   if (line) {
     const from = `${Number(asOf.slice(0, 4)) - 3}${asOf.slice(4)}`;
-    await go("fleet_reports", { family: acc.family, bin: line, from, to: asOf });
-    await go("fix_orders", { family: acc.family, bin: line, asOf });
+    fleet = ((await go("fleet_reports", { family: acc.family, bin: line, from, to: asOf })).data as Array<{ aircraft?: number }>)?.[0];
+    orders = ((await go("fix_orders", { family: acc.family, bin: line, asOf })).data as unknown[]) ?? [];
   }
   if (prior?.[0]) await go("explain_path", { from: prior[prior.length - 1].id, to: evId });
-  emit({
-    type: "answer",
-    text: prior?.length
-      ? `${acc.tail} had ${prior.length} report(s) at ${line} in the 2 years before ${asOf}: ${prior.map((p) => p.id).join(", ")}. Leads worth review: ${line}.`
-      : `No reports on ${acc.tail} at ${line ?? "the finding's location"} before ${asOf}.`,
-  });
+  const what = (p: { part?: string; condition?: string }) => [p.part, p.condition].filter(Boolean).join(" ").toLowerCase() || "a report";
+  const day = (iso: string) => new Date(iso + "T00:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+  const parts = prior?.length
+    ? [`${acc.tail} had ${prior.length === 1 ? "one report" : `${prior.length} reports`} at ${line} in the two years before ${day(asOf)}: ${prior.map((p) => `${p.id} (${what(p)}, ${day(p.date)})`).join(", ")}.`]
+    : [`No reports on ${acc.tail} at ${line ?? "the finding's location"} in the two years before ${day(asOf)}.`];
+  if (fleet?.aircraft) parts.push(`Across the fleet, ${fleet.aircraft} ${acc.family}s reported trouble on that line in the three years before.`);
+  parts.push(orders.length ? `${orders.length} fix order(s) already covered it.` : "No fix order covered that line yet.");
+  if (prior?.length) parts.push(`Leads worth review: ${line}.`);
+  emit({ type: "answer", text: parts.join(" ") });
 }
 
 // ---------- helpers ----------

@@ -138,6 +138,17 @@ export const CYPHER: Record<string, string> = {
     MATCH (r)-[:ON]->(a:Aircraft)
     WHERE $variants IS NULL OR a.variant IN $variants
     RETURN b.stringer AS stringer, b.side AS side, b.station_bin AS station, count(DISTINCT a) AS aircraft, count(r) AS reports`,
+  // Per line: distinct aircraft in the window before asOf (ac) and the window before that (ac_prev).
+  // The map margin; hotspots is the same count ranked, for the agent.
+  line_window: `
+    MATCH (line:Location {level:'line', family:$family, chapter:coalesce($chapter, '53')})
+    MATCH (r:Report)-[:AT]->(:Location)-[:WITHIN*0..1]->(line)
+    WHERE r.date < $asOf AND r.date >= toString(date($asOf) - duration({days: 2 * coalesce($windowDays, 365)}))
+      AND ($part IS NULL OR r.part = $part) AND ($condition IS NULL OR r.condition CONTAINS $condition)
+    MATCH (r)-[:ON]->(a:Aircraft)
+    WHERE $variants IS NULL OR a.variant IN $variants
+    WITH line, a, r.date >= toString(date($asOf) - duration({days: coalesce($windowDays, 365)})) AS recent
+    RETURN line.bin AS line, count(DISTINCT CASE WHEN recent THEN a END) AS ac, count(DISTINCT CASE WHEN NOT recent THEN a END) AS ac_prev`,
   // Yearly distinct aircraft per line (e.g. S-4 vs the rest of the fuselage).
   line_trend: `
     MATCH (line:Location {level:'line', family:$family, chapter:coalesce($chapter, '53')})
@@ -151,7 +162,16 @@ export const CYPHER: Record<string, string> = {
   graph_stats: `
     MATCH (n) RETURN labels(n)[0] AS label, count(n) AS n`,
   edge_stats: `
-    MATCH ()-[e]->() RETURN type(e) AS type, count(e) AS n`,
+    MATCH (a)-[e]->(b) RETURN labels(a)[0] AS from, type(e) AS type, labels(b)[0] AS to, count(e) AS n`,
+  // The reports behind one map cell (or any location key), newest first.
+  bin_reports: `
+    MATCH (r:Report)-[:AT]->(:Location)-[:WITHIN*0..2]->(:Location {bin:$bin})
+    WHERE r.date < $asOf AND r.date >= toString(date($asOf) - duration({days: coalesce($windowDays, 365)}))
+      AND ($part IS NULL OR r.part = $part) AND ($condition IS NULL OR r.condition CONTAINS $condition)
+    MATCH (r)-[:ON]->(a:Aircraft)
+    WHERE $variants IS NULL OR a.variant IN $variants
+    RETURN r.id AS id, r.date AS date, a.tail AS tail, a.variant AS variant, r.part AS part, r.condition AS condition, r.text AS text
+    ORDER BY r.date DESC LIMIT 60`,
   // Induced subgraph over the nodes an investigation touched (typed keys, indexed lookups).
   subgraph: `
     CALL {

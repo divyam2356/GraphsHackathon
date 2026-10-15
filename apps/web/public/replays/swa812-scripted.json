@@ -1,0 +1,288 @@
+{
+ "mode": "scripted",
+ "asOf": "2011-04-01",
+ "question": "Southwest 812 (NTSB ev_id 20110401X24330) lost part of its fuselage skin on 1 April 2011. Were there warning signs in the maintenance records before it?",
+ "recorded": "2026-10-15T12:02:52.183Z",
+ "steps": [
+  {
+   "t": 199,
+   "step": {
+    "type": "tool_call",
+    "id": "s1",
+    "name": "get_accident",
+    "args": {
+     "ev_id": "20110401X24330"
+    },
+    "cypher": "MATCH (a:Accident {ev_id:$ev_id})-[i:INVOLVED]->(t:Aircraft)-[:IS_A]->(m:Model)\n    OPTIONAL MATCH (a)-[fo:FOUND]->(f:Finding)-[:AT]->(l:Location)\n    RETURN a.ev_id AS ev_id, a.ntsb_no AS ntsb_no, a.date AS date, t.tail AS tail, t.id AS aircraft,\n      t.variant AS variant, m.family AS family, i.far_part AS far_part, a.cause_text AS cause,\n      collect({finding:f.text, kind:fo.kind, chapter:f.chapter, at:l.bin}) AS findings"
+   }
+  },
+  {
+   "t": 378,
+   "step": {
+    "type": "tool_result",
+    "id": "s1",
+    "name": "get_accident",
+    "ms": 179,
+    "isError": false,
+    "rows": 1,
+    "preview": {
+     "ev_id": "20110401X24330",
+     "ntsb_no": "DCA11MA039",
+     "date": "2011-04-01",
+     "tail": "N632SW",
+     "aircraft": "N632SW|27707",
+     "variant": "737-300",
+     "family": "737",
+     "far_part": "121",
+     "cause": "the improper installation of the fuselage crown skin panel at the S-4L lap joint during the manufacturing process, which resulted in multiple site damage fatigue cracking and eventual failure of the lower skin panel. Con…",
+     "findings": [
+      {
+       "finding": "Aircraft-Aircraft structures-Fuselage-Fuselage main structure-Incorrect service/maintenance",
+       "kind": "cause",
+       "chapter": "53",
+       "at": "737/53/S4L"
+      }
+     ]
+    },
+    "keys": {
+     "accidents": [
+      "20110401X24330"
+     ],
+     "reports": [],
+     "aircraft": [
+      "N632SW|27707"
+     ],
+     "locations": [
+      "737/53",
+      "737/53/S4L"
+     ],
+     "fixorders": [],
+     "modes": []
+    }
+   }
+  },
+  {
+   "t": 378,
+   "step": {
+    "type": "tool_call",
+    "id": "s2",
+    "name": "prior_reports",
+    "args": {
+     "tail": "N632SW",
+     "bin": "737/53/S4L",
+     "asOf": "2011-04-01",
+     "windowDays": 730
+    },
+    "cypher": "MATCH (:Aircraft {tail:$tail})<-[:ON]-(r:Report)-[:AT]->(l:Location)\n    WHERE r.date < $asOf\n      AND r.date >= toString(date($asOf) - duration({days: coalesce($windowDays, 730)}))\n      AND ($bin IS NULL OR (l)-[:WITHIN*0..2]->(:Location {bin:$bin}))\n    RETURN r.id AS id, r.date AS date, r.text AS text, l.bin AS bin, r.part AS part, r.condition AS condition\n    ORDER BY r.date DESC LIMIT 50"
+   }
+  },
+  {
+   "t": 444,
+   "step": {
+    "type": "tool_result",
+    "id": "s2",
+    "name": "prior_reports",
+    "ms": 66,
+    "isError": false,
+    "rows": 2,
+    "preview": [
+     {
+      "id": "SWAA101400",
+      "date": "2010-03-09",
+      "text": "DURING SCHEDULED 14Y CHECK, FOUND STRINGER CLIP CRACKED AT BS 727A, STR 4L.  REMOVED AND REPLACED CLIP PER SRM.",
+      "bin": "737/53/S4L/BS720",
+      "part": "STRINGER CLIP",
+      "condition": "CRACKED"
+     },
+     {
+      "id": "SWAA101399",
+      "date": "2010-03-09",
+      "text": "DURING SCHEDULED 14Y CHECK, FOUND STRINGER CLIP CRACKED AT BS 639, STR 4L.  REMOVED AND REPLACED CLIP PER SRM.",
+      "bin": "737/53/S4L/BS620",
+      "part": "STRINGER CLIP",
+      "condition": "CRACKED"
+     }
+    ],
+    "keys": {
+     "accidents": [],
+     "reports": [
+      "SWAA101400",
+      "SWAA101399"
+     ],
+     "aircraft": [],
+     "locations": [
+      "737/53",
+      "737/53/S4L",
+      "737/53/S4L/BS720",
+      "737/53/S4L/BS620"
+     ],
+     "fixorders": [],
+     "modes": []
+    }
+   }
+  },
+  {
+   "t": 444,
+   "step": {
+    "type": "tool_call",
+    "id": "s3",
+    "name": "fleet_reports",
+    "args": {
+     "family": "737",
+     "bin": "737/53/S4L",
+     "from": "2008-04-01",
+     "to": "2011-04-01"
+    },
+    "cypher": "MATCH (r:Report)-[:AT]->(:Location)-[:WITHIN*0..2]->(:Location {bin:$bin})\n    WHERE $from <= r.date < $to\n    MATCH (r)-[:ON]->(ac:Aircraft)\n    RETURN count(r) AS reports, count(DISTINCT ac) AS aircraft, collect(DISTINCT ac.variant) AS variants,\n      min(r.date) AS first, max(r.date) AS last"
+   }
+  },
+  {
+   "t": 568,
+   "step": {
+    "type": "tool_result",
+    "id": "s3",
+    "name": "fleet_reports",
+    "ms": 124,
+    "isError": false,
+    "rows": 1,
+    "preview": [
+     {
+      "reports": 391,
+      "aircraft": 156,
+      "variants": [
+       "737-300",
+       "737-400",
+       "737-500",
+       "737-200",
+       "737-800",
+       "737-700"
+      ],
+      "first": "2008-04-03",
+      "last": "2011-03-31"
+     }
+    ],
+    "keys": {
+     "accidents": [],
+     "reports": [],
+     "aircraft": [],
+     "locations": [
+      "737/53",
+      "737/53/S4L"
+     ],
+     "fixorders": [],
+     "modes": []
+    }
+   }
+  },
+  {
+   "t": 568,
+   "step": {
+    "type": "tool_call",
+    "id": "s4",
+    "name": "fix_orders",
+    "args": {
+     "family": "737",
+     "bin": "737/53/S4L",
+     "asOf": "2011-04-01"
+    },
+    "cypher": "MATCH (f:FixOrder)-[:APPLIES_TO]->(:Model {family:$family})\n    WHERE $asOf IS NULL OR f.date <= $asOf\n    OPTIONAL MATCH (f)-[:TARGETS]->(l:Location)\n    OPTIONAL MATCH (f)-[:SUPERSEDES*1..5]->(old:FixOrder)\n    RETURN f.ad_no AS ad, f.date AS date, l.bin AS bin, collect(DISTINCT old.ad_no) AS replaces"
+   }
+  },
+  {
+   "t": 569,
+   "step": {
+    "type": "tool_result",
+    "id": "s4",
+    "name": "fix_orders",
+    "ms": 1,
+    "isError": false,
+    "rows": 0,
+    "preview": [],
+    "keys": {
+     "accidents": [],
+     "reports": [],
+     "aircraft": [],
+     "locations": [
+      "737/53",
+      "737/53/S4L"
+     ],
+     "fixorders": [],
+     "modes": []
+    }
+   }
+  },
+  {
+   "t": 569,
+   "step": {
+    "type": "tool_call",
+    "id": "s5",
+    "name": "explain_path",
+    "args": {
+     "from": "SWAA101399",
+     "to": "20110401X24330"
+    },
+    "cypher": "MATCH (a) WHERE a.id = $from OR a.ev_id = $from OR a.ad_no = $from OR a.bin = $from\n    MATCH (b) WHERE b.id = $to OR b.ev_id = $to OR b.ad_no = $to OR b.bin = $to\n    // Evidence edges only: hub types (IS_A, IN_SYSTEM, FOR) and pathCount > 1 make the\n    // search enumerate thousands of paths through Model/System nodes and time out.\n    CALL algo.SPpaths({sourceNode:a, targetNode:b, relDirection:'both', maxLen:6, pathCount:1,\n      relTypes:['ON','INVOLVED','AT','WITHIN','FOUND','PRECURSOR_OF','TARGETS','SUPERSEDES','CITES','MATCHES','SIGNATURE']}) YIELD path\n    RETURN [n IN nodes(path) | {labels:labels(n), id:coalesce(n.id, n.ev_id, n.ad_no, n.bin)}] AS hops,\n      [r IN relationships(path) | type(r)] AS rels"
+   }
+  },
+  {
+   "t": 1192,
+   "step": {
+    "type": "tool_result",
+    "id": "s5",
+    "name": "explain_path",
+    "ms": 623,
+    "isError": false,
+    "rows": 1,
+    "preview": [
+     {
+      "hops": [
+       {
+        "labels": [
+         "Report"
+        ],
+        "id": "SWAA101399"
+       },
+       {
+        "labels": [
+         "Aircraft"
+        ],
+        "id": "N632SW|27707"
+       },
+       {
+        "labels": [
+         "Accident"
+        ],
+        "id": "20110401X24330"
+       }
+      ],
+      "rels": [
+       "ON",
+       "INVOLVED"
+      ]
+     }
+    ],
+    "keys": {
+     "accidents": [
+      "20110401X24330"
+     ],
+     "reports": [
+      "SWAA101399"
+     ],
+     "aircraft": [
+      "N632SW|27707"
+     ],
+     "locations": [],
+     "fixorders": [],
+     "modes": []
+    }
+   }
+  },
+  {
+   "t": 1201,
+   "step": {
+    "type": "answer",
+    "text": "N632SW had 2 reports at 737/53/S4L in the two years before 1 April 2011: SWAA101400 (stringer clip cracked, 9 March 2010), SWAA101399 (stringer clip cracked, 9 March 2010). Across the fleet, 156 737s reported trouble on that line in the three years before. No fix order covered that line yet. Leads worth review: 737/53/S4L."
+   }
+  }
+ ]
+}
