@@ -27,20 +27,22 @@ export async function playReplay(r: Replay, onStep: (s: Step) => void, signal: A
   }
 }
 
-export function AgentPanel({ asOf, steps, onStep, onReset, onOpen, replayUrl = "/replays/swa812-scripted.json", autorun }: {
+export function AgentPanel({ asOf, steps, onStep, onReset, onOpen, replayUrl = "/replays/swa812-agent.json", autorun }: {
   asOf: string; steps: Step[]; onStep: (s: Step) => void; onReset: () => void;
   onOpen: (id: string) => void; replayUrl?: string; autorun?: Mode;
 }) {
   const [question, setQuestion] = useState(DEFAULT_QUESTION);
   const [live, setLive] = useState<{ live: boolean; model: string } | null>(null);
-  const [mode, setMode] = useState<Mode>("scripted");
+  const [mode, setMode] = useState<Mode>("recorded");
   const [busy, setBusy] = useState(false);
+  const [replay, setReplay] = useState<Replay | null>(null);
   const abort = useRef<AbortController | null>(null);
   const list = useRef<HTMLOListElement>(null);
   useEffect(() => { const el = list.current; if (el && el.scrollHeight > el.clientHeight) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" }); }, [steps.length]);
 
   useEffect(() => {
-    fetch("/api/agent").then((r) => r.json()).then((j) => { setLive(j); if (j.live) setMode("agent"); }, () => setLive({ live: false, model: "" }));
+    fetch("/api/agent").then((r) => r.json()).then((j) => setLive(j), () => setLive({ live: false, model: "" }));
+    fetch(replayUrl).then((r) => (r.ok ? r.json() : null)).then(setReplay, () => {});
   }, []);
   useEffect(() => { if (autorun) run(autorun); }, [autorun]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -50,7 +52,7 @@ export function AgentPanel({ asOf, steps, onStep, onReset, onOpen, replayUrl = "
     onReset();
     setBusy(true);
     try {
-      if (m === "recorded") await playReplay(await fetch(replayUrl).then((r) => r.json()), onStep, a.signal);
+      if (m === "recorded") await playReplay(replay ?? (await fetch(replayUrl).then((r) => r.json())), onStep, a.signal);
       else await streamAgent({ mode: m, question, evId: SWA812.evId, asOf }, onStep, a.signal);
     } catch (e) {
       if (!a.signal.aborted) onStep({ type: "error", text: (e as Error).message });
@@ -83,9 +85,9 @@ export function AgentPanel({ asOf, steps, onStep, onReset, onOpen, replayUrl = "
           <button type="submit" className="go" disabled={busy}>{busy ? "Investigating" : "Investigate"}</button>
         </div>
         <p className="ask-note">
-          {mode === "agent" && live?.live && <>The model ({live.model}) picks MCP tools itself. </>}
+          {mode === "agent" && live?.live && <>The model ({live.model}, free tier) picks MCP tools itself; free models can take minutes. </>}
           {mode === "scripted" && <>The same MCP tools in a fixed order, with no model. </>}
-          {mode === "recorded" && <>A saved run, replayed. </>}
+          {mode === "recorded" && replay && <>A real {replay.mode === "agent" ? `run of ${replay.model}` : "scripted run"}, saved {new Date(replay.recorded).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} and replayed faster. </>}
           It sees records before {fmtDate(asOf)}.
         </p>
       </form>

@@ -103,7 +103,7 @@ details pre { margin: 6px 0 0; padding: 9px 11px; background: var(--ink); color:
 .step-error { color: var(--signal-deep); }
 .step-answer { padding: 12px 0 0 34px; border-top: 2px solid var(--ink); }
 .step-answer p { margin: 0; font-family: var(--text); font-size: 17px; line-height: 1.55; max-width: 62ch; }
-.id-link { border: 0; background: none; padding: 0; font: inherit; color: var(--ink); text-decoration: underline; text-decoration-color: var(--signal); text-underline-offset: 3px; cursor: pointer; }
+.id-link { display: inline; border: 0; background: none; padding: 0; font: inherit; color: var(--ink); text-decoration: underline; text-decoration-color: var(--signal); text-underline-offset: 3px; cursor: pointer; }
 
 .egraph > svg { display: block; width: 100%; height: auto; background: var(--sheet); border: 1px solid var(--alclad); border-radius: 4px; }
 .egraph .nlabel { fill: var(--ink); font-family: var(--ui); paint-order: stroke; stroke: var(--sheet); stroke-width: 3px; stroke-linejoin: round; }

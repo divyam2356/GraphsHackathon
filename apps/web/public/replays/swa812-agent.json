@@ -1,0 +1,534 @@
+{
+ "mode": "agent",
+ "model": "nvidia/nemotron-3-super-120b-a12b:free",
+ "asOf": "2011-04-01",
+ "question": "Southwest 812 (NTSB ev_id 20110401X24330) lost part of its fuselage skin on 1 April 2011. Were there warning signs in the maintenance records before it?",
+ "recorded": "2026-10-15T12:43:59.973Z",
+ "steps": [
+  {
+   "t": 7388,
+   "step": {
+    "type": "note",
+    "text": "Model: nvidia/nemotron-3-super-120b-a12b:free"
+   }
+  },
+  {
+   "t": 7388,
+   "step": {
+    "type": "tool_call",
+    "id": "call-e64db30a-1da6-4d15-a9e0-612870af5698",
+    "name": "get_accident",
+    "args": {
+     "ev_id": "20110401X24330"
+    },
+    "cypher": "MATCH (a:Accident {ev_id:$ev_id})-[i:INVOLVED]->(t:Aircraft)-[:IS_A]->(m:Model)\n    OPTIONAL MATCH (a)-[fo:FOUND]->(f:Finding)-[:AT]->(l:Location)\n    RETURN a.ev_id AS ev_id, a.ntsb_no AS ntsb_no, a.date AS date, t.tail AS tail, t.id AS aircraft,\n      t.variant AS variant, m.family AS family, i.far_part AS far_part, a.cause_text AS cause,\n      collect({finding:f.text, kind:fo.kind, chapter:f.chapter, at:l.bin}) AS findings"
+   }
+  },
+  {
+   "t": 7558,
+   "step": {
+    "type": "tool_result",
+    "id": "call-e64db30a-1da6-4d15-a9e0-612870af5698",
+    "name": "get_accident",
+    "ms": 170,
+    "isError": false,
+    "rows": 1,
+    "preview": {
+     "ev_id": "20110401X24330",
+     "ntsb_no": "DCA11MA039",
+     "date": "2011-04-01",
+     "tail": "N632SW",
+     "aircraft": "N632SW|27707",
+     "variant": "737-300",
+     "family": "737",
+     "far_part": "121",
+     "cause": "the improper installation of the fuselage crown skin panel at the S-4L lap joint during the manufacturing process, which resulted in multiple site damage fatigue cracking and eventual failure of the lower skin panel. Con…",
+     "findings": [
+      {
+       "finding": "Aircraft-Aircraft structures-Fuselage-Fuselage main structure-Incorrect service/maintenance",
+       "kind": "cause",
+       "chapter": "53",
+       "at": "737/53/S4L"
+      }
+     ]
+    },
+    "keys": {
+     "accidents": [
+      "20110401X24330"
+     ],
+     "reports": [],
+     "aircraft": [
+      "N632SW|27707"
+     ],
+     "locations": [
+      "737/53",
+      "737/53/S4L"
+     ],
+     "fixorders": [],
+     "modes": []
+    }
+   }
+  },
+  {
+   "t": 13763,
+   "step": {
+    "type": "tool_call",
+    "id": "call-6a1aa9a4-0d58-461f-9706-1b89244ea485",
+    "name": "prior_reports",
+    "args": {
+     "tail": "N632SW",
+     "bin": "737/53/S4L",
+     "asOf": "2011-04-01"
+    },
+    "cypher": "MATCH (:Aircraft {tail:$tail})<-[:ON]-(r:Report)-[:AT]->(l:Location)\n    WHERE r.date < $asOf\n      AND r.date >= toString(date($asOf) - duration({days: coalesce($windowDays, 730)}))\n      AND ($bin IS NULL OR (l)-[:WITHIN*0..2]->(:Location {bin:$bin}))\n    RETURN r.id AS id, r.date AS date, r.text AS text, l.bin AS bin, r.part AS part, r.condition AS condition\n    ORDER BY r.date DESC LIMIT 50"
+   }
+  },
+  {
+   "t": 13812,
+   "step": {
+    "type": "tool_result",
+    "id": "call-6a1aa9a4-0d58-461f-9706-1b89244ea485",
+    "name": "prior_reports",
+    "ms": 49,
+    "isError": false,
+    "rows": 2,
+    "preview": [
+     {
+      "id": "SWAA101400",
+      "date": "2010-03-09",
+      "text": "DURING SCHEDULED 14Y CHECK, FOUND STRINGER CLIP CRACKED AT BS 727A, STR 4L.  REMOVED AND REPLACED CLIP PER SRM.",
+      "bin": "737/53/S4L/BS720",
+      "part": "STRINGER CLIP",
+      "condition": "CRACKED"
+     },
+     {
+      "id": "SWAA101399",
+      "date": "2010-03-09",
+      "text": "DURING SCHEDULED 14Y CHECK, FOUND STRINGER CLIP CRACKED AT BS 639, STR 4L.  REMOVED AND REPLACED CLIP PER SRM.",
+      "bin": "737/53/S4L/BS620",
+      "part": "STRINGER CLIP",
+      "condition": "CRACKED"
+     }
+    ],
+    "keys": {
+     "accidents": [],
+     "reports": [
+      "SWAA101400",
+      "SWAA101399"
+     ],
+     "aircraft": [],
+     "locations": [
+      "737/53",
+      "737/53/S4L",
+      "737/53/S4L/BS720",
+      "737/53/S4L/BS620"
+     ],
+     "fixorders": [],
+     "modes": []
+    }
+   }
+  },
+  {
+   "t": 28904,
+   "step": {
+    "type": "tool_call",
+    "id": "call-8ed1dc90-20b5-4443-85f4-b6b6005e3fe1",
+    "name": "prior_reports",
+    "args": {
+     "tail": "N632SW",
+     "asOf": "2011-04-01"
+    },
+    "cypher": "MATCH (:Aircraft {tail:$tail})<-[:ON]-(r:Report)-[:AT]->(l:Location)\n    WHERE r.date < $asOf\n      AND r.date >= toString(date($asOf) - duration({days: coalesce($windowDays, 730)}))\n      AND ($bin IS NULL OR (l)-[:WITHIN*0..2]->(:Location {bin:$bin}))\n    RETURN r.id AS id, r.date AS date, r.text AS text, l.bin AS bin, r.part AS part, r.condition AS condition\n    ORDER BY r.date DESC LIMIT 50"
+   }
+  },
+  {
+   "t": 28951,
+   "step": {
+    "type": "tool_result",
+    "id": "call-8ed1dc90-20b5-4443-85f4-b6b6005e3fe1",
+    "name": "prior_reports",
+    "ms": 47,
+    "isError": false,
+    "rows": 38,
+    "preview": [
+     {
+      "id": "SWAA112349",
+      "date": "2011-03-31",
+      "text": "DURING SCHEDULED OTS CHECK, FOUND LT WING NR 2 SLAT CRACKED AT I/B AUX TRACK LOWER SURFACE.  REPAIRED NR 2 SLAT PER SRM.",
+      "bin": "737/57",
+      "part": "SKIN",
+      "condition": "CRACKED"
+     },
+     {
+      "id": "SWAA112350",
+      "date": "2011-03-31",
+      "text": "DURING SCHEDULED OTS CHECK, FOUND EEPLS INOP.  REMOVED AND REPLACED BATTERY CHARGER PER MM.",
+      "bin": "737/33",
+      "part": "CHARGER",
+      "condition": "INOPERATIVE"
+     },
+     {
+      "id": "SWAA112328",
+      "date": "2011-03-31",
+      "text": "DURING SCHEDULED OTS CHECK, FOUND LT OVERWING EMERGENCY EXIT LIGHT LENS LOOSE.  REMOVED AND REPLACED LENS PER MM.",
+      "bin": "737/33",
+      "part": "LENS",
+      "condition": "LOOSE"
+     },
+     {
+      "id": "SWAA112174",
+      "date": "2011-03-27",
+      "text": "DURING SCHEDULED OTS CHECK, FOUND LT WING NR 1 SLAT I/B LOWER SURFACE CRACKED.  REPAIRED NR 1 SLAT PER SRM.",
+      "bin": "737/57",
+      "part": "SKIN",
+      "condition": "CRACKED"
+     },
+     {
+      "id": "SWAA112125",
+      "date": "2011-03-21",
+      "text": "DURING SCHEDULED OTS CHECK, FOUND LT WING I/B FORE FLAP DELAMINATED.  REPAIRED FORE FLAP PER SRM.",
+      "bin": "737/57",
+      "part": "FLAP",
+      "condition": "DELAMINATED"
+     },
+     {
+      "id": "SWAA106678",
+      "date": "2010-10-24",
+      "text": "R2 DOOR EMERGENCY EVAC SLIDE FELL OUT, DID NOT DEPLOY.  RE-INSTALLED SLIDE PER MT.",
+      "bin": "737/25",
+      "part": "SLIDE",
+      "condition": "OUT OF POSITION"
+     },
+     {
+      "id": "SWAA104289",
+      "date": "2010-07-19",
+      "text": "DURING SCHEDULED 2HC2 CHECK, FOUND R1 DOOR EMERGENCY EVAC SLIDE OUT OF ADJUST.  ADJUSTED SLIDE PER MM.",
+      "bin": "737/25",
+      "part": "SLIDE",
+      "condition": "OUT OF ADJUST"
+     },
+     {
+      "id": "SWAA101643",
+      "date": "2010-03-21",
+      "text": "DURING SCHEDULED 14Y CHECK, FOUND EEPLS DAMAGED.  REMOVED AND REPLACED EEPLS PER MM.",
+      "bin": "737/33",
+      "part": "LIGHT",
+      "condition": "DAMAGED"
+     }
+    ],
+    "keys": {
+     "accidents": [],
+     "reports": [
+      "SWAA112349",
+      "SWAA112350",
+      "SWAA112328",
+      "SWAA112174",
+      "SWAA112125",
+      "SWAA106678",
+      "SWAA104289",
+      "SWAA101643",
+      "SWAA101642",
+      "SWAA101449",
+      "SWAA101398",
+      "SWAA101402",
+      "SWAA101397",
+      "SWAA101396",
+      "SWAA101399",
+      "SWAA101403",
+      "SWAA101401",
+      "SWAA101400",
+      "SWAA101355",
+      "SWAA101354",
+      "SWAA101295",
+      "SWAA101294",
+      "SWAA101254",
+      "SWAA101253",
+      "SWAA101252",
+      "SWAA101170",
+      "SWAA101169",
+      "SWAA101168",
+      "SWAA101083",
+      "SWAA101082",
+      "SWAA101081",
+      "SWAA101080",
+      "SWAA101079",
+      "SWAA101078",
+      "SWAA094431",
+      "SWAA094432",
+      "SWAA093937",
+      "SWAA092447"
+     ],
+     "aircraft": [],
+     "locations": [
+      "737/57",
+      "737/33",
+      "737/25",
+      "737/53",
+      "737/53/BS720",
+      "737/53/S8R",
+      "737/53/S8R/BS700",
+      "737/53/S7R",
+      "737/53/S7R/BS560",
+      "737/53/S9L",
+      "737/53/S9L/BS580",
+      "737/53/S8R/BS580",
+      "737/53/S6R",
+      "737/53/S6R/BS680",
+      "737/53/S4L",
+      "737/53/S4L/BS620",
+      "737/53/S3L",
+      "737/53/S3L/BS380",
+      "737/53/S6L",
+      "737/53/S6L/BS580",
+      "737/53/S4L/BS720",
+      "737/53/S8R/BS360",
+      "737/53/S8L",
+      "737/53/S8L/BS380",
+      "737/53/S8L/BS860",
+      "737/53/BS620",
+      "737/53/S7L",
+      "737/53/S7L/BS400",
+      "737/53/S8L/BS400",
+      "737/53/S8R/BS480",
+      "737/53/S8L/BS720",
+      "737/53/S8L/BS520",
+      "737/53/S8R/BS740",
+      "737/53/S8R/BS500",
+      "737/53/S8R/BS720",
+      "737/36"
+     ],
+     "fixorders": [],
+     "modes": []
+    }
+   }
+  },
+  {
+   "t": 143308,
+   "step": {
+    "type": "note",
+    "text": "Harness: Before answering, finish the method: fleet_reports and explain_path. Then answer."
+   }
+  },
+  {
+   "t": 164267,
+   "step": {
+    "type": "tool_call",
+    "id": "call-5db92d47-0407-44f1-8345-717f32f5e425",
+    "name": "fleet_reports",
+    "args": {
+     "family": "737",
+     "bin": "737/53/S4L",
+     "from": "2008-04-01",
+     "to": "2011-04-01"
+    },
+    "cypher": "MATCH (r:Report)-[:AT]->(:Location)-[:WITHIN*0..2]->(:Location {bin:$bin})\n    WHERE $from <= r.date < $to\n    MATCH (r)-[:ON]->(ac:Aircraft)\n    RETURN count(r) AS reports, count(DISTINCT ac) AS aircraft, collect(DISTINCT ac.variant) AS variants,\n      min(r.date) AS first, max(r.date) AS last"
+   }
+  },
+  {
+   "t": 164356,
+   "step": {
+    "type": "tool_result",
+    "id": "call-5db92d47-0407-44f1-8345-717f32f5e425",
+    "name": "fleet_reports",
+    "ms": 89,
+    "isError": false,
+    "rows": 1,
+    "preview": [
+     {
+      "reports": 391,
+      "aircraft": 156,
+      "variants": [
+       "737-300",
+       "737-400",
+       "737-500",
+       "737-200",
+       "737-800",
+       "737-700"
+      ],
+      "first": "2008-04-03",
+      "last": "2011-03-31"
+     }
+    ],
+    "keys": {
+     "accidents": [],
+     "reports": [],
+     "aircraft": [],
+     "locations": [
+      "737/53",
+      "737/53/S4L"
+     ],
+     "fixorders": [],
+     "modes": []
+    }
+   }
+  },
+  {
+   "t": 195178,
+   "step": {
+    "type": "tool_call",
+    "id": "call-9c0883d0-bd64-4bb1-bee8-21cda26190db",
+    "name": "explain_path",
+    "args": {
+     "from": "SWAA101399",
+     "to": "20110401X24330"
+    },
+    "cypher": "// Endpoints by indexed key (an unlabelled OR scan of 250k nodes cost ~80 ms).\n    CALL { MATCH (x:Report {id:$from}) RETURN x UNION MATCH (x:Accident {ev_id:$from}) RETURN x\n      UNION MATCH (x:FixOrder {ad_no:$from}) RETURN x UNION MATCH (x:Location {bin:$from}) RETURN x } WITH x AS a\n    CALL { MATCH (x:Report {id:$to}) RETURN x UNION MATCH (x:Accident {ev_id:$to}) RETURN x\n      UNION MATCH (x:FixOrder {ad_no:$to}) RETURN x UNION MATCH (x:Location {bin:$to}) RETURN x } WITH a, x AS b\n    // Search from the end with fewer edges: event -> stringer line takes 1 ms, line -> event 650 ms.\n    OPTIONAL MATCH (a)-[ea]-() WITH a, b, count(ea) AS da\n    OPTIONAL MATCH (b)-[eb]-() WITH a, b, da, count(eb) AS db\n    WITH da <= db AS fwd, CASE WHEN da <= db THEN a ELSE b END AS s, CASE WHEN da <= db THEN b ELSE a END AS t\n    // Evidence edges only, maxLen 4 (every evidence path we use is <= 4 hops). FalkorDB's\n    // shortestPath() is directed-only and these paths mix directions, so SPpaths with\n    // relDirection 'both'; maxLen 5+ explodes through hub nodes (6 s vs 10-130 ms at 4).\n    CALL algo.SPpaths({sourceNode:s, targetNode:t, relDirection:'both', maxLen:4, pathCount:1,\n      relTypes:['ON','INVOLVED','AT','WITHIN','FOUND','PRECURSOR_OF','TARGETS','SUPERSEDES','CITES','MATCHES','SIGNATURE']}) YIELD path\n    WITH fwd, nodes(path) AS ns, [r IN relationships(path) | type(r)] AS rs\n    RETURN [n IN CASE WHEN fwd THEN ns ELSE reverse(ns) END | {labels:labels(n), id:coalesce(n.id, n.ev_id, n.ad_no, n.bin)}] AS hops,\n      CASE WHEN fwd THEN rs ELSE reverse(rs) END AS rels"
+   }
+  },
+  {
+   "t": 195185,
+   "step": {
+    "type": "tool_result",
+    "id": "call-9c0883d0-bd64-4bb1-bee8-21cda26190db",
+    "name": "explain_path",
+    "ms": 7,
+    "isError": false,
+    "rows": 1,
+    "preview": [
+     {
+      "hops": [
+       {
+        "labels": [
+         "Report"
+        ],
+        "id": "SWAA101399"
+       },
+       {
+        "labels": [
+         "Aircraft"
+        ],
+        "id": "N632SW|27707"
+       },
+       {
+        "labels": [
+         "Accident"
+        ],
+        "id": "20110401X24330"
+       }
+      ],
+      "rels": [
+       "ON",
+       "INVOLVED"
+      ]
+     }
+    ],
+    "keys": {
+     "accidents": [
+      "20110401X24330"
+     ],
+     "reports": [
+      "SWAA101399"
+     ],
+     "aircraft": [
+      "N632SW|27707"
+     ],
+     "locations": [],
+     "fixorders": [],
+     "modes": []
+    }
+   }
+  },
+  {
+   "t": 215079,
+   "step": {
+    "type": "tool_call",
+    "id": "call-d86e561d-99e5-4880-b9fa-ecd59ea8bf50",
+    "name": "record_precursor",
+    "args": {
+     "reportId": "SWAA101399",
+     "accidentId": "20110401X24330",
+     "confidence": 0.8,
+     "reason": "Stringer clip crack at S4L indicates fatigue in lap joint where accident originated",
+     "asOf": "2011-04-01"
+    },
+    "cypher": "MATCH (r:Report {id:$reportId}), (a:Accident {ev_id:$accidentId})\n    MERGE (r)-[p:PRECURSOR_OF]->(a)\n    SET p.confidence=$confidence, p.reason=$reason, p.asOf=$asOf RETURN p.confidence AS ok"
+   }
+  },
+  {
+   "t": 215081,
+   "step": {
+    "type": "tool_result",
+    "id": "call-d86e561d-99e5-4880-b9fa-ecd59ea8bf50",
+    "name": "record_precursor",
+    "ms": 2,
+    "isError": false,
+    "rows": 1,
+    "preview": [
+     {
+      "ok": 0.8
+     }
+    ],
+    "keys": {
+     "accidents": [
+      "20110401X24330"
+     ],
+     "reports": [
+      "SWAA101399"
+     ],
+     "aircraft": [],
+     "locations": [],
+     "fixorders": [],
+     "modes": []
+    }
+   }
+  },
+  {
+   "t": 264247,
+   "step": {
+    "type": "tool_call",
+    "id": "call-cb6e9577-3283-4ad6-8b90-8f8d98e6c7dc",
+    "name": "record_precursor",
+    "args": {
+     "reportId": "SWAA101400",
+     "accidentId": "20110401X24330",
+     "confidence": 0.8,
+     "reason": "Stringer clip crack at S4L indicates fatigue in lap joint where accident originated",
+     "asOf": "2011-04-01"
+    },
+    "cypher": "MATCH (r:Report {id:$reportId}), (a:Accident {ev_id:$accidentId})\n    MERGE (r)-[p:PRECURSOR_OF]->(a)\n    SET p.confidence=$confidence, p.reason=$reason, p.asOf=$asOf RETURN p.confidence AS ok"
+   }
+  },
+  {
+   "t": 264249,
+   "step": {
+    "type": "tool_result",
+    "id": "call-cb6e9577-3283-4ad6-8b90-8f8d98e6c7dc",
+    "name": "record_precursor",
+    "ms": 2,
+    "isError": false,
+    "rows": 1,
+    "preview": [
+     {
+      "ok": 0.8
+     }
+    ],
+    "keys": {
+     "accidents": [
+      "20110401X24330"
+     ],
+     "reports": [
+      "SWAA101400"
+     ],
+     "aircraft": [],
+     "locations": [],
+     "fixorders": [],
+     "modes": []
+    }
+   }
+  },
+  {
+   "t": 278966,
+   "step": {
+    "type": "note",
+    "text": "Harness: Rewrite the answer without saying what caused or contributed to the accident: report warning signs and leads worth review only. The NTSB determines causes."
+   }
+  },
+  {
+   "t": 296815,
+   "step": {
+    "type": "answer",
+    "text": "Yes. Before the 1 Apr 2011 event, N632SW’s maintenance records showed two fuselage‑skin‑related service difficulty reports. On 9 Mar 2010, during a 14‑year check, a cracked stringer clip was found at BS 639, stringer 4‑left (S4L) – report SWAA101399 – and another cracked stringer clip at BS 727A, S4L – report SWAA101400. Both were repaired per the SRM. Fleet‑wide queries for the 737 family at location 737/53/S4L from 1 Apr 2008 to 1 Apr 2011 returned 391 reports on 156 aircraft, indicating a recurring issue in that area. The evidence path links each report to the accident through the aircraft N632SW (e.g., SWAA101399 → N632SW → 20110401X24330). Leads worth review: SWAA101399, SWAA101400."
+   }
+  }
+ ]
+}

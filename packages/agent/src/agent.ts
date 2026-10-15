@@ -3,6 +3,7 @@
 // through it (tools/call), so it only ever reaches FalkorDB through fixed Cypher.
 // runAgent / runScripted stream Steps to a callback; the web UI animates them.
 // Env: OPENROUTER_API_KEY (or LLM_API_KEY), LLM_MODEL, LLM_BASE_URL.
+import "@blackbox/graph/src/env"; // repo-root .env (Next only loads apps/web/.env)
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -19,12 +20,17 @@ export type Step =
 export type Emit = (s: Step) => void;
 
 const BASE = process.env.LLM_BASE_URL ?? "https://openrouter.ai/api/v1";
-const MODEL = process.env.LLM_MODEL ?? "anthropic/claude-haiku-5.5";
+// Free models (50 requests/day, often rate-limited upstream): try the primary, then these in order.
+const model = () => process.env.LLM_MODEL ?? "nvidia/nemotron-3-super-120b-a12b:free";
+// OpenRouter takes at most 3 models per request (primary + 2 fallbacks).
+// Named models only: the openrouter/free router picked a 2.6B model that broke the framing rule.
+const fallbacks = () => (process.env.LLM_FALLBACKS ?? "nvidia/nemotron-3.5-lightning:free,poolside/laguna-s-2.1:free")
+  .split(",").map((m) => m.trim()).filter((m) => m && m !== model()).slice(0, 2);
 const apiKey = () => process.env.OPENROUTER_API_KEY ?? process.env.LLM_API_KEY;
-export const agentModel = () => MODEL;
+export const agentModel = model;
 export const hasAgentKey = () => Boolean(apiKey());
 
-const system = (asOf: string) => `You are Black Box, an investigator's assistant. You work over a FalkorDB graph of NTSB mechanical accidents and incidents (2008 onward) and FAA maintenance reports (Service Difficulty Reports), joined by aircraft and by location.
+export const system = (asOf: string) => `You are Black Box, an investigator's assistant. You work over a FalkorDB graph of NTSB mechanical accidents and incidents (2008 onward) and FAA maintenance reports (Service Difficulty Reports), joined by aircraft and by location.
 
 Rules:
 - You report warning signs and leads worth review, never causes. The NTSB determines causes. Mechanical and structural events only.
@@ -84,42 +90,84 @@ async function call(c: Client, name: string, args: Record<string, unknown>, asOf
   return { text, data };
 }
 
-/** Model-driven investigation: the model picks tools until it answers (max steps). */
-export async function runAgent(question: string, asOf: string, emit: Emit, maxSteps = 14): Promise<void> {
-  if (!apiKey()) throw new Error("No LLM key: set OPENROUTER_API_KEY in .env (or use the scripted run)");
-  const c = await mcp();
+type Msg = { role: string; content: string | null; tool_calls?: Array<{ id: string; function: { name: string; arguments: string } }>; tool_call_id?: string };
+
+/** The MCP server's tools as OpenAI-style function specs, plus their input schemas by name. */
+export async function toolSpecs(c: Client) {
   const { tools } = await c.listTools();
   const schemas = new Map(tools.map((t) => [t.name, t.inputSchema as Record<string, unknown>]));
   const oaTools = tools.map((t) => {
     const { $schema: _drop, ...parameters } = t.inputSchema as Record<string, unknown>;
     return { type: "function", function: { name: t.name, description: t.description ?? "", parameters } };
   });
-  type Msg = { role: string; content: string | null; tool_calls?: Array<{ id: string; function: { name: string; arguments: string } }>; tool_call_id?: string };
+  return { schemas, oaTools };
+}
+
+/** Model-driven investigation: the model picks tools until it answers (max steps).
+ *  Free OpenRouter models allow 50 requests a day, so the step budget is kept small. */
+export async function runAgent(question: string, asOf: string, emit: Emit, maxSteps = 10): Promise<void> {
+  if (!apiKey()) throw new Error("No LLM key: set OPENROUTER_API_KEY in .env (or use the scripted run)");
+  const c = await mcp();
+  const { schemas, oaTools } = await toolSpecs(c);
   const messages: Msg[] = [{ role: "system", content: system(asOf) }, { role: "user", content: question }];
+  let answeredBy = "";
+  const used = new Set<string>(), nudged = new Set<string>();
   for (let i = 0; i < maxSteps; i++) {
+    const j = await complete({ model: model(), models: [model(), ...fallbacks()], messages, tools: oaTools, tool_choice: "auto", max_tokens: 4000 }, emit);
+    const msg = j.choices?.[0]?.message;
+    if (!msg) throw new Error(`LLM returned no message: ${JSON.stringify(j.error ?? j).slice(0, 200)}`);
+    if (j.model && j.model !== answeredBy) { answeredBy = j.model; emit({ type: "note", text: `Model: ${j.model}` }); }
+    messages.push({ role: "assistant", content: msg.content ?? null, tool_calls: msg.tool_calls });
+    if (!msg.tool_calls?.length) {
+      const text = msg.content ?? "";
+      // Harness checks for weaker models, one nudge each: finish the method, keep the framing.
+      const missing = ["fleet_reports", "explain_path"].filter((t) => !used.has(t));
+      const fix = !nudged.has("method") && used.has("prior_reports") && missing.length
+        ? (nudged.add("method"), `Before answering, finish the method: ${missing.join(" and ")}. Then answer.`)
+        : !nudged.has("framing") && CAUSAL.test(text)
+          ? (nudged.add("framing"), "Rewrite the answer without saying what caused or contributed to the accident: report warning signs and leads worth review only. The NTSB determines causes.")
+          : null;
+      if (fix && i < maxSteps - 1) {
+        emit({ type: "note", text: `Harness: ${fix}` });
+        messages.push({ role: "user", content: fix });
+        continue;
+      }
+      emit({ type: "answer", text });
+      return;
+    }
+    if (msg.content?.trim()) emit({ type: "note", text: msg.content.trim() });
+    for (const tc of msg.tool_calls) {
+      let args: Record<string, unknown> = {};
+      try { args = JSON.parse(tc.function.arguments || "{}"); } catch { /* model sent bad JSON: call with none, the tool reports what's missing */ }
+      used.add(tc.function.name);
+      const { text } = await call(c, tc.function.name, args, asOf, emit, tc.id, schemas);
+      messages.push({ role: "tool", tool_call_id: tc.id, content: text.slice(0, 12000) });
+    }
+  }
+  emit({ type: "answer", text: "Stopped at the step limit before a final answer." });
+}
+
+// Causal language the answer must not use (we report warning signs; the NTSB determines causes).
+const CAUSAL = /\b(caused|causing|contribut\w*|led to|resulted in|responsible for|root cause|escalated)\b/i;
+
+/** One chat completion. Free providers often return 429/502/503 for a few seconds:
+ *  OpenRouter tries the `models` fallbacks first; if all are busy we wait and retry twice. */
+async function complete(body: Record<string, unknown>, emit: Emit): Promise<{ model?: string; error?: unknown; choices?: Array<{ message: Msg }> }> {
+  for (let attempt = 0; ; attempt++) {
     const r = await fetch(`${BASE}/chat/completions`, {
       method: "POST",
       headers: {
         "content-type": "application/json", authorization: `Bearer ${apiKey()}`,
         "HTTP-Referer": "https://github.com/divyam2356/GraphsHackathon", "X-Title": "Black Box",
       },
-      body: JSON.stringify({ model: MODEL, messages, tools: oaTools, tool_choice: "auto", max_tokens: 4000 }),
+      body: JSON.stringify(body),
     });
-    if (!r.ok) throw new Error(`LLM ${r.status}: ${(await r.text()).slice(0, 300)}`);
-    const j = (await r.json()) as { choices?: Array<{ message: Msg }> };
-    const msg = j.choices?.[0]?.message;
-    if (!msg) throw new Error("LLM returned no message");
-    messages.push({ role: "assistant", content: msg.content ?? null, tool_calls: msg.tool_calls });
-    if (!msg.tool_calls?.length) { emit({ type: "answer", text: msg.content ?? "" }); return; }
-    if (msg.content?.trim()) emit({ type: "note", text: msg.content.trim() });
-    for (const tc of msg.tool_calls) {
-      let args: Record<string, unknown> = {};
-      try { args = JSON.parse(tc.function.arguments || "{}"); } catch { /* model sent bad JSON: call with none, the tool reports what's missing */ }
-      const { text } = await call(c, tc.function.name, args, asOf, emit, tc.id, schemas);
-      messages.push({ role: "tool", tool_call_id: tc.id, content: text.slice(0, 12000) });
-    }
+    if (r.ok) return r.json();
+    const text = (await r.text()).slice(0, 300);
+    if (attempt >= 3 || ![429, 502, 503].includes(r.status)) throw new Error(`LLM ${r.status}: ${text}`);
+    emit({ type: "note", text: `Free models busy (${r.status}), retrying in ${4 * (attempt + 1)} s` });
+    await new Promise((ok) => setTimeout(ok, 4000 * (attempt + 1)));
   }
-  emit({ type: "answer", text: "Stopped at the step limit before a final answer." });
 }
 
 /** The same method with no model: a fixed tool sequence for one accident. Labelled "scripted" in the UI. */

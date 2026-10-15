@@ -16,7 +16,11 @@ const question = flag("question", "Southwest 812 (NTSB ev_id 20110401X24330) los
 const t0 = Date.now();
 const steps: Array<{ t: number; step: Step }> = [];
 const emit = (step: Step) => { steps.push({ t: Date.now() - t0, step }); console.error(step.type, "name" in step ? step.name : ""); };
-if (mode === "agent") await runAgent(question, asOf, emit); else await runScripted("20110401X24330", asOf, emit);
+try {
+  if (mode === "agent") await runAgent(question, asOf, emit); else await runScripted("20110401X24330", asOf, emit);
+} catch (e) {
+  emit({ type: "error", text: (e as Error).message }); // keep the partial run for inspection
+}
 mkdirSync(dirname(out), { recursive: true });
 writeFileSync(out, JSON.stringify({ mode, model: mode === "agent" ? agentModel() : undefined, asOf, question, recorded: new Date().toISOString(), steps }, null, 1));
 console.error(`wrote ${out} (${steps.length} steps)`);
