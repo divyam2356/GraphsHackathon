@@ -1,5 +1,10 @@
 # Graph model (single graph `blackbox`)
 
+**Built:** the model and counts in the README ("Graph model"). This file is the original plan.
+Not built yet: HotSpot, Alert, Observation, Case, OrgTail, WorkOrder, ShiftNote, EXAMPLE_OF,
+MERGED_INTO, Location-NEAR (the build uses Location-WITHIN for the bin -> line -> zone hierarchy),
+embeddings. Sizes below are the full public data, not what is loaded.
+
 REAL: Accident-FOUND->Finding-AT->Location; Accident-INVOLVED->Aircraft-IS_A->Model;
 Report-ON->Aircraft; Report-AT->Location(family,zone,station_bin,stringer,side);
 Location-NEAR->Location; FixOrder-APPLIES_TO->Model; FixOrder-SUPERSEDES->FixOrder; FixOrder-TARGETS->Location.

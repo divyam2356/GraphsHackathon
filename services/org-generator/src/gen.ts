@@ -1,7 +1,7 @@
 import "@blackbox/graph/src/env";
-// Northwind Aero (fictional): 15 engineers, 3 teams, ~40 task cards citing REAL
-// fix orders, ~300 work orders/shift notes on fictional tails of REAL models.
-// Every node: synthetic:true. Minimum viable: the 3 flow-D questions work.
+// Northwind Aero (fictional): 3 teams, 15 engineers, 2 task cards citing the REAL S-4L
+// fix orders (one current, one citing the superseded AD) and 1 decision. Every node is
+// synthetic:true. Just enough for the who_fixed / why_task / stale_tasks MCP tools.
 import { connect } from "@blackbox/graph/src/db";
 const TEAMS = ["Structures", "Propulsion", "Avionics"];
 const NAMES = ["A. Rao", "M. Chen", "J. Okafor", "S. Iyer", "L. Park", "R. Das", "K. Mehta", "T. Nguyen", "P. Shah", "D. Kim", "N. Rao", "E. Silva", "F. Ahmed", "G. Nair", "H. Zhou"];

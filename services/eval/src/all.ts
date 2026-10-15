@@ -1,7 +1,8 @@
 import "@blackbox/graph/src/env";
-// 3 time-machine backtests on the real graph (rule 3: measured claims come from
-// FalkorDB, not mocks); DEMO=1 runs them on the offline fixture and says so.
-// 1 precursor-hit · 2 leads-top3 · 3 novelty-replay. Thresholds swept, not hardcoded.
+// SWA 812 regression checks on the real graph (DEMO=1 runs them on the offline fixture
+// and says so): 1 precursor-hit · 2 leads-top3 · 3 novelty-replay. One case each, so they
+// catch breakage, not generalisation: T2 is circular (FM-CROWN-S4L and the text_sim
+// keyword rule in loop.ts were written from this accident). The real test is backtest.ts.
 import { runLeads } from "@blackbox/agent/src/loop";
 import { demoMode, graphTools } from "@blackbox/graph/src/run";
 

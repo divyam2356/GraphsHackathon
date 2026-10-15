@@ -12,9 +12,11 @@ maintenance company. The agent investigates through fixed-Cypher MCP tools, scor
 with a formula — never vibes — and needs a human to approve every new failure mode."
 
 ## Likely judge questions
-1. "Where does FalkorDB do real work?" — Multi-hop joins, fulltext + vector search,
-   `algo.SPpaths` fix chains, `algo.labelPropagation` hotspots. Kill FalkorDB and the
-   agent has no evidence, no ranks, no alerts (README §Rules compliance).
+1. "Where does FalkorDB do real work?" — Multi-hop joins across two public sources,
+   the location hierarchy (`WITHIN*0..2`), `algo.SPpaths` evidence paths, full-text search,
+   date/duration time machine. Kill FalkorDB and the agent has no evidence (no fixture
+   fallback unless DEMO=1). Be straight: no vector index is loaded, and the labelPropagation
+   hotspot job reduces to grouping by bin.
 2. "Why one graph for real + synthetic?" — A Cypher query spans one graph; Track 3
    crosses company → real data, so they must co-reside. Synthetic nodes carry
    `synthetic:true` + own labels.
@@ -23,8 +25,11 @@ with a formula — never vibes — and needs a human to approve every new failur
    relevance per report (UPS1354/SWA1380 false matches prove the join isn't enough).
 4. "What happens to rejected patterns?" — No permanent reject: dormant keeps
    collecting SUPPORTS, re-offered on new accident or ≥3 new tails.
-5. "How do you know it works?" — 3 time-machine backtests (`services/eval`),
-   FalkorDB-backed when reachable; 18-month CAROL assumption stated openly.
+5. "How do you know it works?" — We backtested every NTSB mechanical event
+   (`services/eval/src/backtest.ts`). The naive test says 2.9x chance; closing two leaks
+   (the event's own report, family habits) takes it to 0.88x: one aircraft's system-level
+   history does not beat chance. SWA 812's signal is location- and fleet-level; NTSB public
+   findings carry no locations, so that part is shown for one case, not validated.
 6. "Framing?" — Leads worth review, never causes. NTSB determines causes.
    Mechanical/structural only; pilot error + weather out of scope by design.
 

@@ -1,174 +1,196 @@
-# Black Box — warning signs before plane accidents
+# Black Box
 
-> AI agent that finds warning signs that came before plane accidents, ranks where to
-> look when a new one happens, learns new failure modes with human approval, and flags
-> planes flying today that show a known danger pattern.
+**Warning signs in maintenance records, before the accident.**
 
-**Framing rule: we show warning signs and leads worth review, never causes. The NTSB
-determines causes.** Scope: mechanical / structural accidents only. Pilot error and
-weather are the most common NTSB causes and maintenance reports can't predict them.
+Black Box joins public NTSB accident data and FAA maintenance reports in one FalkorDB graph,
+so an investigator (or an agent) can ask: before this accident, did the aircraft or its fleet
+report trouble at that spot?
 
-- Hackathon: Graph Hacks (FalkorDB × WeMakeDevs), Oct 15–18 2026. Status: in build.
-- Tracks: **1. Agents That Act** (main) · **2. Memory & Coordination** · **3. Company Brain**
-- Stack: FalkorDB (`blackbox` graph) · MCP server (domain tools, fixed Cypher) · tool-calling LLM loop · Next.js UI
-- Data: public NTSB + FAA reports + FAA fix orders (Federal Register API) · synthetic org "Northwind Aero"
+![The Board: fuselage heat map of skin-crack reports, an agent run, and the evidence graph](docs/img/board.jpg)
+
+**Framing rule: Black Box shows warning signs and leads worth review, never causes. The NTSB
+determines causes.** Scope: mechanical and structural events. Pilot error and weather are out of scope.
+
+Graph Hacks (FalkorDB × WeMakeDevs), Oct 15–18 2026. Tracks: **1. Agents That Act** (main),
+2. Memory & Coordination, 3. Company Brain (thin, see [Limits](#limits)).
+
+## What it does
+
+- **Board** (`/`): an unrolled Boeing 737 fuselage. Each cell is a location in the graph
+  (stringer line × 20-inch body-station bin), coloured by how many aircraft reported cracks
+  there in the 12 months before the slider date. Drag or play the date; click a cell to read
+  the reports behind it.
+- **Agent**: ask a question in plain English. The model picks tools on our MCP server, each a
+  fixed Cypher query. Every call appears with its arguments, Cypher, rows and time, and the
+  records it touched join an evidence graph.
+- **Human approval**: the agent can draft a failure mode with its evidence linked in the graph.
+  Only a person can approve, defer or reopen it, and the decision, who made it and why are
+  stored on the node. The agent has no approve tool.
+- **Story** (`/story`): a nine-step presentation where every number and picture is a live
+  query, apart from the saved evaluation run below.
+
+## The case: Southwest 812
+
+On 1 April 2011 a 737-300, N632SW, lost a 60 × 8 inch section of crown skin at 34,000 feet.
+The NTSB found fatigue cracking along the S-4L lap joint from a panel installed improperly
+during manufacture (brief AAB-13/02). What the graph shows before that date:
+
+- **The aircraft:** on 9 March 2010 mechanics found two cracked stringer clips on S-4L
+  (SWAA101399 at BS 639, SWAA101400 at BS 727A), 24 inches ahead of the later rupture and at its aft edge.
+- **The fleet:** the number of 737 Classics reporting skin cracks on S-4L or S-4R went 9 → 18 → 31
+  aircraft in 2008, 2009 and 2010.
+- **Not the loudest line:** by raw counts, lower lines (S-24, S-18) had more. Ranked by rise
+  (aircraft this year vs last), S-4L was 2nd of 37 lines on 1 January 2011 (17 aircraft, up from 7).
+  A rising line is a lead worth review, not a prediction.
+
+![Fleet heat replay on 1 April 2011](docs/img/story-fleet.jpg)
+
+## Does it generalise? We checked, and the simple version does not
+
+One case proves nothing, so `services/eval/src/backtest.ts` asks the graph about every NTSB
+mechanical event whose aircraft had FAA reports in the year before: did those reports name a
+system (ATA chapter) the NTSB later cited? Chance is measured by a permutation test: each event
+gets another event's cited systems, 1,000 seeded shuffles, so each aircraft keeps its own report volume.
+
+| Test (365-day window, system level) | Events | Hit rate | Chance | Lift | p |
+|---|---|---|---|---|---|
+| 1. Naive: any earlier report, chance from any event | 198 | 35.9% | 12.5% | 2.87× | < 0.01 |
+| 2. Reports at least 7 days before (drops the event's own report) | 162 | 20.4% | 12.6% | 1.61× | < 0.01 |
+| 3. Chance from the same aircraft family only | 112 | 17.9% | 20.2% | **0.88×** | 0.87 |
+
+Each step closes one leak. A report filed the day before is often the event itself, and each
+aircraft family keeps reporting the same systems (helicopter accidents cite rotors, and helicopters
+report rotors). With both closed, **one aircraft's history does not beat chance**, and the test
+would have caught a lift as small as 1.19×. The result holds for a 730-day window (1.06×, p = 0.33),
+gaps of 1 to 30 days (0.87–0.91×) and the stricter ATA-section match (0.94×).
+
+What this means for the product: a match on a whole system is not a warning sign. What made
+Southwest 812 stand out was one stringer line and a rise across the fleet. The NTSB's public
+findings name systems, never stringers, so that cannot be backtested at scale from public records.
+That is why Black Box shows evidence and leaves the judgement to a person.
+
+```bash
+npm run backtest -w services/eval -- --days=365 --gap=7 --out=$PWD/apps/web/public/backtest.json
+```
+
+![Story step 5: observed hit rate against 1,000 shuffles, for each test](docs/img/story-backtest.jpg)
+
+## How it works
+
+### Graph model (one graph, `blackbox`)
+
+| Node | Count | From |
+|---|---|---|
+| `Report` | 225,627 | FAA Service Difficulty Reports 2008–2026: every 737 structures report (ATA 52–57) plus every report on an aircraft in an NTSB event |
+| `Accident` | 4,235 | NTSB mechanical events 2008–2020 (a cause or factor finding in aircraft systems, structures, propeller/rotor or power plant) |
+| `Finding` | 5,386 | NTSB findings; the finding code carries the ATA chapter and section |
+| `Aircraft`, `Model` | 7,548, 1,148 | by tail and serial number; model family and variant |
+| `Location` | 8,483 | hierarchy: model + ATA chapter (zone) → stringer line → 20-inch body-station bin |
+| `System` | 46 | ATA chapters |
+| `FixOrder` | 2 | AD 2011-08-51, superseded by AD 2015-16-08 |
+| `FailureMode` | 4 | 3 seeded, 1 drafted by the agent and waiting for a person |
+
+```
+(Report)-[:ON]->(Aircraft)<-[:INVOLVED]-(Accident)-[:FOUND]->(Finding)
+(Report)-[:AT]->(Location)-[:WITHIN]->(Location)        bin -> line -> zone
+(Finding)-[:AT]->(Location)   (Location|Finding)-[:IN_SYSTEM]->(System)   (Aircraft)-[:IS_A]->(Model)
+(FixOrder)-[:TARGETS]->(Location)   (FixOrder)-[:SUPERSEDES]->(FixOrder)
+written by the agent:  (Report)-[:PRECURSOR_OF]->(Accident)   (Report|Accident)-[:EVIDENCE_FOR]->(FailureMode)
+```
+
+The two sources were never meant to be read together. They meet at the aircraft (tail and
+serial) and at the location, so "reports on stringer S-4L" rolls up every bin along it:
+
+```cypher
+MATCH (r:Report)-[:AT]->(:Location)-[:WITHIN*0..2]->(:Location {bin: $bin})
+WHERE r.date < $asOf AND r.date >= toString(date($asOf) - duration({days: $windowDays}))
+```
+
+FalkorDB features in use: variable-length paths over the location hierarchy, `algo.SPpaths` for
+the shortest evidence path between a report and an accident, the full-text index on report text,
+date and duration functions for the time machine, and `UNION ALL` typed counts for the schema view.
+View queries run in tens of milliseconds; the heaviest (`fleet_map`, cold) takes about 0.3 s.
+All Cypher lives in `packages/graph/queries/cypher.ts`.
+
+**A FalkorDB bug we hit (v4.14.6):** with a range index on a string property, `r.date < '2011-04-01'`
+matched every row (1,000 instead of 198 in our repro). We dropped the date indexes and recomputed every number.
+
+### MCP server and agent
+
+- `packages/mcp-server`: 19 domain tools, each a fixed Cypher query with typed arguments.
+  Read tools include `get_accident`, `prior_reports`, `fleet_reports`, `explain_path` and
+  `similar_reports`; write tools include `record_precursor` and `propose_failure_mode`.
+  There is no approve tool.
+- `packages/agent`: a tool-calling loop over that MCP server, on OpenRouter. Default model
+  NVIDIA Nemotron 3 Super (free tier), with two free fallbacks. The harness clamps every date
+  argument to the investigation date, so the model cannot read past it. Two guard rails for
+  smaller models: if it answers before checking the fleet and the evidence path, it is asked
+  once to finish; if the answer claims a cause, it is asked once to rewrite.
+- The UI has three modes: **Live model** (needs a key; free models take minutes), **Scripted**
+  (the same tools in a fixed order, no model) and **Recorded** (a real 297-second Nemotron run,
+  replayed in about 20 seconds; the default for demos).
+- Approval goes through `/api/decide`, a UI-only route the agent cannot reach.
+
+![Story step 8: a drafted failure mode waiting for a person](docs/img/story-approval.jpg)
+
+## Run it
+
+Needs Docker and Node (tested on Node 26); the data download also needs curl, unzip and
+[uv](https://docs.astral.sh/uv/).
+
+```bash
+git clone https://github.com/divyam2356/GraphsHackathon && cd GraphsHackathon
+docker compose up -d          # FalkorDB v4.14.6 on :6379, FalkorDB Browser on :3000
+cp .env.example .env          # optional: OPENROUTER_API_KEY for the live agent
+npm ci
+scripts/fetch-data.sh         # public NTSB + FAA files into data/raw (~700 MB)
+npm run graph:indexes
+npm run ingest:ntsb           # 4,235 events (~10 s)
+npm run ingest:reports        # 225,627 reports (~35 s, ~600 MB in FalkorDB)
+npm run ingest:fixorders && npm run seed:modes && npm run org:gen
+npm run dev                   # http://localhost:3001 (Board) and /story
+npm run backtest -w services/eval
+```
+
+Without a key everything runs except the Live model mode. `DEMO=1` serves a tiny offline
+SWA 812 fixture instead of FalkorDB; it is off by default and never used for the numbers here.
+
+## Limits
+
+- **No per-aircraft signal at the system level** (the backtest above). The Southwest 812 signal is
+  location-level and fleet-level, shown for one case; it is not validated across events.
+- **Leads ranking is a sketch.** `rank_failure_modes` scores 3 hand-seeded failure modes, one of
+  them written from this accident, with a keyword stand-in for text similarity (`packages/agent/src/loop.ts`).
+  It is not evaluated and not in the demo. `services/eval/src/all.ts` is a set of SWA 812
+  regression checks, not evidence.
+- `explain_path` does not apply the date limit to the paths it finds (the ones we have seen do not cross later records).
+- `similar_reports` uses the full-text index; no embeddings are loaded.
+- Fix orders: the two S-4L ADs only. Company layer (Track 3): 3 teams, 15 engineers, 2 task cards
+  and 1 decision, all `synthetic: true`, reachable through the `who_fixed`, `why_task` and `stale_tasks` tools.
+- The hotspot job's `algo.labelPropagation` over same-bin edges reduces to grouping by bin.
+- Free OpenRouter models: 50 requests a day; a full run uses about 10 and takes about 5 minutes.
 
 ## Repo map
 
 ```
-apps/web/               Next.js UI (early): date picker + flows A/B/E as JSON. Planned: chat, evidence path, approval cards
-packages/mcp-server/    Our MCP server — the ONLY way the agent touches FalkorDB (fixed Cypher, no raw queries)
-packages/agent/         Tool-calling loop + explainable scoring + decision rule + backtest harness glue
-packages/graph/         Schema, indexes, canned Cypher, algorithm jobs (single source of truth for the model)
-services/ingest/        NTSB → FAA reports → fix orders → embeddings → seed failure modes
-services/org-generator/ Synthetic Northwind Aero (engineers/teams/task cards/work orders), synthetic:true
-services/eval/          3 time-machine backtests: precursor hit rate · leads top-3 · novelty detection
-docs/                   GRAPH_MODEL.md · FLOWS.md · EVALUATION.md · DEMO.md
-.agent/tasks/falkordb-ideas/  Research scripts (reference only, NOT product code)
+apps/web/               Next.js UI: Board (/), Story (/story), API routes (agent, view, decide)
+packages/graph/         FalkorDB client, all Cypher (queries/cypher.ts), indexes, schema
+packages/mcp-server/    MCP server: the only way the agent touches the graph
+packages/agent/         Agent loop on OpenRouter (agent.ts), recorder (record.ts), CLI flows
+services/ingest/        NTSB, FAA reports, fix orders, seed failure modes
+services/eval/          backtest.ts (the evaluation), all.ts (SWA 812 regression checks)
+services/org-generator/ Northwind Aero, the fictional maintenance company (synthetic: true)
+docs/                   GRAPH_MODEL, FLOWS (the original plan), DEFENSE, DEMO
 ```
 
-One graph for both layers (`blackbox`). A Cypher query runs against one graph at a
-time, so Track 3 questions crossing fictional-company → real-data need everything in
-the same graph. Synthetic nodes carry `synthetic: true` + own labels (`OrgTail`, etc.).
+## Data and licences
 
-## Quickstart
-
-```bash
-# 1. FalkorDB
-docker compose up -d            # falkordb:6379 + browser :3000
-# 2. env
-cp .env.example .env
-# 3. install + build
-npm install
-npm run build
-# 4. data + ingest (public NTSB + FAA files, ~700 MB download, ~1 min to load)
-scripts/fetch-data.sh           # -> data/raw/ntsb/*.csv, data/raw/sdr/SDR-YYYY.csv
-npm run graph:indexes
-npm run ingest:ntsb             # 4,235 mechanical NTSB events since 2008 (~10 s)
-npm run ingest:reports          # 737 structures (ATA 52-57) + every report on an NTSB aircraft: ~226k reports (~35 s, ~600 MB in FalkorDB)
-#   wider scope: npm run ingest:reports -- --families=all --chapters=all   (1.19M rows; needs a bigger box)
-npm run ingest:fixorders
-npm run seed:modes
-npm test --workspace services/ingest   # normalizer tests (NTSB <-> FAA joins)
-# 5. run
-npm run mcp:serve               # our MCP server (agent connects here)
-npm run agent:demo -- "crown skin crack S-4L 737"   # CLI smoke test
-npm run dev --workspace apps/web                   # UI on :3001
-```
-
-A community FalkorDB MCP server (see FalkorDB GitHub) can run alongside in read-only mode for ad-hoc exploration.
-
-## Teammates start here (5 min, no graph experience needed)
-
-1. Clone, install, build: `git clone <repo> && npm install && npm run build`
-   (Windows: use `npm.cmd` if `.ps1` scripts are blocked.)
-2. Start the database: `docker compose up -d` — or skip Docker and use FalkorDB Cloud,
-   then set `FALKORDB_URL` in your `.env`. Load the data (Quickstart step 4). Everything
-   reads the graph; without data, `DEMO=1` serves a small offline SWA 812 fixture.
-3. `cp .env.example .env` — an LLM key is **optional** (see below); leave it blank and all flows still run.
-4. Verify your setup with two commands:
-   `npm run agent:demo -- "crown skin S-4L"` (agent investigate + leads in terminal)
-   `npm run eval --workspace services/eval` (3 backtests, expect 3 passes)
-5. Open the UI: `npm run dev --workspace apps/web` → http://localhost:3001.
-   FalkorDB Browser (see your data visually): http://localhost:3000.
-
-Who works where (2 people): Person A owns `services/ingest` + `packages/graph`
-(data, indexes, backtests). Person B owns `packages/mcp-server` + `packages/agent`
-+ `apps/web` (tools, flows, UI). Contract between you: the tool names in
-`packages/mcp-server/src/tools.ts` — A fills the Cypher, B calls the tools.
-Before judging, everyone reads `docs/DEFENSE.md` and fills the HUMAN_LOG.
-
-## Do I need an LLM key? No — but it changes one thing
-
-| Without a key (works, verified) | With a key (stronger Track 1 story) |
-|---|---|
-| Graph queries, algorithms, formula scoring, backtests, UI, video — all run | Same, plus the agent _judges_ each report's relevance |
-| Every joined report is kept (`rule-fallback`, reason logged) | Junk matches dropped with a stated reason (e.g. unrelated same-system hits) |
-
-Set **one** of: `ANTHROPIC_API_KEY` (with `ANTHROPIC_MODEL`), or a free-tier
-`LLM_API_KEY` + `LLM_BASE_URL` (Groq/OpenRouter) with `LLM_MODEL`. Any API failure
-falls back to rules automatically — the project never crashes for lack of a key.
-`.env` is gitignored: keys never touch GitHub.
-
-## MCP tools (fixed Cypher inside)
-
-Read: `search_accidents · get_accident · prior_reports · fleet_reports · hotspots ·
-similar_reports · fix_orders · explain_path · rank_failure_modes ·
-failure_mode_candidates · who_fixed · why_task · stale_tasks`
-
-Write/action: `record_precursor · raise_alert · propose_failure_mode · add_support ·
-record_observation · create_work_order`
-
-UI-only (never the agent): `approve_failure_mode → confirmed · defer_failure_mode →
-dormant · merge_failure_mode → merged`
-
-See `packages/mcp-server/src/tools.ts` and `packages/graph/queries/`.
-
-## Confidence score + decision rule (formula, LLM never sets it)
-
-```
-score = 0.4*structure + 0.4*signature + 0.2*text_sim
-# structure: model family + system + location bin (0 / 0.5 / 1)
-# signature: share of mode SIGNATURE locations with reports in window
-# text_sim: best vector similarity case text ↔ mode example causes
-```
-
-| Result | Rule (starting values, tune via backtest) | Agent does |
-|---|---|---|
-| Clear match | top ≥ 0.6 and margin ≥ 0.15 | "Matches known mode X" + path |
-| Ambiguous | top ≥ 0.6 but margin < 0.15 | Shows both, asks separating question. No new node |
-| Weak match | 0.35 ≤ top < 0.6 | Shows top incl. dormant "unconfirmed", offers propose |
-| No fit | top < 0.35 | Proposes new mode (flow F) |
-
-`FailureMode.status`: `proposed | confirmed | dormant | merged` (no permanent reject).
-Dormant keeps collecting `SUPPORTS`, re-offered on: new accident OR ≥3 new distinct
-aircraft since `support_at_decision`. False-alarm alerts decay signature `weight`,
-never delete.
-
-## Evaluation (all on the time machine — every node has `date`, every tool takes `asOf`)
-
-1. **Precursor hit rate** — asOf = day before accident: would flow B have alerted at the eventual cause location? Hits vs false alarms.
-2. **Leads top-3** — hide findings, feed early facts only, check true system+location in top 3.
-3. **Novelty detection** — replay in date order; first accident per mode was "new" then. Recall/precision of "no known mode fits" across thresholds. Open item: NTSB table has no final-report date → mode becomes known at event + ~18mo unless CAROL gives real date.
-
-## Rules compliance (Graph Hacks rules 2, 3, 5, 10–12)
-
-- Rule 2 (FalkorDB primary, central): the only database is the `blackbox` FalkorDB
-  graph. The agent has no other storage — memory (PRECURSOR_OF, HotSpot, Alert,
-  FailureMode, Case) is written back to the same graph.
-- Rule 3 (graph does real work): every multi-hop join (accident → priors → fleet →
-  fix chain), keyword search and similar reports (fulltext index; vector index once
-  real embeddings are loaded),
-  fix-order paths (`algo.SPpaths`), and hotspot clusters (`algo.labelPropagation`
-  over temp per-window edges, `packages/graph/src/hotspotJob.ts`) executes inside
-  FalkorDB as fixed Cypher in the MCP server. Remove FalkorDB and the agent has no
-  evidence paths, no rankings, no alerts: a failed query is returned as an error,
-  never swapped for fixture data (`packages/graph/src/run.ts`). The SWA 812 fixture
-  is served only when `DEMO=1` is set explicitly.
-- Rule 5 (tracks): entering all three — T1 Agents That Act, T2 Memory & Coordination,
-  T3 Company Brain (single shared graph, `synthetic:true` org layer).
-
-## Docs
-
-- `docs/GRAPH_MODEL.md` — node/edge table + Location binning (~20in stations)
-- `docs/FLOWS.md` — A investigate · B watch · C backtests · D company brain · E leads · F learn
-- `docs/EVALUATION.md` — metrics, assumptions, what to quote publicly
-- `packages/graph/schema.cypher` — runnable DDL
-
-## Data honesty (don't quote raw counts publicly without cleaning)
-
-- SWA 812 signal: same-plane same-system only 68 events/17y (3–13× vs control — real but thin). Fleet × location, from the FAA structured station/stringer fields (graph query, Oct 15): **51 737-300/-400/-500 aircraft reported skin cracks on the S-4L/S-4R lap lines Jan 2008–Mar 2011 (186 reports, mostly one operator); 47 more Apr–Dec 2011.** Per year 9 / 18 / 31 aircraft (2008/09/10) while all other fuselage lines stayed flat (~180–210).
-- It was not the biggest line: by raw counts lower-lobe stringers (S-24, S-18, S-21) had more cracked aircraft. A rising-line query (skin cracks only) put S-4L **2nd of all 737 fuselage lines on 2011-01-01** (17 vs 7 aircraft), with other rising lines that had no accident. So: a ranked watch list, not a prediction.
-- FalkorDB 4.14.6: a range index on a string property answers `d < 'X'` with every row, so dates have no range index (see `packages/graph/src/ensureIndexes.ts`).
-- UPS 1354 / SWA 1380 matches were unrelated; EC135 "warning" was the accident report itself → agent must judge relevance, join alone is not the answer.
+NTSB aviation accident database (avall) and FAA Service Difficulty Reports: US government
+public data. NTSB brief AAB-13/02 and the Federal Register AD texts were used to check facts.
+No private or scraped data.
 
 ## AI disclosure
 
-Built with AI coding assistants (incl. OpenCode / Muse Spark). Humans own the graph
-model, thresholds, approval decisions, and public claims. Everyone on the team can
-explain the graph model and queries (rule 12).
-
-## Submission checklist
-
-- [ ] Public repo · [ ] README (setup+model+Cypher/algorithms) · [ ] demo video
-- [ ] Live deploy or full local setup · [ ] all 3 tracks named · [ ] AI use disclosed
+Built with AI coding assistants (Claude Code, OpenCode). The agent in the app runs on NVIDIA
+Nemotron 3 Super through OpenRouter's free tier. The team chose the problem, the framing rule
+and the scope; failure-mode approvals in the app are made by a person.

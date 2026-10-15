@@ -1,7 +1,8 @@
 import "@blackbox/graph/src/env";
-// FAA fix orders: Federal Register JSON API (public) -> FixOrder nodes.
-// SUPERSEDES + TARGETS via regex ("supersedes AD YYYY-NN-NN", "fuselage station")
-// plus LLM extraction on summaries for the long tail. FR API caps count at 10k.
+// FAA fix orders -> FixOrder nodes. Today: the two S-4L airworthiness directives from the
+// fixture (AD 2011-08-51, superseded by AD 2015-16-08; checked against the Federal Register
+// text). Not built yet: bulk load from the Federal Register JSON API (caps at 10k results).
+// parseSupersedes is the regex that bulk load would use for SUPERSEDES edges.
 // Usage: npm run ingest:fixorders
 import { connect } from "@blackbox/graph/src/db";
 import { DEMO } from "@blackbox/graph/src/demo";
