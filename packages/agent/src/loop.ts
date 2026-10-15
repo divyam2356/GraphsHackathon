@@ -15,10 +15,13 @@ export async function runLeads(
     id: string; name: string; system: string; family: string; sig: Array<{ bin: string; w: number }>;
   }>;
   const prior = (await tools.prior_reports.call({ tail: input.tail, asOf: input.asOf })) as Array<{ bin?: string; text?: string }>;
-  const priorBins = new Set(prior.map((r) => r.bin).filter(Boolean));
+  const priorBins = prior.map((r) => r.bin).filter((b): b is string => Boolean(b));
+  // Location keys nest ("737/53/S4L/BS620" is within "737/53/S4L"), so a signature hits
+  // when a prior report sits at that location or anywhere inside it.
+  const within = (bin: string, sig: string) => bin === sig || bin.startsWith(`${sig}/`);
   const cands: Candidate[] = modes.map((m) => {
     const structure = m.family === input.family ? (m.system === "structures" && /skin|lap|fuselage/i.test(input.narrative) ? 1 : 0.5) : 0;
-    const hit = m.sig.filter((s) => priorBins.has(s.bin)).length;
+    const hit = m.sig.filter((s) => priorBins.some((b) => within(b, s.bin))).length;
     const signature = m.sig.length ? hit / m.sig.length : 0;
     const text_sim = /s-4l|lap joint|crown/i.test(input.narrative) && m.id === "FM-CROWN-S4L" ? 0.9 : 0.1;
     return { modeId: m.id, name: m.name, structure, signature, text_sim };
@@ -39,7 +42,7 @@ export async function runInvestigate(
   const prior = await Promise.all(
     priorRaw.map(async (r) => ({ ...r, judgment: await judgeRelevance(r.text ?? "", cause) })),
   );
-  const fleet = await tools.fleet_reports.call({ family: "737", bin: "S-4L/BS639", from: "2008-01-01", to: input.asOf });
-  const fixes = await tools.fix_orders.call({ family: "737", bin: "S-4L/BS639", asOf: input.asOf });
+  const fleet = await tools.fleet_reports.call({ family: "737", bin: "737/53/S4L", from: "2008-01-01", to: input.asOf });
+  const fixes = await tools.fix_orders.call({ family: "737", bin: "737/53/S4L", asOf: input.asOf });
   return { acc, prior, fleet, fixes };
 }

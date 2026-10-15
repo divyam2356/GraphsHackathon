@@ -22,4 +22,4 @@ if (db) {
   }
 }
 await db?.close();
-console.log(`fixorders done: ${DEMO.fixOrders.length} demo order(s); regex unit:`, parseSupersedes("This AD supersedes AD 2010-14-07"));
+console.log(`fixorders done: ${DEMO.fixOrders.length} demo order(s); regex unit:`, parseSupersedes("This AD supersedes AD 2011-08-51"));

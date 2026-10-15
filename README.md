@@ -41,12 +41,15 @@ cp .env.example .env
 # 3. install + build
 npm install
 npm run build
-# 4. ingest (subset by default; full = 1.17M reports, needs disk for vectors)
-npm run ingest:ntsb -- --limit 1000
-npm run ingest:reports -- --systems structures,engines --limit 5000
-npm run ingest:fixorders
+# 4. data + ingest (public NTSB + FAA files, ~700 MB download, ~1 min to load)
+scripts/fetch-data.sh           # -> data/raw/ntsb/*.csv, data/raw/sdr/SDR-YYYY.csv
 npm run graph:indexes
+npm run ingest:ntsb             # 4,235 mechanical NTSB events since 2008 (~10 s)
+npm run ingest:reports          # 737 structures (ATA 52-57) + every report on an NTSB aircraft: ~226k reports (~35 s, ~600 MB in FalkorDB)
+#   wider scope: npm run ingest:reports -- --families=all --chapters=all   (1.19M rows; needs a bigger box)
+npm run ingest:fixorders
 npm run seed:modes
+npm test --workspace services/ingest   # normalizer tests (NTSB <-> FAA joins)
 # 5. run
 npm run mcp:serve               # our MCP server (agent connects here)
 npm run agent:demo -- "crown skin crack S-4L 737"   # CLI smoke test
@@ -152,7 +155,9 @@ never delete.
 
 ## Data honesty (don't quote raw counts publicly without cleaning)
 
-- SWA 812 signal: same-plane same-system only 68 events/17y (3–13× vs control — real but thin); strong signal is model×location fleet: ~67 crown-skin S-4 reports 2008–Mar 2011 + 47 Apr–Dec 2011, rough text filter incl. gouges/creases.
+- SWA 812 signal: same-plane same-system only 68 events/17y (3–13× vs control — real but thin). Fleet × location, from the FAA structured station/stringer fields (graph query, Oct 15): **51 737-300/-400/-500 aircraft reported skin cracks on the S-4L/S-4R lap lines Jan 2008–Mar 2011 (186 reports, mostly one operator); 47 more Apr–Dec 2011.** Per year 9 / 18 / 31 aircraft (2008/09/10) while all other fuselage lines stayed flat (~180–210).
+- It was not the biggest line: by raw counts lower-lobe stringers (S-24, S-18, S-21) had more cracked aircraft. A rising-line query (skin cracks only) put S-4L **2nd of all 737 fuselage lines on 2011-01-01** (17 vs 7 aircraft), with other rising lines that had no accident. So: a ranked watch list, not a prediction.
+- FalkorDB 4.14.6: a range index on a string property answers `d < 'X'` with every row, so dates have no range index (see `packages/graph/src/ensureIndexes.ts`).
 - UPS 1354 / SWA 1380 matches were unrelated; EC135 "warning" was the accident report itself → agent must judge relevance, join alone is not the answer.
 
 ## AI disclosure

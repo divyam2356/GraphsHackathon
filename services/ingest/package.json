@@ -1,1 +1,1 @@
-{"name":"ingest","private":true,"type":"module","scripts":{"ingest:ntsb":"tsx src/ntsb.ts","ingest:reports":"tsx src/reports.ts","ingest:fixorders":"tsx src/fixorders.ts","seed":"tsx src/seed.ts"}}
+{"name": "ingest", "private": true, "type": "module", "scripts": {"ingest:ntsb": "tsx src/ntsb.ts", "ingest:reports": "tsx src/reports.ts", "ingest:fixorders": "tsx src/fixorders.ts", "seed": "tsx src/seed.ts", "test": "tsx --test src/*.test.ts"}, "dependencies": {"csv-parse": "^5.6.0"}}

@@ -1,34 +1,38 @@
 // Demo seed: the SWA-812 story + fleet + fix chain + org, sized to run without downloads.
 // Full ingest (services/ingest) replaces/extends this with real NTSB+FAA CSVs.
 export const DEMO = {
+  // Real public records (NTSB DCA11MA039, FAA SDR, Federal Register). Checked Oct 15 2026.
   accidents: [
-    { ev_id: "WPR11MA133", tail: "N632SW", family: "737", date: "2011-04-01", phase: "climb",
-      narrative: "rapid decompression, fuselage crown skin rupture at S-4L lap joint",
-      cause: "fuselage crown skin panel at the S-4L lap joint" },
+    { ev_id: "20110401X24330", ntsb_no: "DCA11MA039", tail: "N632SW", family: "737", date: "2011-04-01", phase: "climb",
+      narrative: "rapid decompression, fuselage crown skin rupture",
+      cause: "the improper installation of the fuselage crown skin panel at the S-4L lap joint during the manufacturing process, which resulted in multiple site damage fatigue cracking and eventual failure of the lower skin panel" },
   ],
   priorReports: [
-    { id: "SDR-2010-03-N632SW", tail: "N632SW", bin: "S-4L/BS639", date: "2010-03-12", text: "stringer clip cracks at STR 4L BS 639" },
-    { id: "SDR-2010-06-N632SW", tail: "N632SW", bin: "S-4L/BS727A", date: "2010-06-02", text: "crack indication crown skin STR 4L BS 727A" },
+    { id: "SWAA101399", tail: "N632SW", bin: "737/53/S4L/BS620", date: "2010-03-09", text: "DURING SCHEDULED 14Y CHECK, FOUND STRINGER CLIP CRACKED AT BS 639, STR 4L.  REMOVED AND REPLACED CLIP PER SRM." },
+    { id: "SWAA101400", tail: "N632SW", bin: "737/53/S4L/BS720", date: "2010-03-09", text: "DURING SCHEDULED 14Y CHECK, FOUND STRINGER CLIP CRACKED AT BS 727A, STR 4L.  REMOVED AND REPLACED CLIP PER SRM." },
   ],
-  fleetNote: "rough text filter ~67 737 crown-skin S-4 reports 2008–Mar2011 +47 Apr–Dec 2011 (incl. gouges/creases — clean before quoting)",
+  fleetNote: "51 737-300/-400/-500 aircraft reported skin cracks on the S-4L/S-4R lap lines Jan 2008–Mar 2011 (186 reports, FAA SDR station/stringer fields); 47 more Apr–Dec 2011. Per year 9 / 18 / 31 aircraft (2008/09/10) while other fuselage lines stayed flat (~180–210)",
   fixOrders: [
-    { ad: "AD-2011-08-51", date: "2011-04-05", family: "737", bin: "S-4L/BS639", replaces: ["AD-2010-14-07"] },
-    { ad: "AD-2010-14-07", date: "2010-07-12", family: "737", bin: "S-4L/BS639", replaces: [] },
+    // AD 2015-16-08 (FR 2015-20372, effective 2015-09-29) supersedes emergency AD 2011-08-51
+    // (issued 2011-04-05: eddy current inspections of the S-4L and S-4R lap joints, BS 360–908).
+    { ad: "AD-2015-16-08", date: "2015-08-25", family: "737", bin: "737/53/S4L", replaces: ["AD-2011-08-51"] },
+    { ad: "AD-2011-08-51", date: "2011-04-05", family: "737", bin: "737/53/S4L", replaces: [] },
   ],
   failureModes: [
     { id: "FM-CROWN-S4L", name: "737 crown-skin lap-joint cracking (S-4L)", system: "structures",
       mechanism: "fatigue cracking at lap joint, stringer 4 left", status: "confirmed", origin: "seed",
-      family: "737", sig: [{ bin: "S-4L/BS639", w: 1 }, { bin: "S-4L/BS727A", w: 0.8 }] },
+      family: "737", sig: [{ bin: "737/53/S4L", w: 1 }, { bin: "737/53/S4R", w: 0.8 }] },
     { id: "FM-ENG-FAN", name: "CFM56 fan-blade fatigue", system: "engines",
       mechanism: "low-cycle fatigue, blade dovetail", status: "confirmed", origin: "seed",
-      family: "737", sig: [{ bin: "ENG/FAN-STG1", w: 1 }] },
-    { id: "FM-DOOR-AFT", name: "aft cargo door frame cracking (watch)", system: "structures",
-      mechanism: "unconfirmed — 2 tails, under review", status: "dormant", origin: "observation",
-      family: "737", sig: [{ bin: "DOOR/AFT-CARGO", w: 0.5 }], decision_reason: "only 2 aircraft so far" },
+      family: "737", sig: [{ bin: "737/72", w: 1 }] },
+    // Demo-only candidate for the dormant flow; not a real finding.
+    { id: "FM-DOOR-AFT", name: "aft cargo door frame cracking (demo candidate)", system: "structures",
+      mechanism: "unconfirmed demo candidate", status: "dormant", origin: "observation",
+      family: "737", sig: [{ bin: "737/52", w: 0.5 }], decision_reason: "demo: too little evidence so far" },
   ],
   org: {
     teams: ["Structures", "Propulsion", "Avionics"],
     engineers: ["A. Rao", "M. Chen", "J. Okafor", "S. Iyer", "L. Park"],
-    taskCards: [{ id: "TC-53-041", title: "S-4L lap-joint inspection", cites: "AD-2011-08-51" }],
+    taskCards: [{ id: "TC-53-041", title: "S-4L lap-joint inspection", cites: "AD-2015-16-08" }],
   },
 };

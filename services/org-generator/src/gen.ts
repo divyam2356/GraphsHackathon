@@ -13,9 +13,9 @@ if (db) {
       await db.query(`MERGE (x:Engineer {name:$e}) SET x.synthetic=true WITH x MATCH (t:Team {name:$tn}) MERGE (x)-[:MEMBER_OF]->(t)`, { e, tn: TEAMS[i] });
   }
   await db.query(`MERGE (t:TaskCard {id:'TC-53-041'}) SET t.title='S-4L lap-joint inspection', t.synthetic=true
-    WITH t MATCH (f:FixOrder {ad_no:'AD-2011-08-51'}) MERGE (t)-[:CITES]->(f)`);
+    WITH t MATCH (f:FixOrder {ad_no:'AD-2015-16-08'}) MERGE (t)-[:CITES]->(f)`);
   await db.query(`MERGE (t:TaskCard {id:'TC-53-009'}) SET t.title='S-4L inspection (old rev)', t.synthetic=true
-    WITH t MATCH (f:FixOrder {ad_no:'AD-2010-14-07'}) MERGE (t)-[:CITES]->(f)`);
+    WITH t MATCH (f:FixOrder {ad_no:'AD-2011-08-51'}) MERGE (t)-[:CITES]->(f)`);
   await db.query(`MERGE (d:Decision {id:'D-101', text:'Adopt AD-2011-08-51 inspection interval'}) SET d.synthetic=true
     WITH d MATCH (f:FixOrder {ad_no:'AD-2011-08-51'}) MERGE (d)-[:BASED_ON]->(f)`);
 }

@@ -34,7 +34,7 @@ async function buildTools(): Promise<{ tools: Record<string, Tool>; source: stri
 const { tools, source } = await buildTools();
 // T1 precursor hit: asOf day-before — was S-4L flagged?
 const priors = (await tools.prior_reports.call({ tail: "N632SW", asOf: "2011-03-31" })) as Array<{ bin?: string }>;
-const t1 = priors.filter((r) => (r.bin ?? "").startsWith("S-4L")).length;
+const t1 = priors.filter((r) => (r.bin ?? "").includes("/S4L")).length;
 // T2 leads top-3: hide cause, feed early facts only
 const leads = await runLeads(tools, { tail: "N632SW", family: "737", phase: "climb", narrative: "rapid decompression crown skin rupture lap joint", asOf: "2011-03-31" });
 const t2rank = leads.scored.findIndex((s) => s.modeId === "FM-CROWN-S4L") + 1;

@@ -19,7 +19,7 @@ export default function Page() {
     <div style={{ marginTop: 12 }}>
       <input value={q} onChange={(e) => setQ(e.target.value)} style={{ width: 420 }} />
       <button onClick={() => ask("/api/leads", { narrative: q, asOf })}>Rank leads (flow E)</button>
-      <button onClick={() => ask("/api/investigate", { ev_id: "WPR11MA133", asOf })}>Investigate SWA 812 (flow A)</button>
+      <button onClick={() => ask("/api/investigate", { ev_id: "20110401X24330", asOf })}>Investigate SWA 812 (flow A)</button>
       <button onClick={() => ask("/api/hotspots", { family: "737", asOf })}>Hot spots (flow B)</button>
     </div>
     <pre style={{ background: "#111", color: "#eee", padding: 12, marginTop: 12 }}>{out || "results appear here — every hop has a source"}</pre>

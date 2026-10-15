@@ -14,7 +14,7 @@ function demo(name: string, a: Record<string, unknown>): unknown {
     case "fleet_reports": return { bin: a.bin, note: DEMO.fleetNote };
     case "fix_orders": return DEMO.fixOrders;
     case "rank_failure_modes": return DEMO.failureModes;
-    case "hotspots": return [{ bin: "S-4L/BS639", ac: 12 }, { bin: "ENG/FAN-STG1", ac: 3 }];
+    case "hotspots": return [{ bin: "737/53/S4L", ac: 0, note: "demo placeholder" }];
     case "why_task": return DEMO.org.taskCards;
     case "propose_failure_mode": return { id: "FM-PROPOSED-1", status: "proposed" };
     default: return { ok: true, demo: true, tool: name };
