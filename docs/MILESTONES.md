@@ -1,5 +1,7 @@
 # Milestones (2 people, Oct 15–18) + cut order
 
+**Superseded by [ROADMAP.md](../ROADMAP.md)** (Oct 15). Kept as the original plan.
+
 Day 1 (Oct 15): A=data/graph (FalkorDB up, NTSB+reports+locations, indexes) ·
   B=agent/UI (Next scaffold, MCP skeleton, loop, graph view).
 Day 2: A=fix orders+chain, embeddings subset, seed modes · B=flow A + time slider.
