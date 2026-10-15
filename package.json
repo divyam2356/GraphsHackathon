@@ -1,0 +1,30 @@
+{
+  "name": "blackbox",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "tsx": "^4.19.0"
+  },
+  "workspaces": [
+    "apps/web",
+    "packages/mcp-server",
+    "packages/agent",
+    "packages/graph",
+    "services/ingest",
+    "services/org-generator",
+    "services/eval"
+  ],
+  "scripts": {    "build": "npm run build --workspaces --if-present",
+    "dev": "npm run dev --workspace apps/web",
+    "mcp:serve": "npm run serve --workspace packages/mcp-server",
+    "agent:demo": "npm run demo --workspace packages/agent",
+    "ingest:ntsb": "npm run ingest:ntsb --workspace services/ingest",
+    "ingest:reports": "npm run ingest:reports --workspace services/ingest",
+    "ingest:fixorders": "npm run ingest:fixorders --workspace services/ingest",
+    "graph:indexes": "npm run indexes --workspace packages/graph",
+    "seed:modes": "npm run seed --workspace services/ingest",
+    "eval:all": "npm run eval --workspace services/eval",
+    "org:gen": "npm run gen --workspace services/org-generator"
+  }
+}

@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.next/
+.env
+data/raw/
+data/vectors/
+*.mdb
+*.csv
