@@ -55,6 +55,38 @@ npm run dev --workspace apps/web                   # UI on :3001
 
 A community FalkorDB MCP server (see FalkorDB GitHub) can run alongside in read-only mode for ad-hoc exploration.
 
+## Teammates start here (5 min, no graph experience needed)
+
+1. Clone, install, build: `git clone <repo> && npm install && npm run build`
+   (Windows: use `npm.cmd` if `.ps1` scripts are blocked.)
+2. Start the database: `docker compose up -d` — or skip Docker and use FalkorDB Cloud,
+   then set `FALKORDB_URL` in your `.env`. No data needed yet: everything runs on a
+   built-in demo story (SWA 812) until real CSVs are ingested.
+3. `cp .env.example .env` — an LLM key is **optional** (see below); leave it blank and all flows still run.
+4. Verify your setup with two commands:
+   `npm run agent:demo -- "crown skin S-4L"` (agent investigate + leads in terminal)
+   `npm run eval --workspace services/eval` (3 backtests, expect 3 passes)
+5. Open the UI: `npm run dev --workspace apps/web` → http://localhost:3001.
+   FalkorDB Browser (see your data visually): http://localhost:3000.
+
+Who works where (2 people): Person A owns `services/ingest` + `packages/graph`
+(data, indexes, backtests). Person B owns `packages/mcp-server` + `packages/agent`
++ `apps/web` (tools, flows, UI). Contract between you: the tool names in
+`packages/mcp-server/src/tools.ts` — A fills the Cypher, B calls the tools.
+Before judging, everyone reads `docs/DEFENSE.md` and fills the HUMAN_LOG.
+
+## Do I need an LLM key? No — but it changes one thing
+
+| Without a key (works, verified) | With a key (stronger Track 1 story) |
+|---|---|
+| Graph queries, algorithms, formula scoring, backtests, UI, video — all run | Same, plus the agent _judges_ each report's relevance |
+| Every joined report is kept (`rule-fallback`, reason logged) | Junk matches dropped with a stated reason (e.g. unrelated same-system hits) |
+
+Set **one** of: `ANTHROPIC_API_KEY` (with `ANTHROPIC_MODEL`), or a free-tier
+`LLM_API_KEY` + `LLM_BASE_URL` (Groq/OpenRouter) with `LLM_MODEL`. Any API failure
+falls back to rules automatically — the project never crashes for lack of a key.
+`.env` is gitignored: keys never touch GitHub.
+
 ## MCP tools (fixed Cypher inside)
 
 Read: `search_accidents · get_accident · prior_reports · fleet_reports · hotspots ·
