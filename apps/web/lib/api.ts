@@ -9,7 +9,7 @@ const memo = new Map<string, Promise<ViewResult<unknown>>>();
 export function view<T>(name: string, args: Record<string, unknown> = {}, fresh = false): Promise<ViewResult<T>> {
   const key = name + JSON.stringify(args);
   if (fresh || !memo.has(key)) {
-    const p = fetch("/api/view", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name, args }) })
+    const p = fetch("/api/view", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name, args, fresh }) })
       .then(async (r) => { const j = await r.json(); if (!r.ok) throw new Error(j.error ?? `${name} failed (${r.status})`); return j; });
     memo.set(key, p);
     p.catch(() => memo.delete(key));

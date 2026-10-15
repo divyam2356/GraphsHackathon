@@ -87,8 +87,12 @@ export const CYPHER: Record<string, string> = {
     // Evidence edges only, maxLen 4 (every evidence path we use is <= 4 hops). FalkorDB's
     // shortestPath() is directed-only and these paths mix directions, so SPpaths with
     // relDirection 'both'; maxLen 5+ explodes through hub nodes (6 s vs 10-130 ms at 4).
-    CALL algo.SPpaths({sourceNode:s, targetNode:t, relDirection:'both', maxLen:4, pathCount:1,
+    // Time machine: all shortest paths (pathCount 0), keeping the first whose records between
+    // the endpoints are all dated before asOf (same cost: 3-180 ms). No row = no such path.
+    CALL algo.SPpaths({sourceNode:s, targetNode:t, relDirection:'both', maxLen:4, pathCount:0,
       relTypes:['ON','INVOLVED','AT','WITHIN','FOUND','PRECURSOR_OF','TARGETS','SUPERSEDES','CITES','MATCHES','SIGNATURE']}) YIELD path
+    WITH fwd, path WHERE $asOf IS NULL OR all(n IN nodes(path)[1..-1] WHERE n.date IS NULL OR n.date < $asOf)
+    WITH fwd, path LIMIT 1
     WITH fwd, nodes(path) AS ns, [r IN relationships(path) | type(r)] AS rs
     RETURN [n IN CASE WHEN fwd THEN ns ELSE reverse(ns) END | {labels:labels(n), id:coalesce(n.id, n.ev_id, n.ad_no, n.bin)}] AS hops,
       CASE WHEN fwd THEN rs ELSE reverse(rs) END AS rels`,

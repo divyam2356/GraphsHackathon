@@ -107,7 +107,8 @@ WHERE r.date < $asOf AND r.date >= toString(date($asOf) - duration({days: $windo
 ```
 
 FalkorDB features in use: variable-length paths over the location hierarchy, `algo.SPpaths` for
-the shortest evidence path between a report and an accident, the full-text index on report text,
+the shortest evidence path between a report and an accident (all shortest paths, keeping one that
+only passes through records before the investigation date), the full-text index on report text,
 date and duration functions for the time machine, and `UNION ALL` typed counts for the schema view.
 View queries run in tens of milliseconds; the heaviest (`fleet_map`, cold) takes about 0.3 s.
 All Cypher lives in `packages/graph/queries/cypher.ts`.
@@ -163,7 +164,6 @@ SWA 812 fixture instead of FalkorDB; it is off by default and never used for the
   them written from this accident, with a keyword stand-in for text similarity (`packages/agent/src/loop.ts`).
   It is not evaluated and not in the demo. `services/eval/src/all.ts` is a set of SWA 812
   regression checks, not evidence.
-- `explain_path` does not apply the date limit to the paths it finds (the ones we have seen do not cross later records).
 - `similar_reports` uses the full-text index; no embeddings are loaded.
 - Fix orders: the two S-4L ADs only. Company layer (Track 3): 3 teams, 15 engineers, 2 task cards
   and 1 decision, all `synthetic: true`, reachable through the `who_fixed`, `why_task` and `stale_tasks` tools.

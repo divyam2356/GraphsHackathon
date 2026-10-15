@@ -1,6 +1,7 @@
 import { runTool } from "@blackbox/graph/src/run";
 import { CYPHER } from "@blackbox/graph/queries/cypher";
-// Read-only graph queries for the UI views: POST { name, args } -> { rows, ms, cypher }.
+// Read-only graph queries for the UI views: POST { name, args, fresh? } -> { rows, ms, cypher }.
+// fresh: run and time the query again instead of answering from the cache.
 // Only the names below run here; write tools go through the agent (MCP) or approval routes.
 // Map and trend results are cached (the history they read never changes). The whole-graph
 // counts take ~0.8 s, near FalkorDB's 1 s read timeout, so they are kept for a minute and
@@ -14,12 +15,12 @@ const TTL: Record<string, number> = { graph_stats: 60_000, edge_stats: 60_000 };
 const cache = new Map<string, { rows: unknown; ms: number; at: number }>();
 
 export async function POST(req: Request) {
-  const { name, args = {} } = (await req.json()) as { name: string; args?: Record<string, unknown> };
+  const { name, args = {}, fresh = false } = (await req.json()) as { name: string; args?: Record<string, unknown>; fresh?: boolean };
   if (!VIEWS.has(name)) return Response.json({ error: `not a view query: ${name}` }, { status: 400 });
   const key = name + JSON.stringify(args);
   const kept = cache.get(key);
   try {
-    let hit = kept && (CACHED.has(name) || Date.now() - kept.at < (TTL[name] ?? 0)) ? kept : undefined;
+    let hit = !fresh && kept && (CACHED.has(name) || Date.now() - kept.at < (TTL[name] ?? 0)) ? kept : undefined;
     if (!hit) {
       const t0 = Date.now();
       hit = { rows: await runTool(name, args), ms: Date.now() - t0, at: t0 };

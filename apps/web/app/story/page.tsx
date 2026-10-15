@@ -338,7 +338,15 @@ function BuiltOn() {
       ["bin_reports", "The write-ups behind one map cell", { family: "737", chapter: "53", variants: CLASSIC, condition: "CRACK", bin: "737/53/S4L/BS620", asOf: SWA812.date }],
       ["lines_by_year", "S-4 across the fleet, by year", { ...SKIN, lines: ["737/53/S4L", "737/53/S4R"], to: SWA812.date }],
     ];
-    Promise.all(runs.map(([name, what, a]) => view<unknown[]>(name, a).then((r) => ({ name, what, ms: r.ms, rows: Array.isArray(r.rows) ? r.rows.length : 1 })))).then(setTimes, () => {});
+    // one at a time and uncached, so each time is that query alone
+    (async () => {
+      const out: typeof times = [];
+      for (const [name, what, a] of runs) {
+        const r = await view<unknown[]>(name, a, true);
+        out.push({ name, what, ms: r.ms, rows: Array.isArray(r.rows) ? r.rows.length : 1 });
+      }
+      setTimes(out);
+    })().catch(() => {});
   }, []);
   return (
     <>
@@ -357,8 +365,10 @@ function BuiltOn() {
   sourceNode: a, targetNode: b,
   relTypes: ['ON', 'INVOLVED', 'AT',
              'WITHIN', 'FOUND'],
-  relDirection: 'both', maxLen: 4, pathCount: 1
-}) YIELD path`}</pre></section>
+  relDirection: 'both', maxLen: 4, pathCount: 0
+}) YIELD path
+WITH path WHERE all(n IN nodes(path)[1..-1]
+  WHERE n.date IS NULL OR n.date < $asOf)`}</pre></section>
         <section><h2>Search the mechanics&apos; write-ups</h2><pre>{`CALL db.idx.fulltext.queryNodes('Report', $text)
 YIELD node AS r, score
 WHERE r.date < $asOf`}</pre></section>
