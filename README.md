@@ -96,6 +96,21 @@ never delete.
 2. **Leads top-3** — hide findings, feed early facts only, check true system+location in top 3.
 3. **Novelty detection** — replay in date order; first accident per mode was "new" then. Recall/precision of "no known mode fits" across thresholds. Open item: NTSB table has no final-report date → mode becomes known at event + ~18mo unless CAROL gives real date.
 
+## Rules compliance (Graph Hacks rules 2, 3, 5, 10–12)
+
+- Rule 2 (FalkorDB primary, central): the only database is the `blackbox` FalkorDB
+  graph. The agent has no other storage — memory (PRECURSOR_OF, HotSpot, Alert,
+  FailureMode, Case) is written back to the same graph.
+- Rule 3 (graph does real work): every multi-hop join (accident → priors → fleet →
+  fix chain), keyword search (fulltext index), similar-report search (vector index),
+  fix-order paths (`algo.SPpaths`), and hotspot clusters (`algo.labelPropagation`
+  over temp per-window edges, `packages/graph/src/hotspotJob.ts`) executes inside
+  FalkorDB as fixed Cypher in the MCP server. Remove FalkorDB and the agent has no
+  evidence paths, no rankings, no alerts — the demo fixture only carries the one
+  SWA-812 story for offline UI work and cannot answer new questions.
+- Rule 5 (tracks): entering all three — T1 Agents That Act, T2 Memory & Coordination,
+  T3 Company Brain (single shared graph, `synthetic:true` org layer).
+
 ## Docs
 
 - `docs/GRAPH_MODEL.md` — node/edge table + Location binning (~20in stations)
