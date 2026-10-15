@@ -1,3 +1,4 @@
+import "@blackbox/graph/src/env";
 // CLI smoke test: npm run demo -- "crown skin crack S-4L 737"
 // Runs investigate + leads against demo store (no DB, no LLM key needed).
 import { runInvestigate, runLeads } from "./loop";

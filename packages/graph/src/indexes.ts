@@ -1,3 +1,4 @@
+import "@blackbox/graph/src/env";
 // Creates indexes from schema.cypher (idempotent — safe to re-run).
 import { connect } from "./db";
 const db = await connect();

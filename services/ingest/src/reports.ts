@@ -1,3 +1,4 @@
+import "@blackbox/graph/src/env";
 // FAA reports ingest: yearly SDR CSVs (faa.gov, public) -> Report nodes.
 // Location: structured station+stringer fields first, regex fallback on text
 // ("BS 727A, STR 4L"). Embeddings: local bge-small (384d) on structures+engines

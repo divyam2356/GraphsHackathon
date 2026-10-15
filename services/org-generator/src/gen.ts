@@ -1,3 +1,4 @@
+import "@blackbox/graph/src/env";
 // Northwind Aero (fictional): 15 engineers, 3 teams, ~40 task cards citing REAL
 // fix orders, ~300 work orders/shift notes on fictional tails of REAL models.
 // Every node: synthetic:true. Minimum viable: the 3 flow-D questions work.

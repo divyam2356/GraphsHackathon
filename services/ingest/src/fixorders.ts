@@ -1,3 +1,4 @@
+import "@blackbox/graph/src/env";
 // FAA fix orders: Federal Register JSON API (public) -> FixOrder nodes.
 // SUPERSEDES + TARGETS via regex ("supersedes AD YYYY-NN-NN", "fuselage station")
 // plus LLM extraction on summaries for the long tail. FR API caps count at 10k.

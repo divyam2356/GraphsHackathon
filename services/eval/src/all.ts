@@ -1,3 +1,4 @@
+import "@blackbox/graph/src/env";
 // 3 time-machine backtests. FalkorDB-backed when reachable (rule 3: the measured
 // claims come from the graph, not mocks); demo fixture otherwise.
 // 1 precursor-hit · 2 leads-top3 · 3 novelty-replay. Thresholds swept, not hardcoded.

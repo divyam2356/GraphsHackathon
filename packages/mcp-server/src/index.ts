@@ -1,3 +1,4 @@
+import "@blackbox/graph/src/env";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { buildServer } from "./tools";
 import { connect } from "@blackbox/graph/src/db";

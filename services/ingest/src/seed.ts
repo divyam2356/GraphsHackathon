@@ -1,3 +1,4 @@
+import "@blackbox/graph/src/env";
 // Seed failure modes: group historical mechanical-cause findings by
 // (family, system, location bin, mechanism keyword) -> FailureMode origin:seed.
 // Approval-gated modes (accident/observation origin) are drafted by the agent

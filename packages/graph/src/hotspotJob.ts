@@ -1,3 +1,4 @@
+import "@blackbox/graph/src/env";
 // Flow-B hotspot job (runnable): temp per-window :CO_Q edges -> algo.labelPropagation
 // -> (:HotSpot)-[:AT]->(:Location). Algorithms filter by label+rel-type only,
 // not by date — hence temp edges per window, created, run, deleted.

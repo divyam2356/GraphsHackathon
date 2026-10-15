@@ -1,3 +1,4 @@
+import "@blackbox/graph/src/env";
 // NTSB ingest: avall.mdb -> CSV -> Accident/Aircraft/Finding nodes.
 // Source: NTSB aviation accident database (public). Findings map to Location
 // bins via JASC-code lookup (draft: .agent/tasks/falkordb-ideas/same_system.py).
