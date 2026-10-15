@@ -19,7 +19,7 @@ async function chatAnthropic(system: string, user: string): Promise<string> {
       "x-api-key": process.env.ANTHROPIC_API_KEY!,
       "anthropic-version": "2023-06-01",
     },
-    body: JSON.stringify({ model: process.env.ANTHROPIC_MODEL ?? OA_MODEL, max_tokens: 300, system, messages: [{ role: "user", content: user }] }),
+    body: JSON.stringify({ model: process.env.ANTHROPIC_MODEL ?? OA_MODEL, max_tokens: 1000, system, messages: [{ role: "user", content: user }] }),
   });
   if (!r.ok) throw new Error(`LLM ${r.status}`);
   const j = (await r.json()) as { content: Array<{ text?: string }> };
@@ -31,7 +31,7 @@ async function chatOA(system: string, user: string): Promise<string> {
   const r = await fetch(`${OA_BASE}/chat/completions`, {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${process.env.LLM_API_KEY!}` },
-    body: JSON.stringify({ model: OA_MODEL, max_tokens: 300, messages: [{ role: "system", content: system }, { role: "user", content: user }] }),
+    body: JSON.stringify({ model: OA_MODEL, max_tokens: 1000, messages: [{ role: "system", content: system }, { role: "user", content: user }] }),
   });
   if (!r.ok) throw new Error(`LLM ${r.status}`);
   const j = (await r.json()) as { choices: Array<{ message: { content: string } }> };
@@ -50,14 +50,15 @@ export interface Judgment { keep: boolean; reason: string }
 // and self-matches (EC135). Warning signs only — never causes.
 export async function judgeRelevance(report: string, cause: string): Promise<Judgment> {
   if (!hasKey()) return { keep: true, reason: "rule-fallback (no LLM key)" };
-  try {
-    const out = await chat(
-      "You triage aircraft maintenance reports. Reply ONLY JSON: {\"keep\":boolean,\"reason\":string}. Keep only reports that plausibly foreshadow the accident's mechanical failure mode (same system AND location/mechanism). Drop unrelated matches and reports describing the accident itself. You describe warning signs, never causes.",
-      `Report: ${report}\nAccident cause: ${cause}`,
-    );
-    const j = JSON.parse(out) as Judgment;
-    return { keep: Boolean(j.keep), reason: String(j.reason ?? "llm").slice(0, 200) };
-  } catch {
-    return { keep: true, reason: "rule-fallback (LLM error)" };
+  const sys = "You triage aircraft maintenance reports. Reply ONLY JSON: {\"keep\":boolean,\"reason\":string}. Keep only reports that plausibly foreshadow the accident's mechanical failure mode (same system AND location/mechanism). Drop unrelated matches and reports describing the accident itself. You describe warning signs, never causes.";
+  const usr = `Report: ${report}\nAccident cause: ${cause}`;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const j = JSON.parse(await chat(sys, usr)) as Judgment;
+      return { keep: Boolean(j.keep), reason: String(j.reason ?? "llm").slice(0, 200) };
+    } catch {
+      if (attempt === 0) await new Promise((r) => setTimeout(r, 1500)); // free-tier hiccup retry
+    }
   }
+  return { keep: true, reason: "rule-fallback (LLM error)" };
 }
