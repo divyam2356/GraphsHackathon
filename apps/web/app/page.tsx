@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { FuselageMap, HeatLegend, type Cell, type LineCount, type Pin } from "../components/FuselageMap";
 import { TimeSlider } from "../components/TimeSlider";
 import { Header } from "../components/Header";
-import { AgentPanel, AnswerBar, type Mode } from "../components/AgentPanel";
+import { AgentPanel, AnswerBar, StepsGrid, type Mode } from "../components/AgentPanel";
 import { EvidenceGraph, nodeKey, type SubRow } from "../components/EvidenceGraph";
 import { RecordDrawer, type Open } from "../components/RecordDrawer";
 import { view, type Step } from "../lib/api";
@@ -102,14 +102,15 @@ export default function Board() {
           <TimeSlider asOf={asOf} onChange={setAsOf} stopAt={SWA812.date} prefetch={prefetch}
             marks={[{ date: "2010-03-09", label: "N632SW: 2 cracked clips on S-4L" }, { date: SWA812.date, label: "Southwest 812", hot: true }]} />
         </section>
-        <div className="lower">
-          <AgentPanel asOf={asOf} steps={steps} onStep={(s) => setSteps((p) => [...p, s])} onReset={() => setSteps([])} onOpen={openId} autorun={autorun} hideAnswer />
+        <div className="askrow">
+          <AgentPanel asOf={asOf} steps={steps} onStep={(s) => setSteps((p) => [...p, s])} onReset={() => setSteps([])} onOpen={openId} autorun={autorun} hideAnswer showSteps={false} />
           <section aria-labelledby="graph-title">
             <h2 id="graph-title" className="panel-title">Evidence graph <small>{sub.length ? `${sub.length} nodes the investigation touched, and the edges between them` : ""}</small></h2>
             <EvidenceGraph rows={sub} kept={kept} focus={open?.kind === "node" ? nodeKey(open.node) : null} onNode={(node) => setOpen({ kind: "node", node })} />
           </section>
-          {answer && <AnswerBar text={answer.text} onOpen={openId} />}
         </div>
+        <StepsGrid steps={steps} onOpen={openId} hideAnswer />
+        {answer && <AnswerBar text={answer.text} onOpen={openId} />}
       </main>
       <RecordDrawer open={open} onClose={() => { setOpen(null); setSelected(null); }} />
     </>

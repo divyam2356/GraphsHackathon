@@ -27,9 +27,9 @@ export async function playReplay(r: Replay, onStep: (s: Step) => void, signal: A
   }
 }
 
-export function AgentPanel({ asOf, steps, onStep, onReset, onOpen, replayUrl = "/replays/swa812-agent.json", autorun, hideAnswer }: {
+export function AgentPanel({ asOf, steps, onStep, onReset, onOpen, replayUrl = "/replays/swa812-agent.json", autorun, hideAnswer, showSteps = true }: {
   asOf: string; steps: Step[]; onStep: (s: Step) => void; onReset: () => void;
-  onOpen: (id: string) => void; replayUrl?: string; autorun?: Mode; hideAnswer?: boolean;
+  onOpen: (id: string) => void; replayUrl?: string; autorun?: Mode; hideAnswer?: boolean; showSteps?: boolean;
 }) {
   const [question, setQuestion] = useState(DEFAULT_QUESTION);
   const [live, setLive] = useState<{ live: boolean; model: string } | null>(null);
@@ -37,8 +37,6 @@ export function AgentPanel({ asOf, steps, onStep, onReset, onOpen, replayUrl = "
   const [busy, setBusy] = useState(false);
   const [replay, setReplay] = useState<Replay | null>(null);
   const abort = useRef<AbortController | null>(null);
-  const list = useRef<HTMLOListElement>(null);
-  useEffect(() => { const el = list.current; if (el && el.scrollHeight > el.clientHeight) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" }); }, [steps.length]);
 
   useEffect(() => {
     fetch("/api/agent").then((r) => r.json()).then((j) => setLive(j), () => setLive({ live: false, model: "" }));
@@ -59,17 +57,6 @@ export function AgentPanel({ asOf, steps, onStep, onReset, onOpen, replayUrl = "
     }
     if (abort.current === a) setBusy(false);
   }
-
-  const rows: Row[] = [];
-  for (const s of steps) {
-    if (hideAnswer && s.type === "answer") continue;
-    if (s.type === "tool_call") rows.push({ kind: "tool", call: s });
-    else if (s.type === "tool_result") {
-      const r = rows.find((x) => x.kind === "tool" && x.call.id === s.id);
-      if (r && r.kind === "tool") r.result = s;
-    } else rows.push({ kind: s.type, text: s.text });
-  }
-  let n = 0;
 
   return (
     <section className="agent" aria-labelledby="agent-title">
@@ -93,7 +80,31 @@ export function AgentPanel({ asOf, steps, onStep, onReset, onOpen, replayUrl = "
         </p>
       </form>
 
-      <ol className="steps" ref={list}>
+      {showSteps && <StepsGrid steps={steps} onOpen={onOpen} hideAnswer={hideAnswer} />}
+    </section>
+  );
+}
+
+/** The trace as a wrapping card grid: chronological left-to-right, notes span full width. */
+export function StepsGrid({ steps, onOpen, hideAnswer }: { steps: Step[]; onOpen: (id: string) => void; hideAnswer?: boolean }) {
+  const rows: Row[] = [];
+  for (const s of steps) {
+    if (hideAnswer && s.type === "answer") continue;
+    if (s.type === "tool_call") rows.push({ kind: "tool", call: s });
+    else if (s.type === "tool_result") {
+      const r = rows.find((x) => x.kind === "tool" && x.call.id === s.id);
+      if (r && r.kind === "tool") r.result = s;
+    } else rows.push({ kind: s.type, text: s.text });
+  }
+  return <StepsList rows={rows} onOpen={onOpen} />;
+}
+
+function StepsList({ rows, onOpen }: { rows: Row[]; onOpen: (id: string) => void }) {
+  const list = useRef<HTMLOListElement>(null);
+  useEffect(() => { const el = list.current; if (el && el.scrollHeight > el.clientHeight) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" }); }, [rows.length]);
+  let n = 0;
+  return (
+    <ol className="steps grid" ref={list}>
         {rows.map((r, i) => {
           if (r.kind !== "tool") return <li key={i} className={`step-${r.kind}`}><span className="step-n" aria-hidden="true">{r.kind === "answer" ? "◆" : r.kind === "error" ? "!" : ""}</span><div className="step-body">{r.kind === "answer" ? <Linked text={r.text} onOpen={onOpen} /> : <p>{r.text}</p>}</div></li>;
           n++;
@@ -116,8 +127,7 @@ export function AgentPanel({ asOf, steps, onStep, onReset, onOpen, replayUrl = "
           );
         })}
         {!rows.length && <li className="step-empty"><span className="step-n" aria-hidden="true"></span><div className="step-body"><p>Press Investigate. Each tool call appears here with the query behind it, and the records it touches join the evidence graph.</p></div></li>}
-      </ol>
-    </section>
+    </ol>
   );
 }
 
