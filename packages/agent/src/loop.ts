@@ -1,35 +1,27 @@
 // Tool-calling loop (older CLI/dev flows; the live product path is agent.ts + runTool).
-// NOTE (D6): runLeads below is a SKETCH — text_sim is a hard-coded keyword rule
-// over hand-seeded modes, so it cannot fail on SWA 812 and proves nothing. It is
-// NOT reachable from the live agent (no MCP tool) or the UI (no route); it survives
-// only for the CLI demo and the old eval harness. Fix = score with FalkorDB
-// full-text similarity and evaluate; until then do not present it as evidence.
+// runLeads was a SKETCH until Oct 16 (D6): it now delegates to the honest
+// scoreCandidates pipeline — every component from the graph, no per-mode rules.
 import { rank, type Candidate } from "./scoring";
 import { judgeRelevance } from "./llm";
+import { scoreCandidates } from "@blackbox/graph/src/run";
 
 export interface Tool { name: string; call(args: Record<string, unknown>): Promise<unknown> }
 
 export async function runLeads(
   tools: Record<string, Tool>,
-  input: { tail: string; family: string; phase: string; narrative: string; asOf: string },
+  input: { tail: string; family: string; system?: string; phase: string; narrative: string; asOf: string },
 ) {
-  // E. leads: early facts only -> evidence -> formula rank -> ranked systems+locations
-  const modes = (await tools.rank_failure_modes.call(input)) as Array<{
+  // E. leads: early facts only -> evidence -> honest rank (scoreCandidates: every
+  // component from the graph, no per-mode keyword rules). If the backend already
+  // scored (rank_failure_modes tool), use that; else gather and score locally.
+  const first = await tools.rank_failure_modes.call(input);
+  if (first && typeof first === "object" && "scored" in (first as Record<string, unknown>)) return first as ReturnType<typeof scoreCandidates>;
+  const modes = first as Array<{
     id: string; name: string; system: string; family: string; sig: Array<{ bin: string; w: number }>;
   }>;
-  const prior = (await tools.prior_reports.call({ tail: input.tail, asOf: input.asOf })) as Array<{ bin?: string; text?: string }>;
-  const priorBins = prior.map((r) => r.bin).filter((b): b is string => Boolean(b));
-  // Location keys nest ("737/53/S4L/BS620" is within "737/53/S4L"), so a signature hits
-  // when a prior report sits at that location or anywhere inside it.
-  const within = (bin: string, sig: string) => bin === sig || bin.startsWith(`${sig}/`);
-  const cands: Candidate[] = modes.map((m) => {
-    const structure = m.family === input.family ? (m.system === "structures" && /skin|lap|fuselage/i.test(input.narrative) ? 1 : 0.5) : 0;
-    const hit = m.sig.filter((s) => priorBins.some((b) => within(b, s.bin))).length;
-    const signature = m.sig.length ? hit / m.sig.length : 0;
-    const text_sim = /s-4l|lap joint|crown/i.test(input.narrative) && m.id === "FM-CROWN-S4L" ? 0.9 : 0.1;
-    return { modeId: m.id, name: m.name, structure, signature, text_sim };
-  });
-  return rank(cands);
+  const prior = (await tools.prior_reports.call({ tail: input.tail, asOf: input.asOf })) as Array<{ bin?: string }>;
+  const sims = (await tools.similar_reports?.call({ text: input.narrative, asOf: input.asOf }).catch(() => [])) as Array<{ bin?: string; score?: number }>;
+  return scoreCandidates({ ...input, system: input.system ?? "" }, modes, prior, sims ?? []);
 }
 
 export async function runInvestigate(

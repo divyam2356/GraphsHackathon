@@ -47,7 +47,7 @@ asking about a line automatically includes every slice on it."
 **Each folder in one line:**
 - `services/ingest` — downloads public records and pins them on the board.
 - `packages/graph` — the board itself, plus the fixed questions anyone may ask it.
-- `packages/mcp-server` — 18 labeled buttons; the agent may press buttons but never reach behind the board.
+- `packages/mcp-server` — 19 labeled buttons; the agent may press buttons but never reach behind the board.
 - `packages/agent` — the investigator: presses buttons in order, judges each report, writes down what it kept.
 - `apps/web` — the two screens: the Board (investigate) and the Story (presentation).
 - `services/eval` — the honesty check: replays old accidents to see if the method would have flagged them.
@@ -79,7 +79,7 @@ Say: "warning signs", "leads worth review", "inspect first."
 
 ## File tour (who owns what — put names here)
 - `packages/graph/{schema.cypher,queries/cypher.ts,src/hotspotJob.ts}` — model + fixed queries + LP job
-- `packages/mcp-server/src/{tools.ts,index.ts}` — 18 domain tools, demo fallback
+- `packages/mcp-server/src/{tools.ts,index.ts}` — 19 domain tools, demo fallback
 - `packages/agent/src/{loop.ts,scoring.ts}` — flows A/B/D/E/F, formula + decision rule
 - `services/{ingest,org-generator,eval}` — pipeline, Northwind Aero, backtests
 - `apps/web` — chat, time slider, approval cards, 3 API routes

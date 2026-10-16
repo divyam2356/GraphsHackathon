@@ -30,6 +30,7 @@ Last updated: Oct 15, evening (Manish).
 | Oct 15 | Demos default to the **Recorded** run (a real 297 s Nemotron run, replayed in about 20 s). | Free tier: 50 requests a day and about 5 minutes per live run. |
 | Oct 15 | The evaluation is the backtest over all NTSB events, reported honestly: no per-aircraft signal (0.88× chance). | A fair test, shown in Story step 5. It is stronger than single-case checks that cannot fail. |
 | Oct 15 | Leads ranking (`rank_failure_modes`) and `services/eval/src/all.ts` are not presented as evidence. | Both are built from the SWA 812 answer (seeded mode, keyword rule). |
+| Oct 16 | D6 closed: leads ranking fixed — structure + signature overlap + full-text similarity, all from the graph; verified SWA 812 rank 1 (0.8, clear), door-frame case weak. | The keyword rule could not fail and proved nothing; the fix keeps D6's recommended approach. |
 
 ## Pending decisions
 

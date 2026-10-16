@@ -32,6 +32,8 @@ export function buildServer(query: (name: string, args: unknown) => Promise<unkn
     { family: z.string(), bin: bin.optional(), asOf });
   tool("explain_path", "Shortest evidence path (up to 4 hops) between two records (report id, ev_id, AD number or location key) over evidence edges, only through records dated before asOf. Use it to show how a warning sign connects to an accident.",
     { from: z.string(), to: z.string(), asOf: asOf.optional() });
+  tool("rank_failure_modes", "Rank confirmed failure modes for a new case: every component (family/system match, signature-line overlap with this tail's priors, full-text similarity) is computed from the graph, never hard-coded. Returns scored modes plus the decision (clear/ambiguous/weak/none).",
+    { tail: z.string(), family: z.string(), system: z.string().describe("system, e.g. structures"), narrative: z.string().describe("early facts only, never the final cause"), asOf, windowDays: z.number().default(730).describe("look-back window in days").optional() });
   tool("failure_mode_candidates", "Dormant and proposed failure modes (not yet confirmed by a human). Check these before proposing a new one.",
     { caseId: z.string() });
   tool("who_fixed", "Engineers of the (fictional) maintenance company who worked at a location.", { bin });
