@@ -11,7 +11,7 @@ import { TrendChart, busiest, riseRank, shortLine, useLineSeries } from "../../c
 import { DetailMap } from "../../components/DetailMap";
 import { SchemaView } from "../../components/SchemaView";
 import { BacktestChart, BacktestHits, useBacktest } from "../../components/Backtest";
-import { AgentPanel } from "../../components/AgentPanel";
+import { AgentPanel, AnswerBar } from "../../components/AgentPanel";
 import { EvidenceGraph, nodeKey, type SubRow } from "../../components/EvidenceGraph";
 import { RecordDrawer, type Open } from "../../components/RecordDrawer";
 import { streamAgent, view, type Step } from "../../lib/api";
@@ -229,6 +229,7 @@ function AskIt() {
   }, [keysJson]);
   const binCalls = new Set(steps.flatMap((s) => (s.type === "tool_call" && s.name === "prior_reports" && s.args.bin ? [s.id] : [])));
   const kept = new Set(steps.flatMap((s) => (s.type === "tool_call" && s.name === "record_precursor" ? [String(s.args.reportId)] : s.type === "tool_result" && binCalls.has(s.id) ? s.keys.reports : [])));
+  const answer = [...steps].reverse().find((s) => s.type === "answer");
   const openId = (id: string) => { const row = sub.find((r) => nodeKey(r.node) === id); setOpen(row ? { kind: "node", node: row.node } : { kind: "missing", id }); };
   return (
     <>
@@ -236,11 +237,12 @@ function AskIt() {
         <p className="story-n">7 of {TITLES.length}</p>
         <h1>{TITLES[6]}</h1>
         <p className="lede">An agent investigates through our MCP server. Every tool runs fixed Cypher, so the model never writes a query, and the date limit is enforced in code.</p>
-        <AgentPanel asOf={SWA812.date} steps={steps} onStep={(s) => setSteps((p) => [...p, s])} onReset={() => setSteps([])} onOpen={openId} />
+        <AgentPanel asOf={SWA812.date} steps={steps} onStep={(s) => setSteps((p) => [...p, s])} onReset={() => setSteps([])} onOpen={openId} hideAnswer />
       </div>
       <div className="story-visual">
         <EvidenceGraph rows={sub} kept={kept} focus={open?.kind === "node" ? nodeKey(open.node) : null} onNode={(node) => setOpen({ kind: "node", node })} />
       </div>
+      {answer && <AnswerBar text={answer.text} onOpen={openId} />}
       <RecordDrawer open={open} onClose={() => setOpen(null)} />
     </>
   );

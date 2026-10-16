@@ -27,9 +27,9 @@ export async function playReplay(r: Replay, onStep: (s: Step) => void, signal: A
   }
 }
 
-export function AgentPanel({ asOf, steps, onStep, onReset, onOpen, replayUrl = "/replays/swa812-agent.json", autorun }: {
+export function AgentPanel({ asOf, steps, onStep, onReset, onOpen, replayUrl = "/replays/swa812-agent.json", autorun, hideAnswer }: {
   asOf: string; steps: Step[]; onStep: (s: Step) => void; onReset: () => void;
-  onOpen: (id: string) => void; replayUrl?: string; autorun?: Mode;
+  onOpen: (id: string) => void; replayUrl?: string; autorun?: Mode; hideAnswer?: boolean;
 }) {
   const [question, setQuestion] = useState(DEFAULT_QUESTION);
   const [live, setLive] = useState<{ live: boolean; model: string } | null>(null);
@@ -62,6 +62,7 @@ export function AgentPanel({ asOf, steps, onStep, onReset, onOpen, replayUrl = "
 
   const rows: Row[] = [];
   for (const s of steps) {
+    if (hideAnswer && s.type === "answer") continue;
     if (s.type === "tool_call") rows.push({ kind: "tool", call: s });
     else if (s.type === "tool_result") {
       const r = rows.find((x) => x.kind === "tool" && x.call.id === s.id);
@@ -114,9 +115,20 @@ export function AgentPanel({ asOf, steps, onStep, onReset, onOpen, replayUrl = "
             </li>
           );
         })}
-        {!rows.length && <li className="step-empty">Press Investigate. Each tool call appears here with the query behind it, and the records it touches join the evidence graph.</li>}
+        {!rows.length && <li className="step-empty"><span className="step-n" aria-hidden="true"></span><div className="step-body"><p>Press Investigate. Each tool call appears here with the query behind it, and the records it touches join the evidence graph.</p></div></li>}
       </ol>
     </section>
+  );
+}
+
+/** Full-width conclusion bar: the final answer rendered below the trace + graph
+ *  columns instead of squeezed inside one of them. */
+export function AnswerBar({ text, onOpen }: { text: string; onOpen: (id: string) => void }) {
+  return (
+    <div className="conclusion" role="status">
+      <p className="eyebrow">Conclusion — leads worth review, not causes</p>
+      <Linked text={text} onOpen={onOpen} />
+    </div>
   );
 }
 
