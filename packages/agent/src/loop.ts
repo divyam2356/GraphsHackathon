@@ -1,6 +1,9 @@
-// Tool-calling loop. LLM via Anthropic API when ANTHROPIC_API_KEY is set,
-// else rule-based demo path (formula scoring + canned tool sequence) so everything
-// runs offline. The LLM judges relevance; the FORMULA sets every score.
+// Tool-calling loop (older CLI/dev flows; the live product path is agent.ts + runTool).
+// NOTE (D6): runLeads below is a SKETCH — text_sim is a hard-coded keyword rule
+// over hand-seeded modes, so it cannot fail on SWA 812 and proves nothing. It is
+// NOT reachable from the live agent (no MCP tool) or the UI (no route); it survives
+// only for the CLI demo and the old eval harness. Fix = score with FalkorDB
+// full-text similarity and evaluate; until then do not present it as evidence.
 import { rank, type Candidate } from "./scoring";
 import { judgeRelevance } from "./llm";
 

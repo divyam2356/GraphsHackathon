@@ -160,10 +160,10 @@ SWA 812 fixture instead of FalkorDB; it is off by default and never used for the
 
 - **No per-aircraft signal at the system level** (the backtest above). The Southwest 812 signal is
   location-level and fleet-level, shown for one case; it is not validated across events.
-- **Leads ranking is a sketch.** `rank_failure_modes` scores 3 hand-seeded failure modes, one of
-  them written from this accident, with a keyword stand-in for text similarity (`packages/agent/src/loop.ts`).
-  It is not evaluated and not in the demo. `services/eval/src/all.ts` is a set of SWA 812
-  regression checks, not evidence.
+- **Leads ranking is cut from the product.** It scored hand-seeded modes with a keyword
+  stand-in, so it could not fail and proved nothing. The MCP tool and UI routes are
+  removed; the sketch survives only in `packages/agent/src/loop.ts` for the CLI demo
+  (marked D6). `services/eval/src/all.ts` is a set of SWA 812 regression checks, not evidence.
 - `similar_reports` uses the full-text index; no embeddings are loaded.
 - Fix orders: the two S-4L ADs only. Company layer (Track 3): 3 teams, 15 engineers, 2 task cards
   and 1 decision, all `synthetic: true`, reachable through the `who_fixed`, `why_task` and `stale_tasks` tools.

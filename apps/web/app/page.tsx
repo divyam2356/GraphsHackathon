@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { FuselageMap, HeatLegend, type Cell, type LineCount, type Pin } from "../components/FuselageMap";
 import { TimeSlider } from "../components/TimeSlider";
 import { Header } from "../components/Header";
-import { AgentPanel, AnswerBar, StepsGrid, type Mode } from "../components/AgentPanel";
+import { AgentPanel, AnswerBar, StepsGrid, type Lift, type Mode } from "../components/AgentPanel";
 import { EvidenceGraph, nodeKey, type SubRow } from "../components/EvidenceGraph";
 import { RecordDrawer, type Open } from "../components/RecordDrawer";
 import { view, type Step } from "../lib/api";
@@ -73,6 +73,13 @@ export default function Board() {
   useEffect(() => { if (selected && !open) openCell(selected); }, [selected]); // eslint-disable-line react-hooks/exhaustive-deps
   const prefetch = useCallback((d: string) => { view("fleet_map", args(d)); view("line_window", args(d)); }, [filter]); // eslint-disable-line react-hooks/exhaustive-deps
   const answer = [...steps].reverse().find((s) => s.type === "answer");
+  // Fleet lift per stringer line, from the already-fetched line_window view:
+  // distinct aircraft in the 12mo before asOf vs the 12mo before that.
+  const liftByLine = useMemo(() => {
+    const m = new Map<string, Lift>();
+    for (const l of lines.rows ?? []) m.set(l.line, { ac: l.ac, acPrev: l.ac_prev, lift: Math.round((100 * (l.ac + 1)) / (l.ac_prev + 1)) / 100 });
+    return m;
+  }, [lines.rows]);
   const pins: Pin[] = (prior.rows ?? []).flatMap((r) => {
     const k = parseKey(r.bin);
     const station = stationIn(r.text) ?? (k?.station ?? 0) + 10;
@@ -109,7 +116,7 @@ export default function Board() {
             <EvidenceGraph rows={sub} kept={kept} focus={open?.kind === "node" ? nodeKey(open.node) : null} onNode={(node) => setOpen({ kind: "node", node })} />
           </section>
         </div>
-        <StepsGrid steps={steps} onOpen={openId} hideAnswer />
+        <StepsGrid steps={steps} onOpen={openId} hideAnswer lifts={liftByLine} />
         {answer && <AnswerBar text={answer.text} onOpen={openId} />}
       </main>
       <RecordDrawer open={open} onClose={() => { setOpen(null); setSelected(null); }} />

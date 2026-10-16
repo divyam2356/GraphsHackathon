@@ -8,8 +8,11 @@ B. **Watch (act):** newest month reports → hotspots (distinct tails vs baselin
 C. **Backtests:** see docs/EVALUATION.md.
 D. **Company brain:** why_task TC-53-041 (card→fix order→SUPERSEDES chain→accident/mode);
    who_fixed S-4L; stale_tasks (cards citing replaced orders).
-E. **Leads (cause unknown):** early facts only → rank_failure_modes → ranked systems+locations
-   with evidence paths. After cause confirmed, flow B scans fleet.
+E. **Leads (cause unknown): WITHDRAWN Oct 16 (D6).** Early-facts ranking scored
+   hand-seeded modes with a keyword rule, so it could not fail and proved nothing.
+   The MCP tool and UI routes are removed; the sketch survives in
+   `packages/agent/src/loop.ts` only. Fix = score with FalkorDB full-text
+   similarity and evaluate before presenting it again.
 F. **Learn:** rank → Case node → decision rule → candidates via failure_mode_candidates →
    add_support (dormant/proposed fits) or propose_failure_mode (new) → approval card
    (Approve/Edit/Not now/Same as X). Dormant re-offer rule: new accident OR ≥3 new tails.

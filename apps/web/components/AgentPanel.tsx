@@ -8,6 +8,10 @@ import { streamAgent, type Step } from "../lib/api";
 import { SWA812, fmtDate } from "../lib/fuselage";
 
 export type Mode = "agent" | "scripted" | "recorded";
+/** Fleet lift per stringer line: distinct aircraft in the window vs the one before. */
+export interface Lift { ac: number; acPrev: number; lift: number }
+/** "737/53/S4L/BS620" -> "737/53/S4L" (any level rolls up to its line). */
+export const lineOf = (bin: string): string => bin.split("/").slice(0, 3).join("/");
 export interface Replay { mode: "agent" | "scripted"; model?: string; asOf: string; question: string; recorded: string; steps: Array<{ t: number; step: Step }> }
 type Call = Extract<Step, { type: "tool_call" }>;
 type Result = Extract<Step, { type: "tool_result" }>;
@@ -86,7 +90,7 @@ export function AgentPanel({ asOf, steps, onStep, onReset, onOpen, replayUrl = "
 }
 
 /** The trace as a wrapping card grid: chronological left-to-right, notes span full width. */
-export function StepsGrid({ steps, onOpen, hideAnswer }: { steps: Step[]; onOpen: (id: string) => void; hideAnswer?: boolean }) {
+export function StepsGrid({ steps, onOpen, hideAnswer, lifts }: { steps: Step[]; onOpen: (id: string) => void; hideAnswer?: boolean; lifts?: Map<string, Lift> }) {
   const rows: Row[] = [];
   for (const s of steps) {
     if (hideAnswer && s.type === "answer") continue;
@@ -106,10 +110,10 @@ export function StepsGrid({ steps, onOpen, hideAnswer }: { steps: Step[]; onOpen
       if (typeof id === "string") kept.set(id, typeof c === "number" ? c : NaN);
     }
   }
-  return <StepsList rows={rows} kept={kept} onOpen={onOpen} />;
+  return <StepsList rows={rows} kept={kept} lifts={lifts} onOpen={onOpen} />;
 }
 
-function StepsList({ rows, kept, onOpen }: { rows: Row[]; kept: Map<string, number>; onOpen: (id: string) => void }) {
+function StepsList({ rows, kept, lifts, onOpen }: { rows: Row[]; kept: Map<string, number>; lifts?: Map<string, Lift>; onOpen: (id: string) => void }) {
   const list = useRef<HTMLOListElement>(null);
   useEffect(() => { const el = list.current; if (el && el.scrollHeight > el.clientHeight) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" }); }, [rows.length]);
   let n = 0;
@@ -126,6 +130,7 @@ function StepsList({ rows, kept, onOpen }: { rows: Row[]; kept: Map<string, numb
           n++;
           const res = r.result;
           const ids = res ? [...res.keys.accidents, ...res.keys.reports, ...res.keys.fixorders] : [];
+          const lift = r.call.name === "prior_reports" && typeof r.call.args.bin === "string" ? lifts?.get(lineOf(r.call.args.bin)) : undefined;
           return (
             <li key={r.call.id} className={`step dense${res ? "" : " running"}`}>
               <span className="step-n">{n}</span>
@@ -136,6 +141,9 @@ function StepsList({ rows, kept, onOpen }: { rows: Row[]; kept: Map<string, numb
                   {ids.length > 0 && <span className="chips inline">{ids.slice(0, 5).map((id) => { const kc = kept.get(id); return <button key={id} onClick={() => onOpen(id)} className={kc !== undefined ? "chip kept" : "chip"} title={kc !== undefined && !Number.isNaN(kc) ? `kept as precursor · confidence ${kc}` : id}>{id}{kc !== undefined && !Number.isNaN(kc) ? <span className="conf">{kc}</span> : null}</button>; })}{ids.length > 5 && <span className="more">+{ids.length - 5}</span>}</span>}
                   <span className="res">{res ? (res.isError ? "error" : `${res.rows} ${res.rows === 1 ? "row" : "rows"}, ${res.ms} ms`) : "running"}</span>
                 </div>
+                {lift && (
+                  <div className="lift" title="Distinct aircraft on this stringer line, 12 months before the investigation date vs the 12 before that (same count the map uses)">fleet lift <b>{lift.lift}×</b> · {lift.ac} vs {lift.acPrev} aircraft</div>
+                )}
                 {res?.isError && <p className="step-error">{String(res.preview)}</p>}
                 {r.call.cypher && <details><summary>Cypher</summary><pre>{r.call.cypher.replace(/^ {4}/gm, "")}</pre></details>}
               </div>

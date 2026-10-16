@@ -32,8 +32,6 @@ export function buildServer(query: (name: string, args: unknown) => Promise<unkn
     { family: z.string(), bin: bin.optional(), asOf });
   tool("explain_path", "Shortest evidence path (up to 4 hops) between two records (report id, ev_id, AD number or location key) over evidence edges, only through records dated before asOf. Use it to show how a warning sign connects to an accident.",
     { from: z.string(), to: z.string(), asOf: asOf.optional() });
-  tool("rank_failure_modes", "Confirmed failure modes with their signature locations, for scoring which known mode an event matches.",
-    { tail: z.string(), family: z.string(), phase: z.string(), narrative: z.string(), asOf });
   tool("failure_mode_candidates", "Dormant and proposed failure modes (not yet confirmed by a human). Check these before proposing a new one.",
     { caseId: z.string() });
   tool("who_fixed", "Engineers of the (fictional) maintenance company who worked at a location.", { bin });
