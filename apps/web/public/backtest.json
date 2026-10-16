@@ -4,8 +4,8 @@
   "gap_days": 7,
   "shuffles": 1000,
   "seed": 42,
-  "run": "2026-10-15T12:59:34.065Z",
-  "query_ms": 83,
+  "run": "2026-10-16T05:59:01.998Z",
+  "query_ms": 201,
   "stages": [
     {
       "key": "naive",

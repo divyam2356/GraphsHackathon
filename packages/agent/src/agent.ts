@@ -41,7 +41,7 @@ Rules:
 Method for an accident: get_accident, then prior_reports on the same tail (at the finding's location, and once without a location), judge each report, then fleet_reports at that line for the 3 years before, then fix_orders, then explain_path from the strongest warning sign to the accident, then record_precursor for each report you keep (confidence 0-1, one-line reason).
 For a new pattern no known mode fits: failure_mode_candidates first, add_support if one fits, otherwise propose_failure_mode. A human approves it in the UI; you cannot.
 
-Answer in under 150 words, plain sentences. Cite record ids exactly as the tools return them (report ids like SWAA101399, ev_ids, AD numbers, location keys) so the interface can link them. End with one line starting "Leads worth review:".`;
+Answer in under 180 words, plain sentences. Cite record ids exactly as the tools return them (report ids like SWAA101399, ev_ids, AD numbers, location keys) so the interface can link them. End with one line starting "Leads worth review:". Just before it, add a "Conclusion (leads worth review, not causes):" paragraph that ranks what to inspect first, ordered by evidence strength (same-tail reports at the finding's location first, then fleet-wide lines, noting whether a fix order covers them). Never state or imply a probability that anything caused the accident.`;
 
 // ---------- MCP client (one per process; on globalThis so Next dev reloads reuse it) ----------
 const g = globalThis as { __blackboxMcp?: Promise<Client> | null };
@@ -197,6 +197,14 @@ export async function runScripted(evId: string, asOf: string, emit: Emit, opts: 
   if (fleet?.aircraft) parts.push(`Across the fleet, ${fleet.aircraft} ${acc.family}s reported trouble on that line in the three years before.`);
   parts.push(orders.length ? `${orders.length} fix order(s) already covered it.` : "No fix order covered that line yet.");
   if (prior?.length) parts.push(`Leads worth review: ${line}.`);
+  if (prior?.length && line) {
+    // Decisive but non-causal: rank what to inspect first by evidence strength.
+    // Never a probability of causation — the NTSB determines causes.
+    const sameTail = `${prior.length} same-tail report${prior.length === 1 ? "" : "s"} (${prior.map((p) => p.id).join(", ")})`;
+    const fleetEv = fleet?.aircraft ? ` plus ${fleet.aircraft} fleet aircraft on ${line}` : "";
+    const coverage = orders.length ? "a fix order exists — check compliance first" : "no fix order covers it — unaddressed";
+    parts.push(`Conclusion (leads worth review, not causes). Inspect first: ${line} — ${sameTail}${fleetEv}; ${coverage}.`);
+  }
   if (opts.draft && prior?.length && line) {
     // the method's last step: check known candidates, then draft one for a person to decide
     await go("failure_mode_candidates", { caseId: evId });
