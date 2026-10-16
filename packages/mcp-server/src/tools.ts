@@ -36,6 +36,8 @@ export function buildServer(query: (name: string, args: unknown) => Promise<unkn
     { tail: z.string(), family: z.string(), system: z.string().describe("system, e.g. structures"), narrative: z.string().describe("early facts only, never the final cause"), asOf, windowDays: z.number().default(730).describe("look-back window in days").optional() });
   tool("failure_mode_candidates", "Dormant and proposed failure modes (not yet confirmed by a human). Check these before proposing a new one.",
     { caseId: z.string() });
+  tool("reoffer_candidates", "Deferred or proposed modes whose evidence grew since the last human decision (3+ new items, or a newer accident). Offer these to a person again.",
+    {});
   tool("who_fixed", "Engineers of the (fictional) maintenance company who worked at a location.", { bin });
   tool("why_task", "Why a (fictional) maintenance task card exists: the fix order it cites and the orders that one replaced.",
     { task_id: z.string() });

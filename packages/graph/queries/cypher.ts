@@ -14,6 +14,7 @@ const SCHEMA_EDGES: Array<[string, string, string]> = [
   ["Location", "FOR", "Model"], ["FixOrder", "TARGETS", "Location"], ["FixOrder", "APPLIES_TO", "Model"],
   ["FixOrder", "SUPERSEDES", "FixOrder"], ["FailureMode", "SIGNATURE", "Location"], ["FailureMode", "FOR", "Model"],
   ["Report", "EVIDENCE_FOR", "FailureMode"], ["Accident", "EVIDENCE_FOR", "FailureMode"], ["Report", "PRECURSOR_OF", "Accident"],
+  ["FailureMode", "MERGED_INTO", "FailureMode"],
   ["Engineer", "MEMBER_OF", "Team"], ["TaskCard", "CITES", "FixOrder"], ["Decision", "BASED_ON", "FixOrder"],
 ];
 
@@ -205,7 +206,29 @@ export const CYPHER: Record<string, string> = {
   mode_card: `
     MATCH (m:FailureMode {id:$id})
     OPTIONAL MATCH (e)-[:EVIDENCE_FOR]->(m)
-    RETURN m {.*} AS mode, collect({label: labels(e)[0], id: coalesce(e.id, e.ev_id), date: e.date, text: coalesce(e.text, e.cause_text)}) AS evidence`,
+    OPTIONAL MATCH (m)-[:MERGED_INTO]->(n:FailureMode)
+    RETURN m {.*} AS mode, n.id AS merged_into, collect({label: labels(e)[0], id: coalesce(e.id, e.ev_id), date: e.date, text: coalesce(e.text, e.cause_text)}) AS evidence`,
+  // Dormant/proposed modes whose evidence grew since the last human decision:
+  // 3+ new linked items, or an accident linked after the decision. Offer again.
+  reoffer_candidates: `
+    MATCH (m:FailureMode) WHERE m.status IN ['dormant','proposed']
+    OPTIONAL MATCH (e)-[:EVIDENCE_FOR]->(m)
+    WITH m, count(e) AS now,
+      count(CASE WHEN e:Accident AND m.decided_at IS NOT NULL AND e.date > m.decided_at THEN 1 END) AS newAcc
+    WHERE now > coalesce(m.support_at_decision, 0) + 2 OR newAcc > 0
+    RETURN m.id AS id, m.name AS name, m.status AS status, m.decision_reason AS reason,
+      coalesce(m.support_at_decision, 0) AS then, now, newAcc ORDER BY now DESC`,
+  // UI only, never an MCP tool: fold a draft into an existing mode (Same-as-X).
+  // Evidence links move to the surviving mode; the old node stays as a merged stub.
+  merge_mode: `
+    MATCH (old:FailureMode {id:$id}) WHERE old.status IN ['proposed','dormant']
+    MATCH (new:FailureMode {id:$into}) WHERE new.id <> old.id AND new.status IN ['confirmed','dormant','proposed']
+    OPTIONAL MATCH (e)-[:EVIDENCE_FOR]->(old)
+    WITH old, new, collect(e) AS ev
+    MERGE (old)-[:MERGED_INTO]->(new)
+    SET old.status = 'merged', old.decided_by = $by, old.decided_at = $at, old.decision_reason = $reason
+    FOREACH (x IN ev | MERGE (x)-[:EVIDENCE_FOR]->(new))
+    RETURN old.id AS id, old.status AS status, new.id AS into, size(ev) AS moved`,
   // UI only, never an MCP tool: a person approves (confirmed) or defers (dormant) a proposed
   // mode, or reopens it; who, when, why and the evidence count are stored on the node.
   decide_mode: `

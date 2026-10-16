@@ -9,7 +9,7 @@ import { CYPHER } from "@blackbox/graph/queries/cypher";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const VIEWS = new Set(["fleet_map", "line_window", "line_trend", "lines_by_year", "bin_reports", "graph_stats", "edge_stats", "subgraph", "get_accident", "prior_reports", "fix_orders", "hotspots", "failure_mode_candidates", "mode_card"]);
+const VIEWS = new Set(["fleet_map", "line_window", "line_trend", "lines_by_year", "bin_reports", "graph_stats", "edge_stats", "subgraph", "get_accident", "prior_reports", "fix_orders", "hotspots", "failure_mode_candidates", "reoffer_candidates", "mode_card"]);
 const CACHED = new Set(["fleet_map", "line_window", "line_trend", "lines_by_year", "bin_reports"]);
 const TTL: Record<string, number> = { graph_stats: 60_000, edge_stats: 60_000 };
 const cache = new Map<string, { rows: unknown; ms: number; at: number }>();

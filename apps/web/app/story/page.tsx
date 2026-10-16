@@ -251,7 +251,8 @@ function AskIt() {
 // 8 ---------------------------------------------------------------
 /** First sentence of a record, for evidence lists (the drawer has the full text). */
 const firstSentence = (t: string) => (t.match(/^.*?[.;](?=\s|$)/)?.[0] ?? t).slice(0, 300);
-interface ModeCard { mode: Record<string, string | number | null>; evidence: Array<{ label: string; id: string; date?: string; text?: string }> }
+interface ModeCard { mode: Record<string, string | number | null>; merged_into?: string | null; evidence: Array<{ label: string; id: string; date?: string; text?: string }> }
+interface Reoffer { id: string; name: string; status: string; reason: string; then: number; now: number }
 function Decides() {
   const [steps, setSteps] = useState<Step[]>([]);
   const [id, setId] = useState<string | null>(null);
@@ -261,7 +262,15 @@ function Decides() {
   const [reason, setReason] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [cypher, setCypher] = useState<string | null>(null);
-  const load = (m: string) => view<ModeCard[]>("mode_card", { id: m }, true).then((r) => setCard(r.rows[0] ?? null));
+  const [reoffer, setReoffer] = useState<Reoffer[]>([]);
+  const [cands, setCands] = useState<Array<{ id: string; name: string; status: string }>>([]);
+  const [into, setInto] = useState("");
+  const refreshReoffer = () => view<Reoffer[]>("reoffer_candidates", {}, true).then((r) => setReoffer(r.rows ?? []), () => {});
+  useEffect(() => { refreshReoffer(); }, []);
+  const load = (m: string) => {
+    view<ModeCard[]>("mode_card", { id: m }, true).then((r) => setCard(r.rows[0] ?? null));
+    view<Array<{ id: string; name: string; status: string }>>("failure_mode_candidates", {}, true).then((r) => setCands((r.rows ?? []).filter((c) => c.id !== m)), () => {});
+  };
   async function draft() {
     setBusy(true); setSteps([]); setErr(null);
     await streamAgent({ mode: "scripted", evId: SWA812.evId, asOf: SWA812.date, draft: true }, (s) => {
@@ -273,15 +282,15 @@ function Decides() {
     }).catch((e: Error) => setErr(e.message));
     setBusy(false);
   }
-  async function decide(decision: "approve" | "defer" | "reopen") {
+  async function decide(decision: "approve" | "defer" | "reopen" | "merge") {
     setErr(null);
-    const r = await fetch("/api/decide", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id, decision, by: by || "presenter", reason }) });
+    const r = await fetch("/api/decide", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id, decision, by: by || "presenter", reason, into: into || undefined }) });
     const j = await r.json();
-    if (!r.ok) setErr(j.error); else { setCypher(j.cypher ?? null); load(id!); }
+    if (!r.ok) setErr(j.error); else { setCypher(j.cypher ?? null); load(id!); refreshReoffer(); }
   }
   const tools = steps.filter((s): s is Extract<Step, { type: "tool_result" }> => s.type === "tool_result");
   const m = card?.mode;
-  const decided = m && (m.status === "confirmed" || m.status === "dormant");
+  const decided = m && (m.status === "confirmed" || m.status === "dormant" || m.status === "merged");
   return (
     <>
       <Text n={8}>
@@ -291,6 +300,12 @@ function Decides() {
         {tools.length > 0 && <ol className="mini-steps">{tools.map((t) => <li key={t.id}><b>{t.name}</b> {t.rows} {t.rows === 1 ? "row" : "rows"}, {t.ms} ms</li>)}</ol>}
       </Text>
       <div className="story-visual">
+        {reoffer.length > 0 && (
+          <div className="reoffer">
+            <p className="caption">On hold, with new evidence since the decision — worth another look:</p>
+            {reoffer.map((r) => <button key={r.id} className="chip" onClick={() => { setId(r.id); load(r.id); }}>{r.name} (+{Number(r.now) - Number(r.then)})</button>)}
+          </div>
+        )}
         {card && m && (
           <article className={`mode-card status-${m.status}`} aria-live="polite">
             <p className="mode-kind">Failure mode, {m.status === "proposed" ? "drafted through the agent's MCP tools, waiting for a person" : m.status === "confirmed" ? "confirmed by a person" : "deferred by a person"}</p>
@@ -307,10 +322,17 @@ function Decides() {
                 <label>Your name<input value={by} onChange={(e) => setBy(e.target.value)} placeholder="Reviewer" /></label>
                 <label>Reason<textarea rows={2} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why approve or defer" /></label>
                 <div className="decide-row"><button className="go" onClick={() => decide("approve")}>Approve</button><button className="ghost" onClick={() => decide("defer")}>Defer</button></div>
+                {cands.length > 0 && (
+                  <div className="decide-row"><select value={into} onChange={(e) => setInto(e.target.value)} aria-label="Merge into"><option value="">Same as…</option>{cands.map((c) => <option key={c.id} value={c.id}>{c.name} ({c.status})</option>)}</select><button className="ghost" disabled={!into} onClick={() => decide("merge")}>Merge</button></div>
+                )}
               </div>
             ) : (
               <div className="decided">
+                {m.status === "merged" && card.merged_into ? (
+                  <p><b>Merged into {String(card.merged_into)}</b> by {String(m.decided_by)}, {new Date(String(m.decided_at)).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}. Its evidence moved with it.{m.decision_reason ? ` "${m.decision_reason}"` : ""}</p>
+                ) : (
                 <p><b>{m.status === "confirmed" ? "Confirmed" : "Deferred"} by {String(m.decided_by)}</b>, {new Date(String(m.decided_at)).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}, with {String(m.support_at_decision)} pieces of evidence.{m.decision_reason ? ` "${m.decision_reason}"` : ""}</p>
+                )}
                 <p className="caption">Stored on FailureMode {String(m.id).slice(0, 8)} in FalkorDB.</p>
                 <button className="ghost" onClick={() => decide("reopen")}>Reopen for review</button>
               </div>
