@@ -100,15 +100,15 @@ export function AgentPanel({ asOf, steps, onStep, onReset, onOpen, replayUrl = "
           const res = r.result;
           const ids = res ? [...res.keys.accidents, ...res.keys.reports, ...res.keys.fixorders] : [];
           return (
-            <li key={r.call.id} className={`step${res ? "" : " running"}`}>
+            <li key={r.call.id} className={`step dense${res ? "" : " running"}`}>
               <span className="step-n">{n}</span>
               <div className="step-body">
-                <div className="step-head">
+                <div className="step-line">
                   <b>{r.call.name}</b>
                   <span className="args">{Object.entries(r.call.args).map(([k, v]) => <span key={k}>{k} <em>{Array.isArray(v) ? v.join(", ") : String(v)}</em></span>)}</span>
+                  {ids.length > 0 && <span className="chips inline">{ids.slice(0, 5).map((id) => <button key={id} className="chip" onClick={() => onOpen(id)}>{id}</button>)}{ids.length > 5 && <span className="more">+{ids.length - 5}</span>}</span>}
                   <span className="res">{res ? (res.isError ? "error" : `${res.rows} ${res.rows === 1 ? "row" : "rows"}, ${res.ms} ms`) : "running"}</span>
                 </div>
-                {ids.length > 0 && <div className="chips">{ids.slice(0, 8).map((id) => <button key={id} className="chip" onClick={() => onOpen(id)}>{id}</button>)}{ids.length > 8 && <span className="more">and {ids.length - 8} more</span>}</div>}
                 {res?.isError && <p className="step-error">{String(res.preview)}</p>}
                 {r.call.cypher && <details><summary>Cypher</summary><pre>{r.call.cypher.replace(/^ {4}/gm, "")}</pre></details>}
               </div>
