@@ -11,6 +11,50 @@ NTSB accidents, FAA reports, fix orders, learned failure modes, and a fictional
 maintenance company. The agent investigates through fixed-Cypher MCP tools, scores
 with a formula — never vibes — and needs a human to approve every new failure mode."
 
+## Say-it-out-loud version (if the above feels like jargon, memorize this instead)
+
+**The one idea (30 seconds):** "Planes file maintenance reports for years before
+anything goes wrong. Those reports and the accident records live in separate
+places and nobody reads them together. We put both into one database that stores
+*connections*, so for any accident we can walk backwards — same plane, same spot,
+then the whole fleet at that spot — and show a person the warning signs. The
+person decides, never the machine."
+
+**The story that proves it (your only example):** "Southwest 812, April 2011 — a
+hole opened in the fuselage. A year earlier, the *same plane* had two reports of
+cracked clips at stringer S-4L, the exact line that later tore. Across the fleet,
+156 planes reported trouble on that same line. Our tool finds all three facts in
+seconds. The official investigators still determine the cause — we only surface
+leads worth a look."
+
+**What happens when you press Investigate (5 steps, in order):**
+1. It pulls the accident: which plane, what broke, where.
+2. It pulls that plane's old reports at the same spot (2 found, March 2010).
+3. It checks the whole fleet at that spot (156 planes — a pattern, not bad luck).
+4. It checks whether a fix order already covers it (none did — unaddressed).
+5. It draws the path report → plane → accident, writes down what it kept, and a
+   person reviews. Every step shows its query and time on screen.
+
+**The graph in plain words:** "Think of a whiteboard. Every fact is a sticky
+note — a report, an accident, a plane, a place on the plane. Pieces of string
+connect them: *this report is about this plane*, *this accident involved this
+plane*, *this finding is at this place*. Asking a question means following the
+string with your finger. A normal database would need five separate searches
+joined by hand; here it's one walk. Places nest like folders — a 20-inch slice
+of fuselage sits inside a stringer line, which sits inside the fuselage — so
+asking about a line automatically includes every slice on it."
+
+**Each folder in one line:**
+- `services/ingest` — downloads public records and pins them on the board.
+- `packages/graph` — the board itself, plus the fixed questions anyone may ask it.
+- `packages/mcp-server` — 18 labeled buttons; the agent may press buttons but never reach behind the board.
+- `packages/agent` — the investigator: presses buttons in order, judges each report, writes down what it kept.
+- `apps/web` — the two screens: the Board (investigate) and the Story (presentation).
+- `services/eval` — the honesty check: replays old accidents to see if the method would have flagged them.
+
+**Never say:** "predicts", "60% chance it was X", "found the cause", or demo scores.
+Say: "warning signs", "leads worth review", "inspect first."
+
 ## Likely judge questions
 1. "Where does FalkorDB do real work?" — Multi-hop joins across two public sources,
    the location hierarchy (`WITHIN*0..2`), `algo.SPpaths` evidence paths, full-text search,
@@ -35,7 +79,7 @@ with a formula — never vibes — and needs a human to approve every new failur
 
 ## File tour (who owns what — put names here)
 - `packages/graph/{schema.cypher,queries/cypher.ts,src/hotspotJob.ts}` — model + fixed queries + LP job
-- `packages/mcp-server/src/{tools.ts,index.ts}` — 19 domain tools, demo fallback
+- `packages/mcp-server/src/{tools.ts,index.ts}` — 18 domain tools, demo fallback
 - `packages/agent/src/{loop.ts,scoring.ts}` — flows A/B/D/E/F, formula + decision rule
 - `services/{ingest,org-generator,eval}` — pipeline, Northwind Aero, backtests
 - `apps/web` — chat, time slider, approval cards, 3 API routes

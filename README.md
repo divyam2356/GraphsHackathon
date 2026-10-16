@@ -118,7 +118,7 @@ matched every row (1,000 instead of 198 in our repro). We dropped the date index
 
 ### MCP server and agent
 
-- `packages/mcp-server`: 19 domain tools, each a fixed Cypher query with typed arguments.
+- `packages/mcp-server`: 18 domain tools, each a fixed Cypher query with typed arguments.
   Read tools include `get_accident`, `prior_reports`, `fleet_reports`, `explain_path` and
   `similar_reports`; write tools include `record_precursor` and `propose_failure_mode`.
   There is no approve tool.
