@@ -103,9 +103,15 @@ function StepsList({ rows, onOpen }: { rows: Row[]; onOpen: (id: string) => void
   const list = useRef<HTMLOListElement>(null);
   useEffect(() => { const el = list.current; if (el && el.scrollHeight > el.clientHeight) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" }); }, [rows.length]);
   let n = 0;
+  // Harness notes are meta, not evidence: render them above the grid so tool
+  // cards always fill each row left-to-right with no mid-row breaks.
+  const notes = rows.filter((r) => r.kind === "note");
+  const cards = rows.filter((r) => r.kind !== "note");
   return (
-    <ol className="steps grid" ref={list}>
-        {rows.map((r, i) => {
+    <>
+      {notes.length > 0 && <div className="run-notes">{notes.map((r, i) => <p key={i}>{r.kind === "note" ? r.text : ""}</p>)}</div>}
+      <ol className="steps grid" ref={list}>
+        {cards.map((r, i) => {
           if (r.kind !== "tool") return <li key={i} className={`step-${r.kind}`}><span className="step-n" aria-hidden="true">{r.kind === "answer" ? "◆" : r.kind === "error" ? "!" : ""}</span><div className="step-body">{r.kind === "answer" ? <Linked text={r.text} onOpen={onOpen} /> : <p>{r.text}</p>}</div></li>;
           n++;
           const res = r.result;
@@ -126,8 +132,9 @@ function StepsList({ rows, onOpen }: { rows: Row[]; onOpen: (id: string) => void
             </li>
           );
         })}
-        {!rows.length && <li className="step-empty"><span className="step-n" aria-hidden="true"></span><div className="step-body"><p>Press Investigate. Each tool call appears here with the query behind it, and the records it touches join the evidence graph.</p></div></li>}
-    </ol>
+        {!cards.length && !notes.length && <li className="step-empty"><span className="step-n" aria-hidden="true"></span><div className="step-body"><p>Press Investigate. Each tool call appears here with the query behind it, and the records it touches join the evidence graph.</p></div></li>}
+      </ol>
+    </>
   );
 }
 
