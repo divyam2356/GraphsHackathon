@@ -94,7 +94,7 @@ export function AgentPanel({ asOf, steps, onStep, onReset, onOpen, replayUrl = "
 
       <ol className="steps" ref={list}>
         {rows.map((r, i) => {
-          if (r.kind !== "tool") return <li key={i} className={`step-${r.kind}`}>{r.kind === "answer" ? <Linked text={r.text} onOpen={onOpen} /> : r.text}</li>;
+          if (r.kind !== "tool") return <li key={i} className={`step-${r.kind}`}><span className="step-n" aria-hidden="true">{r.kind === "answer" ? "◆" : r.kind === "error" ? "!" : ""}</span><div className="step-body">{r.kind === "answer" ? <Linked text={r.text} onOpen={onOpen} /> : <p>{r.text}</p>}</div></li>;
           n++;
           const res = r.result;
           const ids = res ? [...res.keys.accidents, ...res.keys.reports, ...res.keys.fixorders] : [];
