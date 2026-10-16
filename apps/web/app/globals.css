@@ -119,6 +119,8 @@ a { color: inherit; }
 .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
 .chip { border: 1px solid var(--alclad); background: var(--sheet); border-radius: 2px; padding: 1px 7px; font-size: 12px; cursor: pointer; transition: border-color 200ms ease-out; }
 .chip:hover { border-color: var(--ink); }
+.chip.kept { border-color: var(--signal); box-shadow: inset 0 0 0 1px var(--signal); font-weight: 600; }
+.chip .conf { margin-left: 5px; font-size: 10.5px; font-weight: 700; color: var(--signal-deep); }
 .more { font-size: 12px; color: var(--graphite); align-self: center; }
 details summary { cursor: pointer; font-size: 12px; color: var(--graphite); margin-top: 5px; width: fit-content; }
 details pre { margin: 6px 0 0; padding: 9px 11px; background: var(--ink); color: #DCE6EF; border-radius: 3px; font-family: var(--code); font-size: 11.5px; line-height: 1.5; overflow-x: auto; white-space: pre; }

@@ -96,10 +96,20 @@ export function StepsGrid({ steps, onOpen, hideAnswer }: { steps: Step[]; onOpen
       if (r && r.kind === "tool") r.result = s;
     } else rows.push({ kind: s.type, text: s.text });
   }
-  return <StepsList rows={rows} onOpen={onOpen} />;
+  // Confidence the agent actually judged, per report: record_precursor calls carry
+  // (reportId, confidence). Read tools return records, not judgments, so kept
+  // reports get their judged confidence badged on their chips instead of invented scores.
+  const kept = new Map<string, number>();
+  for (const r of rows) {
+    if (r.kind === "tool" && r.call.name === "record_precursor") {
+      const id = r.call.args.reportId, c = r.call.args.confidence;
+      if (typeof id === "string") kept.set(id, typeof c === "number" ? c : NaN);
+    }
+  }
+  return <StepsList rows={rows} kept={kept} onOpen={onOpen} />;
 }
 
-function StepsList({ rows, onOpen }: { rows: Row[]; onOpen: (id: string) => void }) {
+function StepsList({ rows, kept, onOpen }: { rows: Row[]; kept: Map<string, number>; onOpen: (id: string) => void }) {
   const list = useRef<HTMLOListElement>(null);
   useEffect(() => { const el = list.current; if (el && el.scrollHeight > el.clientHeight) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" }); }, [rows.length]);
   let n = 0;
@@ -123,7 +133,7 @@ function StepsList({ rows, onOpen }: { rows: Row[]; onOpen: (id: string) => void
                 <div className="step-line">
                   <b>{r.call.name}</b>
                   <span className="args">{Object.entries(r.call.args).map(([k, v]) => <span key={k}>{k} <em>{Array.isArray(v) ? v.join(", ") : String(v)}</em></span>)}</span>
-                  {ids.length > 0 && <span className="chips inline">{ids.slice(0, 5).map((id) => <button key={id} className="chip" onClick={() => onOpen(id)}>{id}</button>)}{ids.length > 5 && <span className="more">+{ids.length - 5}</span>}</span>}
+                  {ids.length > 0 && <span className="chips inline">{ids.slice(0, 5).map((id) => { const kc = kept.get(id); return <button key={id} onClick={() => onOpen(id)} className={kc !== undefined ? "chip kept" : "chip"} title={kc !== undefined && !Number.isNaN(kc) ? `kept as precursor · confidence ${kc}` : id}>{id}{kc !== undefined && !Number.isNaN(kc) ? <span className="conf">{kc}</span> : null}</button>; })}{ids.length > 5 && <span className="more">+{ids.length - 5}</span>}</span>}
                   <span className="res">{res ? (res.isError ? "error" : `${res.rows} ${res.rows === 1 ? "row" : "rows"}, ${res.ms} ms`) : "running"}</span>
                 </div>
                 {res?.isError && <p className="step-error">{String(res.preview)}</p>}
