@@ -139,7 +139,7 @@ li.step-answer { border-top: 2px solid var(--ink); padding-top: 12px; }
 
 .egraph > svg { display: block; width: 100%; height: auto; background: var(--sheet); border: 1px solid var(--alclad); border-radius: 4px; }
 .egraph .nlabel { fill: var(--ink); font-family: var(--ui); paint-order: stroke; stroke: var(--sheet); stroke-width: 3px; stroke-linejoin: round; }
-.egraph .elabel { fill: var(--graphite); font-family: var(--ui); }
+.egraph .elabel { fill: var(--graphite); font-family: var(--ui); paint-order: stroke; stroke: var(--sheet); stroke-width: 3px; stroke-linejoin: round; }
 .gnode { cursor: pointer; }
 .gnode:focus-visible { outline: none; }
 .gnode:focus-visible circle, .gnode:focus-visible rect, .gnode:focus-visible path { stroke: var(--ink); stroke-width: 2.5; }

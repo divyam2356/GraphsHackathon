@@ -50,7 +50,8 @@ export function EvidenceGraph({ rows, kept, focus, onNode }: { rows: SubRow[]; k
     const sim = forceSimulation(nodes)
       .force("link", forceLink<N, E>(links).id((d) => d.id).distance((l) => DIST[l.type] ?? 60).strength(0.8))
       .force("charge", forceManyBody().strength(-520))
-      .force("collide", forceCollide(34))
+      // small graphs label every node, so leave room for the name (drawn to the right of the mark)
+      .force("collide", forceCollide<N>((d) => (nodes.length <= 28 ? 16 + d.name.length * 3.3 : 34)))
       .force("x", forceX(W / 2).strength(0.05))
       .force("y", forceY(H / 2).strength(0.08))
       .alpha(pos.current.size ? 0.6 : 1);
@@ -78,6 +79,7 @@ export function EvidenceGraph({ rows, kept, focus, onNode }: { rows: SubRow[]; k
   const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
   [x0, y0] = [cx - (W * k) / 2, cy - (H * k) / 2];
   const ks = Math.max(1, k); // marks and labels keep their on-screen size when the view zooms out
+  const edgeLabels = few ? placeEdgeLabels(g, named, ks) : new Map<number, [number, number]>();
   return (
     <div className="egraph">
       <svg viewBox={`${x0} ${y0} ${W * k} ${H * k}`} role="img" aria-label={`Evidence graph, ${g.nodes.length} nodes`}>
@@ -86,7 +88,7 @@ export function EvidenceGraph({ rows, kept, focus, onNode }: { rows: SubRow[]; k
           return (
             <g key={i}>
               <line x1={s.x} y1={s.y} x2={t.x} y2={t.y} stroke="var(--graphite)" strokeOpacity={0.45} strokeWidth={ks} />
-              {few && <text x={(s.x! + t.x!) / 2} y={(s.y! + t.y!) / 2 - 3 * ks} fontSize={8.5 * ks} textAnchor="middle" className="elabel">{l.type}</text>}
+              {edgeLabels.has(i) && <text x={edgeLabels.get(i)![0]} y={edgeLabels.get(i)![1]} fontSize={8.5 * ks} textAnchor="middle" className="elabel">{l.type}</text>}
             </g>
           );
         })}
@@ -113,6 +115,30 @@ export function EvidenceGraph({ rows, kept, focus, onNode }: { rows: SubRow[]; k
       </div>
     </div>
   );
+}
+
+// Evidence edges get their label first; structural ones (hierarchy) only where room is left.
+const LABEL_ORDER = ["PRECURSOR_OF", "INVOLVED", "ON", "EVIDENCE_FOR", "TARGETS", "FOUND", "AT", "WITHIN"];
+type Box = [number, number, number, number];
+const overlaps = (a: Box, b: Box) => a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3];
+/** Edge label positions (by link index), skipping any label that would cover a node, a node name or another label. */
+function placeEdgeLabels(g: { nodes: N[]; links: E[] }, named: (n: N) => boolean, ks: number): Map<number, [number, number]> {
+  const taken: Box[] = g.nodes.flatMap((n): Box[] => {
+    const mark: Box = [n.x! - 9 * ks, n.y! - 9 * ks, n.x! + 9 * ks, n.y! + 9 * ks];
+    return named(n) ? [mark, [n.x! + 10 * ks, n.y! - 8 * ks, n.x! + (12 + n.name.length * 6.4) * ks, n.y! + 6 * ks]] : [mark];
+  });
+  const rank = (t: string) => (LABEL_ORDER.indexOf(t) + 1 || LABEL_ORDER.length + 1);
+  const order = g.links.map((_, i) => i).sort((a, b) => rank(g.links[a].type) - rank(g.links[b].type));
+  const out = new Map<number, [number, number]>();
+  for (const i of order) {
+    const s = g.links[i].source as N, t = g.links[i].target as N;
+    const x = (s.x! + t.x!) / 2, y = (s.y! + t.y!) / 2 - 3 * ks, w = g.links[i].type.length * 5.2 * ks;
+    const box: Box = [x - w / 2, y - 8 * ks, x + w / 2, y + 2 * ks];
+    if (taken.some((b) => overlaps(b, box))) continue;
+    taken.push(box);
+    out.set(i, [x, y]);
+  }
+  return out;
 }
 
 const LEGEND: Record<string, string> = { Accident: "NTSB event", Report: "Maintenance report", Aircraft: "Aircraft", Location: "Location", Finding: "NTSB finding", FixOrder: "Fix order (AD)" };
