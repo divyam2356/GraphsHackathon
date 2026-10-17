@@ -23,6 +23,7 @@
     "ingest:ntsb": "npm run ingest:ntsb --workspace services/ingest",
     "ingest:reports": "npm run ingest:reports --workspace services/ingest",
     "ingest:fixorders": "npm run ingest:fixorders --workspace services/ingest",
+    "ingest:documents": "npm run ingest:documents --workspace services/ingest",
     "graph:indexes": "npm run indexes --workspace packages/graph",
     "seed:modes": "npm run seed --workspace services/ingest",
     "eval:all": "npm run eval --workspace services/eval",

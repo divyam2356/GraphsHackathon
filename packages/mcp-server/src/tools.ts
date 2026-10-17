@@ -49,6 +49,8 @@ export function buildServer(query: (name: string, args: unknown) => Promise<unkn
   tool("why_task", "Why a (fictional) maintenance task card exists: the fix order it cites and the orders that one replaced.",
     { task_id: z.string() });
   tool("stale_tasks", "Task cards that still cite a fix order that has since been replaced.", {});
+  tool("cite_documents", "Sections of the loaded official documents (the FAA airworthiness directives for the S-4L/S-4R lap joints and the NTSB accident brief AAB-13/02) that name the location or sit inside it, dated before asOf, oldest first. Use it to cite the paragraph behind a fix order or the NTSB's words about a location. Returns doc, kind, title, url, section id, heading, date and the text (first 600 characters).",
+    { bin, asOf });
 
   // Write / action (agent memory + org actions). A human approves failure modes in the UI.
   tool("record_precursor", "Save a judged warning sign: this report preceded this accident, with confidence 0-1 and a one-line reason.",

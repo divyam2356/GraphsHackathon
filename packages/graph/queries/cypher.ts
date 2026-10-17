@@ -18,6 +18,8 @@ const SCHEMA_EDGES: Array<[string, string, string]> = [
   ["Alert", "AT", "Location"], ["Alert", "FOR", "Aircraft"], ["WorkOrder", "FROM", "Alert"], ["WorkOrder", "AT", "Location"],
   ["WorkOrder", "ON", "Aircraft"], ["Engineer", "ASSIGNED", "WorkOrder"],
   ["Engineer", "MEMBER_OF", "Team"], ["TaskCard", "CITES", "FixOrder"], ["Decision", "BASED_ON", "FixOrder"],
+  ["Document", "HAS_SECTION", "Section"], ["Section", "ABOUT", "Location"],
+  ["Document", "DESCRIBES", "FixOrder"], ["Document", "DESCRIBES", "Accident"],
 ];
 
 export const CYPHER: Record<string, string> = {
@@ -360,6 +362,7 @@ export const CYPHER: Record<string, string> = {
       UNION MATCH (n:FailureMode) WHERE n.id IN coalesce($modes, []) RETURN n
       UNION MATCH (n:Alert) WHERE n.id IN coalesce($alerts, []) RETURN n
       UNION MATCH (n:WorkOrder) WHERE n.id IN coalesce($workorders, []) RETURN n
+      UNION MATCH (n:Section) WHERE n.id IN coalesce($sections, []) RETURN n
       UNION MATCH (:Accident)-[:FOUND]->(n:Finding) WHERE split(n.id, '/')[0] IN coalesce($accidents, []) RETURN n
     }
     WITH collect(n) AS ns
@@ -369,4 +372,20 @@ export const CYPHER: Record<string, string> = {
   stale_tasks: `
     MATCH (t:TaskCard)-[:CITES]->(old:FixOrder)<-[:SUPERSEDES]-(new:FixOrder)
     RETURN t.id AS task, old.ad_no AS cited, new.ad_no AS current LIMIT 50`,
+  // Sections of the loaded documents (the two S-4L ADs, the NTSB brief) that name the
+  // location or sit inside it: a line also returns sections about its bins and the other
+  // way, and everything is dated (section = document date), so $asOf applies to citations:
+  // on 2011-04-01 there is no AD yet; on 2011-05-01 the AD 2011-08-51 paragraphs answer.
+  // The zone is never a bridge: upward (a bin seeing its line) is one WITHIN hop and only
+  // for bins; otherwise every 53-chapter section would answer for every stringer.
+  cite_documents: `
+    MATCH (t:Location {bin:$bin})
+    MATCH (s:Section) WHERE s.date < $asOf
+    MATCH (s)-[:ABOUT]->(loc:Location)
+    WHERE (loc)-[:WITHIN*0..2]->(t) OR (t.level = "bin" AND (t)-[:WITHIN]->(loc))
+    MATCH (d:Document)-[:HAS_SECTION]->(s)
+    RETURN DISTINCT d.id AS doc, d.kind AS kind, d.title AS title, d.url AS url,
+      s.id AS id, s.heading AS heading, s.date AS date,
+      substring(s.text, 0, 600) AS text, s.n AS n
+    ORDER BY date ASC, n ASC`,
 };

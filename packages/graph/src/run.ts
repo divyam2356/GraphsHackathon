@@ -89,6 +89,15 @@ function demo(name: string, a: Record<string, unknown>): unknown {
     case "rank_failure_modes": return DEMO.failureModes.filter((m) => m.status === "confirmed" && ("known_from" in m ? m.known_from ?? "9999" : "9999") < String(a.asOf));
     case "failure_mode_candidates": return DEMO.failureModes.filter((m) => m.status !== "confirmed");
     case "why_task": return DEMO.org.taskCards;
+    case "cite_documents": {
+      // DEMO ad sections fixtured the same way the real query answers: S-4L/S-4R at both
+      // AD dates; nothing before 2011-04-05; the brief only after 2013-09-24
+      const rows = [
+        { doc: "AD-2011-08-51", kind: "AD", title: "Emergency AD 2011-08-51: The Boeing Company Model 737-300, -400, and -500 Series Airplanes (Amendment 39-16701, 76 FR 28632, May 18, 2011)", id: "AD-2011-08-51#g", heading: "Inspections", date: "2011-04-05", text: "At the applicable time specified in paragraph (g)(1), (g)(2), or (g)(3) of this AD: Except as provided by paragraphs (h) and (i) of this AD, do external eddy current inspections of the lap joint at stringers S-4R and S-4L, along the entire length from body station (BS) 360 to BS 908, in accordance with the Accomplishment Instructions of Boeing Alert Service Bulletin 737-53A1319, dated April 4, 2011." },
+        { doc: "NTSB-AAB-13-02", kind: "NTSB brief", title: "NTSB Aviation Accident Brief AAB-13/02: Southwest Airlines Flight 812, Boeing 737-3H4, N632SW, April 1, 2011", id: "NTSB-AAB-13-02#3", heading: "DAMAGE TO AIRCRAFT", date: "2013-09-24", text: "Postaccident inspection of the airplane revealed that a section of fuselage skin about 60 inches long by 8 inches wide had fractured and flapped open on the upper left side above the wing. The damaged section of fuselage side skin was bounded by body station (BS) 663 and BS 727 in the fore-aft direction and stringer (S)-4L and S-5L in the circumferential direction." },
+      ];
+      return rows.filter((r) => r.date < String(a.asOf));
+    }
     default: return { demo: true, tool: name, note: "no fixture for this tool; run against FalkorDB" };
   }
 }
