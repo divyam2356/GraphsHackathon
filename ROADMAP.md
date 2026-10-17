@@ -4,7 +4,9 @@ Shared plan for Graph Hacks. **Submissions close Oct 18, 11:59 PM IST** (aim to 
 that day). Both of us edit this file: tick boxes as things land, and when you settle a pending
 decision, move it to "Decided" with the date and your name.
 
-Last updated: Oct 17, 16:30 IST (Manish + Claude). Order from here: improvements (Phase 1) first, then the video. The plan for the last 29 hours is under "Plan to the deadline".
+Last updated: Oct 17, 18:40 IST (divyam2356 + Claude). Track 3 documents landed (commits 23a6c69,
+6fc6e84, e734493, report in docs/briefs/track3-report.md). Order from here: your items in Phase 1
+then the video. The plan for the last hours is under "Plan to the deadline".
 
 ## Submission checklist (rules 10–13)
 
@@ -85,17 +87,19 @@ all made up; Track 3 asks for "knowledge from docs" and "answers with clear sour
 **Full brief for your agent: [`docs/briefs/track3-documents.md`](docs/briefs/track3-documents.md)**
 (files, existing code to reuse, milestones, constraints, done-when, challenger check). Prompt:
 "Read ROADMAP.md, then docs/briefs/track3-documents.md, and execute it."
-- [ ] Load the texts of AD 2011-08-51, AD 2015-16-08 (Federal Register) and NTSB brief AAB-13/02 as
+- [x] 23a6c69 Load the texts of AD 2011-08-51, AD 2015-16-08 (Federal Register) and NTSB brief AAB-13/02 as
       `Document` → `Section` nodes (US government works, public domain). Link each section to the
       `Location`s it names (reuse `locationChain` in `services/ingest/src/normalize.ts`) and to its
       `FixOrder` or `Accident`. Give each section the document's date.
-- [ ] MCP tool `cite_documents {bin, asOf}`: sections about a location, dated before `asOf`
-      (fixed Cypher, like the other tools).
-- [ ] Show a location's cited sections in the record drawer.
+- [x] 6fc6e84 MCP tool `cite_documents {bin, asOf}`: sections about a location, dated before `asOf`
+      (fixed Cypher, like the other tools). Done-when verified: `737/53/S4L` at 2011-04-01 → 0 rows,
+      at 2011-05-01 → the AD 2011-08-51 paragraphs (e, g, i); S-24R → 0; tests 10/10; MCP stdio answers.
+- [x] e734493 Show a location's cited sections in the record drawer.
 - Files: new `services/ingest/src/documents.ts`, appended entries in `cypher.ts` and `tools.ts`,
   `apps/web/components/RecordDrawer.tsx`. Leave `packages/agent/` to Manish, who wires the tool in.
 - Done when: `cite_documents` for `737/53/S4L` returns nothing at 2011-04-01 (no AD yet) and the
-  AD 2011-08-51 inspection paragraph at 2011-05-01; screenshot of the drawer.
+  AD 2011-08-51 inspection paragraph at 2011-05-01; screenshot of the drawer. **Verified (report:
+  `docs/briefs/track3-report.md`); drawer screenshot still to capture.**
 
 **Manish, with Claude: Track 1 and the rest of Track 3.**
 - [ ] Same-generation fleet: the agent's fleet count uses 737 Classics only, like the map; update
