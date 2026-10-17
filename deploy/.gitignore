@@ -1,0 +1,5 @@
+# the graph dump is data, not source (63.7 MB, refreshed with redis-cli SAVE)
+dump.rdb
+# Modal secrets/credentials never exist here; keep the folder clean anyway
+*.pem
+modal.toml.*
