@@ -11,8 +11,8 @@ report trouble at that spot?
 **Framing rule: Black Box shows warning signs and leads worth review, never causes. The NTSB
 determines causes.** Scope: mechanical and structural events. Pilot error and weather are out of scope.
 
-Graph Hacks (FalkorDB × WeMakeDevs), Oct 15–18 2026. Tracks: **1. Agents That Act** (main),
-2. Memory & Coordination, 3. Company Brain (thin, see [Limits](#limits)).
+Graph Hacks (FalkorDB × WeMakeDevs), Oct 15–18 2026. Tracks entered: **1. Agents That Act on Connected Data** and
+**3. Company Brain**.
 
 ## What it does
 

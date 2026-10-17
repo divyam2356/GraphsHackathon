@@ -13,7 +13,7 @@ Last updated: Oct 17, 16:30 IST (Manish + Claude). Order from here: improvements
 - [x] Cypher and algorithms explained (README "How it works", Story step 9)
 - [ ] Demo video, linked in the README (script ready: `docs/DEMO.md`)
 - [ ] Live deployment, or full local setup (local setup done and verified; deploy pending decision D1)
-- [x] Tracks named: 1 and 3 decided Oct 17; Track 2 pending Manish
+- [x] Tracks: 1 and 3 (decided Oct 17, Manish). Not Track 2.
 - [x] AI use disclosed (README)
 - [ ] Both of us can explain the graph model, queries and decisions (rule 12): run it locally, read `docs/DEFENSE.md`
 - [x] Human contribution stated in the README's AI disclosure (Oct 17; no separate log: judges read the README). Our voices in the video back it up.
@@ -31,6 +31,7 @@ Last updated: Oct 17, 16:30 IST (Manish + Claude). Order from here: improvements
 | Oct 15 | The evaluation is the backtest over all NTSB events, reported honestly: no per-aircraft signal (0.88× chance). | A fair test, shown in Story step 5. It is stronger than single-case checks that cannot fail. |
 | Oct 15 | Leads ranking (`rank_failure_modes`) and `services/eval/src/all.ts` are not presented as evidence. | Both are built from the SWA 812 answer (seeded mode, keyword rule). |
 | Oct 16 | D6 closed: leads ranking fixed — structure + signature overlap + full-text similarity, all from the graph; verified SWA 812 rank 1 (0.8, clear), door-frame case weak. | The keyword rule could not fail and proved nothing; the fix keeps D6's recommended approach. |
+| Oct 17 | D2 closed: we enter **Tracks 1 and 3 only**. | No time to argue Track 2 well; the memory and hand-off features stay, described as part of Tracks 1 and 3. (Manish) |
 | Oct 17 | Paperwork cut: no blog post (D4; the AI draft is deleted), no separate HUMAN_LOG (the README's AI disclosure says what we did), and the superseded plan docs (MILESTONES, GRAPH_MODEL) are deleted. | Judges read the README and watch the video; the time goes to Phase 1 and the video. divyam2356 can still write a blog in their own words. (Manish) |
 | Oct 17 | Board explains itself to non-experts: hover tooltips on every aviation and graph term, a labelled case card instead of the question box, and a **3D aircraft** view whose "Unroll" lays the skin flat into the map. | Manish: viewers won't know aircraft. No free 737 model with a usable licence and internal structure was found (searched Oct 17), so the aircraft is drawn in code with three.js (MIT). (Manish + Claude) |
 | Oct 17 | Watch → investigate hand-off (Tracks 1, 2, 3): the watcher stores `Alert`s in the graph on the fastest-rising skin-crack lines; the investigator picks one up, widens it, drafts a `WorkOrder`; only a person dispatches it (UI). 23 MCP tools. | Track 1 asks for actions based on what the graph shows, Track 2 for shared state and hand-offs between agents; `who_fixed` (Track 3) had no data before. (Manish + Claude) |
@@ -42,7 +43,6 @@ Last updated: Oct 17, 16:30 IST (Manish + Claude). Order from here: improvements
 | # | Question | Options | Recommendation | Decides | By |
 |---|---|---|---|---|---|
 | D1 | Live deployment? The rules prefer one; not required (rule 10: deployment *or* full local setup). | Modal, tested Oct 17: a web endpoint runs FalkorDB + the app with no card, on the free $30/month credit. Warm (about $5 through Oct 23, inside the credit) or sleep when idle (first visit waits 10–20 s). FalkorDB Cloud free (100 MB) and Hugging Face Spaces (PRO only) don't fit. | **Oct 17 (Manish): divyam2356 handles the deploy.** Suggest Modal, warm, with the Live model mode off on the public site (no OpenRouter key exposed). | divyam2356 | Oct 18, 15:00 |
-| D2 | Which tracks? | Rules allow any or all; each one entered must be named at submission. | **Decided Oct 17 (Manish): Tracks 1 and 3.** Open: also name Track 2? Memory across sessions and the watcher → investigator hand-off are its key focus items, and entering costs nothing. | Manish | Oct 17 |
 | D3 | The video | | **Decided Oct 17 (Manish): Manish + Claude make the video in code (`common/videokit`, captions carry the narration, no dramatic music). Both of us voice it: Claude writes a two-voice script from `docs/DEMO.md`. Improvements come first.** | Both | Oct 18 |
 
 ## Tracks: what the judges look for, and where we stand
@@ -68,10 +68,6 @@ Key focus items are quoted from the rules page (checked Oct 17). "Gap" says who 
 | Tracing decisions back to their source | Every decision stores who, why and when; `why_task`: task card → fix order → the order it replaced. | Cite the paragraph behind a fix order (divyam2356); `why` tool if time (Manish). |
 | Keeping knowledge current | `stale_tasks` (cards citing a replaced order); `reoffer_candidates` (deferred modes with new evidence); the time machine. | Dated documents, so citations follow the time machine (divyam2356). |
 | Answers with clear sources | Record ids link to the source record; the drawer quotes it in full. | Answers cite document sections (divyam2356 builds, Manish wires in). |
-
-**Track 2: Agent Memory and Coordination** (only if we name it, D2): memory across sessions
-(`Investigation` run log + `past_investigations`), shared state and a hand-off between two agents
-(`Alert` → `WorkOrder`), persistent history. Not covered: high-concurrency writes, memory per user.
 
 ## Plan to the deadline
 
