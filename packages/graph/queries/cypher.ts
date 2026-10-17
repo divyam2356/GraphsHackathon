@@ -15,6 +15,8 @@ const SCHEMA_EDGES: Array<[string, string, string]> = [
   ["FixOrder", "SUPERSEDES", "FixOrder"], ["FailureMode", "SIGNATURE", "Location"], ["FailureMode", "FOR", "Model"],
   ["Report", "EVIDENCE_FOR", "FailureMode"], ["Accident", "EVIDENCE_FOR", "FailureMode"], ["Report", "PRECURSOR_OF", "Accident"],
   ["FailureMode", "MERGED_INTO", "FailureMode"], ["Investigation", "ABOUT", "Accident"], ["Investigation", "KEPT", "Report"],
+  ["Alert", "AT", "Location"], ["Alert", "FOR", "Aircraft"], ["WorkOrder", "FROM", "Alert"], ["WorkOrder", "AT", "Location"],
+  ["WorkOrder", "ON", "Aircraft"], ["Engineer", "ASSIGNED", "WorkOrder"],
   ["Engineer", "MEMBER_OF", "Team"], ["TaskCard", "CITES", "FixOrder"], ["Decision", "BASED_ON", "FixOrder"],
 ];
 
@@ -143,12 +145,41 @@ export const CYPHER: Record<string, string> = {
     MATCH (i:Investigation {id:$id})
     SET i.finished = $at, i.leads = $leads, i.answer = $answer
     RETURN i.id AS id`,
+  // --- Watcher -> investigator hand-off: the alert is shared state in the graph ---
+  // One alert per line and date (watching twice adds nothing), linked to every aircraft that
+  // reported there in the window under the same filter as the hotspot that raised it.
   raise_alert: `
-    MATCH (t:Aircraft {tail:$tail})
-    CREATE (al:Alert {id:randomUUID(), date:toString(date()), status:'open', reason:$reason})-[:FOR]->(t)
-    WITH al OPTIONAL MATCH (m:FailureMode {id:$modeId})
-    FOREACH (_ IN CASE WHEN m IS NULL THEN [] ELSE [1] END | CREATE (al)-[:MATCHES]->(m))
-    RETURN al.id AS id`,
+    MATCH (line:Location {bin:$bin})
+    MERGE (al:Alert {bin:$bin, asOf:$asOf})
+      ON CREATE SET al.id = randomUUID(), al.status = 'open', al.reason = $reason, al.part = $part,
+        al.condition = $condition, al.raised_on = toString(date())
+    MERGE (al)-[:AT]->(line)
+    WITH al, line
+    OPTIONAL MATCH (r:Report)-[:AT]->(:Location)-[:WITHIN*0..1]->(line)
+    WHERE r.date < $asOf AND r.date >= toString(date($asOf) - duration({days: coalesce($windowDays, 365)}))
+      AND ($part IS NULL OR r.part = $part) AND ($condition IS NULL OR r.condition CONTAINS $condition)
+    OPTIONAL MATCH (r)-[:ON]->(a:Aircraft)
+    WITH al, collect(DISTINCT a) AS acs
+    FOREACH (a IN acs | MERGE (al)-[:FOR]->(a))
+    RETURN al.id AS id, al.bin AS bin, al.asOf AS asOf, al.status AS status, size(acs) AS aircraft`,
+  open_alerts: `
+    MATCH (al:Alert {status:'open'}) WHERE al.asOf <= $asOf
+    OPTIONAL MATCH (al)-[:FOR]->(a:Aircraft)
+    RETURN al.id AS id, al.bin AS bin, al.asOf AS asOf, al.reason AS reason, count(a) AS aircraft
+    ORDER BY al.asOf DESC, aircraft DESC LIMIT 10`,
+  // The investigator's view of one alert: the aircraft it names (most reports first), then the
+  // others with a matching report on the same line in the window (e.g. any crack, not only skin).
+  alert_aircraft: `
+    MATCH (al:Alert {id:$id})-[:AT]->(line:Location)
+    MATCH (r:Report)-[:AT]->(:Location)-[:WITHIN*0..1]->(line)
+    WHERE r.date < al.asOf AND r.date >= toString(date(al.asOf) - duration({days: coalesce($windowDays, 365)}))
+      AND ($condition IS NULL OR r.condition CONTAINS $condition)
+    MATCH (r)-[:ON]->(a:Aircraft)
+    OPTIONAL MATCH (al)-[f:FOR]->(a)
+    WITH al, a, f IS NOT NULL AS named, count(r) AS reports, max(r.date) AS last,
+      collect(DISTINCT toLower(trim(coalesce(r.part, '') + ' ' + coalesce(r.condition, ''))))[0..3] AS what
+    RETURN al.bin AS bin, a.id AS aircraft, a.tail AS tail, a.variant AS variant, named, reports, last, what
+    ORDER BY named DESC, reports DESC, tail LIMIT 100`,
   // MERGE by name: proposing the same mode twice adds evidence instead of a duplicate.
   // Evidence (report ids / ev_ids) is linked EVIDENCE_FOR. A person decides in the UI (decide_mode).
   propose_failure_mode: `
@@ -169,24 +200,42 @@ export const CYPHER: Record<string, string> = {
     MATCH (t:Aircraft {tail:$tail}), (l:Location {bin:$bin})
     CREATE (o:Observation {id:randomUUID(), text:$text, date:$date})-[:ON]->(t)
     CREATE (o)-[:AT]->(l) RETURN o.id AS id`,
-  // One engineer per work order (least loaded on the team), placed at $bin or else at the
-  // matched failure mode's strongest signature location, so who_fixed can find it.
+  // A draft inspection order for an alert (one per alert), at the alert's line and on the
+  // aircraft it names. Only a draft: a person dispatches it in the UI (dispatch_work_order).
   create_work_order: `
-    MATCH (al:Alert {id:$alertId})-[:FOR]->(t:Aircraft)
-    OPTIONAL MATCH (al)-[:MATCHES]->(:FailureMode)-[s:SIGNATURE]->(ml:Location)
-    WITH al, t, ml ORDER BY s.weight DESC LIMIT 1
-    OPTIONAL MATCH (bl:Location {bin:$bin})
-    WITH al, t, coalesce(bl, ml) AS l
-    MATCH (e:Engineer)-[:MEMBER_OF]->(:Team {name:$team})
-    OPTIONAL MATCH (e)-[:SIGNED_OFF]->(prev:WorkOrder)
-    WITH al, t, l, e, count(prev) AS load ORDER BY load ASC LIMIT 1
-    CREATE (w:WorkOrder {id:randomUUID(), team:$team, date:toString(date()), synthetic:true})-[:ON]->(t)
-    CREATE (e)-[:SIGNED_OFF]->(w)
-    CREATE (w)-[:FROM]->(al)
-    FOREACH (_ IN CASE WHEN l IS NULL THEN [] ELSE [1] END | CREATE (w)-[:AT]->(l))
-    RETURN w.id AS id, e.name AS engineer, l.bin AS bin`,
+    MATCH (al:Alert {id:$alertId})-[:AT]->(l:Location)
+    MERGE (w:WorkOrder {alert:$alertId})
+      ON CREATE SET w.id = randomUUID(), w.team = $team, w.task = $task, w.status = 'draft',
+        w.synthetic = true, w.drafted_on = toString(date())
+    MERGE (w)-[:FROM]->(al)
+    MERGE (w)-[:AT]->(l)
+    WITH w, al
+    OPTIONAL MATCH (al)-[:FOR]->(a:Aircraft)
+    WITH w, collect(a) AS acs
+    FOREACH (a IN acs | MERGE (w)-[:ON]->(a))
+    RETURN w.id AS id, w.status AS status, w.team AS team, w.task AS task, size(acs) AS aircraft`,
+  // UI only, never MCP tools: a person dispatches a draft (assigned to the least-loaded engineer
+  // on its team; the alert becomes actioned) or dismisses an open alert (its draft is cancelled).
+  dispatch_work_order: `
+    MATCH (w:WorkOrder {id:$id}) WHERE w.status = 'draft'
+    MATCH (e:Engineer)-[:MEMBER_OF]->(t:Team) WHERE t.name = w.team
+    OPTIONAL MATCH (e)-[:ASSIGNED]->(prev:WorkOrder)
+    WITH w, e, count(prev) AS load ORDER BY load ASC, e.name LIMIT 1
+    MERGE (e)-[:ASSIGNED]->(w)
+    SET w.status = 'dispatched', w.dispatched_by = $by, w.dispatched_at = $at, w.decision_reason = $reason
+    WITH w, e
+    OPTIONAL MATCH (w)-[:FROM]->(al:Alert)
+    SET al.status = 'actioned'
+    RETURN w.id AS id, w.status AS status, w.team AS team, e.name AS engineer`,
+  dismiss_alert: `
+    MATCH (al:Alert {id:$id}) WHERE al.status = 'open'
+    SET al.status = 'dismissed', al.decided_by = $by, al.decided_at = $at, al.decision_reason = $reason
+    WITH al
+    OPTIONAL MATCH (w:WorkOrder)-[:FROM]->(al) WHERE w.status = 'draft'
+    SET w.status = 'cancelled'
+    RETURN al.id AS id, al.status AS status`,
   who_fixed: `
-    MATCH (e:Engineer)-[:SIGNED_OFF]->(:WorkOrder)-[:AT]->(:Location)-[:WITHIN*0..2]->(:Location {bin:$bin})
+    MATCH (e:Engineer)-[:ASSIGNED]->(:WorkOrder)-[:AT]->(:Location)-[:WITHIN*0..2]->(:Location {bin:$bin})
     RETURN e.name AS engineer, count(*) AS jobs ORDER BY jobs DESC LIMIT 10`,
   why_task: `
     MATCH (t:TaskCard {id:$task_id})-[:CITES]->(f:FixOrder)
@@ -309,6 +358,8 @@ export const CYPHER: Record<string, string> = {
       UNION MATCH (n:Location) WHERE n.bin IN coalesce($locations, []) RETURN n
       UNION MATCH (n:FixOrder) WHERE n.ad_no IN coalesce($fixorders, []) RETURN n
       UNION MATCH (n:FailureMode) WHERE n.id IN coalesce($modes, []) RETURN n
+      UNION MATCH (n:Alert) WHERE n.id IN coalesce($alerts, []) RETURN n
+      UNION MATCH (n:WorkOrder) WHERE n.id IN coalesce($workorders, []) RETURN n
       UNION MATCH (:Accident)-[:FOUND]->(n:Finding) WHERE split(n.id, '/')[0] IN coalesce($accidents, []) RETURN n
     }
     WITH collect(n) AS ns

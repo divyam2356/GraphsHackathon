@@ -120,10 +120,20 @@ matched every row (1,000 instead of 198 in our repro). We dropped the date index
 
 ### MCP server and agent
 
-- `packages/mcp-server`: 21 domain tools, each a fixed Cypher query with typed arguments.
+- `packages/mcp-server`: 23 domain tools, each a fixed Cypher query with typed arguments.
   Read tools include `past_investigations`, `get_accident`, `prior_reports`, `fleet_reports`,
   `explain_path` and `similar_reports`; write tools include `record_precursor` and
   `propose_failure_mode`. There is no approve tool.
+- **Two agents, one hand-off, through the graph:** on the Board, *Watch the fleet* runs the
+  watcher at the slider date: `hotspots` ranks fuselage lines by the rise in skin-crack reports,
+  and `raise_alert` stores an `Alert` on the top three, linked to every aircraft behind it. The
+  investigator picks an alert up from the graph (`open_alerts`), widens it to any crack on that
+  line (`alert_aircraft`), checks three years of fleet reports and the fix orders, then drafts a
+  `WorkOrder` for the (fictional) Structures team (`create_work_order`). Only a person can
+  dispatch it (UI); dispatch assigns the engineer with the fewest open orders, which is what
+  `who_fixed` reads back. On 1 January 2011 the watcher put S-4L second (17 aircraft, up from 7).
+  N632SW was not among those 17: its reports were clip cracks, which only the investigator's
+  wider view includes. Alerts are leads worth review; most rising lines turn out to be routine.
 - **Memory across sessions:** the harness logs every run as an `Investigation` node, and each
   report the model keeps as a `KEPT` edge with its confidence and reason. The next run starts
   with `past_investigations` and says whether it agrees ("An earlier run (nemotron-3-super,
@@ -135,10 +145,11 @@ matched every row (1,000 instead of 198 in our repro). We dropped the date index
   argument to the investigation date, so the model cannot read past it. Two guard rails for
   smaller models: if it answers before checking the fleet and the evidence path, it is asked
   once to finish; if the answer claims a cause, it is asked once to rewrite.
-- The UI has three modes: **Live model** (needs a key; free models take minutes), **Scripted**
+- The agent panel has three modes: **Live model** (needs a key; free models take minutes), **Scripted**
   (the same tools in a fixed order, no model) and **Recorded** (a real 297-second Nemotron run,
   replayed in about 20 seconds; the default for demos).
-- Approval goes through `/api/decide`, a UI-only route the agent cannot reach.
+- Every human decision (approve, defer, merge a failure mode; dispatch a work order; dismiss an
+  alert) goes through `/api/decide`, a UI-only route the agent cannot reach.
 
 ![Story step 8: a drafted failure mode waiting for a person](docs/img/story-approval.jpg)
 
@@ -176,8 +187,11 @@ SWA 812 fixture instead of FalkorDB; it is off by default and never used for the
   became known with AD 2011-08-51 on 5 April 2011, so the honest answer is "no known mode,
   draft a new one for a person" (Story step 8). With 2 confirmed modes it is not evaluated.
 - `similar_reports` uses the full-text index; no embeddings are loaded.
-- Fix orders: the two S-4L ADs only. Company layer (Track 3): 3 teams, 15 engineers, 2 task cards
-  and 1 decision, all `synthetic: true`, reachable through the `who_fixed`, `why_task` and `stale_tasks` tools.
+- Fix orders: the two S-4L ADs only. Company layer (Track 3): 3 teams, 15 engineers, 2 task cards,
+  1 decision and the work orders people dispatch, all `synthetic: true`, reachable through the
+  `who_fixed`, `why_task` and `stale_tasks` tools.
+- The watcher is a fixed method (no model), and its alerts are not backtested: the rise ranking
+  is shown for one case (S-4L, 1 January 2011).
 - The hotspot job's `algo.labelPropagation` over same-bin edges reduces to grouping by bin.
 - Free OpenRouter models: 50 requests a day; a full run uses about 10 and takes about 5 minutes.
 

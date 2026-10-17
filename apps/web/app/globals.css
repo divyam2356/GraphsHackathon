@@ -281,3 +281,12 @@ li.step-answer { border-top: 2px solid var(--ink); padding-top: 12px; }
 .decided { border-top: 1px solid var(--alclad); padding-top: 12px; }
 .decided p { margin: 0 0 6px; font-family: var(--text); font-size: 16px; }
 .story-text .go { margin: 6px 0 0; }
+
+/* Watcher -> investigator hand-off (Board) */
+.watch-row { display: flex; align-items: center; gap: 14px; margin-top: 10px; }
+.watch-row .go { margin-left: 0; flex: none; }
+.watch-row .caption { max-width: 80ch; }
+.handoff { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+.handoff .caption { width: 100%; }
+.order-card { grid-column: 1 / -1; margin-top: 12px; }
+@media (max-width: 600px) { .watch-row { flex-direction: column; align-items: flex-start; } }

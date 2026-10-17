@@ -29,6 +29,8 @@ function nodeName(n: GraphNode): string {
       return parts.length === 2 ? `${parts[0]} ${ZONES[parts[1]] ?? `ATA ${parts[1]}`}` : parts.slice(2).join(" ").replace(/^S(\d+)([LR])/, "S-$1$2").replace("BS", "BS ");
     }
     case "Finding": return p.cause_factor === "C" ? "Cause finding" : "Finding";
+    case "Alert": return `Alert ${String(p.bin).split("/")[2]?.replace(/^S(\d+)([LR])/, "S-$1$2") ?? ""}`;
+    case "WorkOrder": return `Work order (${p.status})`;
     default: return nodeKey(n);
   }
 }
@@ -70,7 +72,7 @@ export function EvidenceGraph({ rows, kept, focus, onNode }: { rows: SubRow[]; k
 
   const few = g.nodes.length <= 28;
   // In a big graph only the nodes that carry the story get a label; the rest stay dots (hover for the id).
-  const named = (n: N) => few || ["Accident", "Aircraft", "FixOrder", "FailureMode"].includes(n.label) || kept?.has(n.key) || focus === n.key
+  const named = (n: N) => few || ["Accident", "Aircraft", "FixOrder", "FailureMode", "Alert", "WorkOrder"].includes(n.label) || kept?.has(n.key) || focus === n.key
     || (n.label === "Location" && !n.key.includes("/BS"));
   // Fit the view to the nodes (with room for labels), never zooming in past 1.6x.
   const xs = g.nodes.map((n) => n.x!), ys = g.nodes.map((n) => n.y!);
@@ -79,7 +81,8 @@ export function EvidenceGraph({ rows, kept, focus, onNode }: { rows: SubRow[]; k
   const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
   [x0, y0] = [cx - (W * k) / 2, cy - (H * k) / 2];
   const ks = Math.max(1, k); // marks and labels keep their on-screen size when the view zooms out
-  const edgeLabels = few ? placeEdgeLabels(g, named, ks) : new Map<number, [number, number]>();
+  // edge names help a small graph; on a busy one (an alert's fleet) they are noise
+  const edgeLabels = few && g.links.length <= 24 ? placeEdgeLabels(g, named, ks) : new Map<number, [number, number]>();
   return (
     <div className="egraph">
       <svg viewBox={`${x0} ${y0} ${W * k} ${H * k}`} role="img" aria-label={`Evidence graph, ${g.nodes.length} nodes`}>
@@ -108,7 +111,7 @@ export function EvidenceGraph({ rows, kept, focus, onNode }: { rows: SubRow[]; k
         {!g.nodes.length && <text x={x0 + (W * k) / 2} y={y0 + (H * k) / 2} textAnchor="middle" fontSize={13} className="nlabel">The records the agent touches appear here, joined by their edges.</text>}
       </svg>
       <div className="glegend">
-        {["Accident", "Report", "Aircraft", "Location", "Finding", "FixOrder"].map((l) => (
+        {["Accident", "Report", "Aircraft", "Location", "Finding", "FixOrder", ...["Alert", "WorkOrder"].filter((l) => g.nodes.some((n) => n.label === l))].map((l) => (
           <span key={l}><svg width="16" height="16" viewBox="-8 -8 16 16"><Shape label={l} small /></svg>{LEGEND[l]}</span>
         ))}
         <span><svg width="16" height="16" viewBox="-8 -8 16 16"><Shape label="Report" hot small /></svg>Earlier report at the same location</span>
@@ -118,7 +121,7 @@ export function EvidenceGraph({ rows, kept, focus, onNode }: { rows: SubRow[]; k
 }
 
 // Evidence edges get their label first; structural ones (hierarchy) only where room is left.
-const LABEL_ORDER = ["PRECURSOR_OF", "INVOLVED", "ON", "EVIDENCE_FOR", "TARGETS", "FOUND", "AT", "WITHIN"];
+const LABEL_ORDER = ["PRECURSOR_OF", "INVOLVED", "FROM", "ON", "FOR", "EVIDENCE_FOR", "TARGETS", "FOUND", "AT", "WITHIN"];
 type Box = [number, number, number, number];
 const overlaps = (a: Box, b: Box) => a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3];
 /** Edge label positions (by link index), skipping any label that would cover a node, a node name or another label. */
@@ -141,7 +144,7 @@ function placeEdgeLabels(g: { nodes: N[]; links: E[] }, named: (n: N) => boolean
   return out;
 }
 
-const LEGEND: Record<string, string> = { Accident: "NTSB event", Report: "Maintenance report", Aircraft: "Aircraft", Location: "Location", Finding: "NTSB finding", FixOrder: "Fix order (AD)" };
+const LEGEND: Record<string, string> = { Accident: "NTSB event", Report: "Maintenance report", Aircraft: "Aircraft", Location: "Location", Finding: "NTSB finding", FixOrder: "Fix order (AD)", Alert: "Alert (watcher)", WorkOrder: "Work order" };
 
 function Shape({ label, hot, small }: { label: string; hot?: boolean; small?: boolean }) {
   const k = small ? 0.75 : 1;
@@ -152,6 +155,8 @@ function Shape({ label, hot, small }: { label: string; hot?: boolean; small?: bo
     case "Location": return <circle r={4.5 * k} fill="var(--graphite)" />;
     case "Finding": return <circle r={4.5 * k} fill="var(--sheet)" stroke="var(--graphite)" strokeWidth={1.5} />;
     case "FixOrder": return <rect x={-8 * k} y={-5 * k} width={16 * k} height={10 * k} fill="var(--sheet)" stroke="var(--ink)" strokeWidth={1.4} strokeDasharray="2.5 1.5" />;
+    case "Alert": return <path d={`M0,${-9 * k} L${8 * k},${6 * k} L${-8 * k},${6 * k} Z`} fill="var(--sheet)" stroke="var(--signal)" strokeWidth={2} />;
+    case "WorkOrder": return <rect x={-7 * k} y={-7 * k} width={14 * k} height={14 * k} fill="var(--ink)" />;
     default: return <circle r={5 * k} fill="var(--alclad)" />;
   }
 }

@@ -16,6 +16,8 @@ interface Props {
   lines?: LineCount[];
   pins?: Pin[];
   pinLabel?: string;
+  /** line keys with an alert from the watcher, outlined across the map */
+  alerts?: string[];
   asOf: string;
   showSwa812?: boolean;
   selected?: string | null;
@@ -31,7 +33,7 @@ const yMid = (side: Side, n: number) => yTop(rowIndex(side, n)) + PITCH / 2;
 const LABELLED = new Set([4, 8, 12, 16, 20, 24, 28]);
 const halo = { paintOrder: "stroke", stroke: "var(--film)", strokeWidth: 3, strokeLinejoin: "round" } as const;
 
-export function FuselageMap({ cells, lines = [], pins = [], pinLabel, asOf, showSwa812 = true, selected, onCell, onPin }: Props) {
+export function FuselageMap({ cells, lines = [], pins = [], pinLabel, alerts = [], asOf, showSwa812 = true, selected, onCell, onPin }: Props) {
   const box = useRef<HTMLDivElement>(null);
   const [tip, setTip] = useState<{ x: number; y: number; body: React.ReactNode } | null>(null);
   const show = (e: React.MouseEvent, body: React.ReactNode) => {
@@ -103,6 +105,18 @@ export function FuselageMap({ cells, lines = [], pins = [], pinLabel, asOf, show
             {k === 0 && pinLabel && <text x={x(p.station) - 6} y={yMid(p.side, p.n) + 15} fontSize={10.5} fontWeight={700} textAnchor="end" style={{ ...halo, fill: "var(--ink)" }}>{pinLabel}</text>}
           </g>
         ))}
+
+        {/* lines the watcher raised an alert on */}
+        {Array.from({ length: ROWS }, (_, i) => {
+          const { side, n } = rowOf(i);
+          if (!alerts.includes(lineKey(side, n))) return null;
+          return (
+            <g key={`alert${i}`} onMouseMove={(e) => show(e, <><b>{stringerName(side, n)}</b>: alert raised by the watcher</>)}>
+              <rect x={L - 0.5} y={yTop(i) - 0.5} width={MAPW + 1} height={PITCH + 1} fill="none" stroke="var(--signal)" strokeWidth={1.6} />
+              <text x={L + MAPW - 4} y={yTop(i) - 2.5} fontSize={10} fontWeight={700} textAnchor="end" style={{ ...halo, fill: "var(--signal-deep)" }}>Alert: {stringerName(side, n)}</text>
+            </g>
+          );
+        })}
 
         {/* row labels and sides */}
         {Array.from({ length: ROWS }, (_, i) => {

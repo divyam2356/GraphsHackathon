@@ -1,6 +1,7 @@
 "use client";
 // Board: the live investigation view. Fuselage map + time machine on top; the
 // agent's trace and the evidence graph it touched below; records open in a drawer.
+// The watcher raises alerts at the slider date and hands one to the investigator.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FuselageMap, HeatLegend, type Cell, type LineCount, type Pin } from "../components/FuselageMap";
 import { TimeSlider } from "../components/TimeSlider";
@@ -8,7 +9,8 @@ import { Header } from "../components/Header";
 import { AgentPanel, AnswerBar, StepsGrid, type Lift, type Mode } from "../components/AgentPanel";
 import { EvidenceGraph, nodeKey, type SubRow } from "../components/EvidenceGraph";
 import { RecordDrawer, type Open } from "../components/RecordDrawer";
-import { view, type Step } from "../lib/api";
+import { WatchActions, WatchButton } from "../components/Watch";
+import { streamAgent, view, type Step } from "../lib/api";
 import { useView } from "../lib/useView";
 import { SWA812, parseKey, stationIn } from "../lib/fuselage";
 import type { Keys } from "@blackbox/agent/src/agent";
@@ -30,6 +32,13 @@ export default function Board() {
   const [sub, setSub] = useState<SubRow[]>([]);
   const [open, setOpen] = useState<Open | null>(null);
   const [autorun, setAutorun] = useState<Mode | undefined>();
+  const [busy, setBusy] = useState(false);
+  // The watcher and the hand-off: fixed methods streamed into the same trace as the agent.
+  const runFixed = async (body: { mode: "watch" | "alert"; alertId?: string }) => {
+    setBusy(true); setSteps([]);
+    await streamAgent({ ...body, asOf }, (s) => setSteps((p) => [...p, s])).catch((e: Error) => setSteps((p) => [...p, { type: "error", text: e.message }]));
+    setBusy(false);
+  };
 
   // Deep links for demos and screenshots: ?asOf=2010-04-01&filter=crack&cell=737/53/S4L/BS620&run=scripted
   useEffect(() => {
@@ -43,7 +52,7 @@ export default function Board() {
 
   // Every key a tool result touched, accumulated; the evidence graph is their subgraph.
   const keys = useMemo(() => {
-    const k: Keys = { accidents: [], reports: [], aircraft: [], locations: [], fixorders: [], modes: [] };
+    const k: Keys = { accidents: [], reports: [], aircraft: [], locations: [], fixorders: [], modes: [], alerts: [], workorders: [] };
     for (const s of steps) if (s.type === "tool_result") for (const f of Object.keys(k) as Array<keyof Keys>) for (const v of s.keys[f]) if (!k[f].includes(v)) k[f].push(v);
     return k;
   }, [steps]);
@@ -73,6 +82,9 @@ export default function Board() {
   useEffect(() => { if (selected && !open) openCell(selected); }, [selected]); // eslint-disable-line react-hooks/exhaustive-deps
   const prefetch = useCallback((d: string) => { view("fleet_map", args(d)); view("line_window", args(d)); }, [filter]); // eslint-disable-line react-hooks/exhaustive-deps
   const answer = [...steps].reverse().find((s) => s.type === "answer");
+  // Lines with an alert in this run (raised by the watcher, or open when the investigator took over).
+  const alertLines = useMemo(() => [...new Set(steps.flatMap((s) => (s.type === "tool_result" && (s.name === "raise_alert" || s.name === "open_alerts") && Array.isArray(s.preview)
+    ? (s.preview as Array<{ bin?: string }>).map((r) => r.bin ?? "") : [])).filter(Boolean))], [steps]);
   // Fleet lift per stringer line, from the already-fetched line_window view:
   // distinct aircraft in the 12mo before asOf vs the 12mo before that.
   const liftByLine = useMemo(() => {
@@ -104,10 +116,11 @@ export default function Board() {
             <HeatLegend />
             <span className="query-time">{map.error ? map.error : map.ms !== undefined ? `fleet_map ${map.ms} ms, ${map.rows?.length ?? 0} cells` : "Loading the graph"}</span>
           </div>
-          <FuselageMap cells={map.rows ?? []} lines={lines.rows ?? []} pins={pins} pinLabel={pins.length ? `${SWA812.tail}'s own reports` : undefined}
+          <FuselageMap cells={map.rows ?? []} lines={lines.rows ?? []} pins={pins} pinLabel={pins.length ? `${SWA812.tail}'s own reports` : undefined} alerts={alertLines}
             asOf={asOf} selected={selected} onCell={openCell} onPin={openId} />
           <TimeSlider asOf={asOf} onChange={setAsOf} stopAt={SWA812.date} prefetch={prefetch}
             marks={[{ date: "2010-03-09", label: "N632SW: 2 cracked clips on S-4L" }, { date: SWA812.date, label: "Southwest 812", hot: true }]} />
+          <WatchButton asOf={asOf} busy={busy} onWatch={() => runFixed({ mode: "watch" })} />
         </section>
         <div className="askrow">
           <AgentPanel asOf={asOf} steps={steps} onStep={(s) => setSteps((p) => [...p, s])} onReset={() => setSteps([])} onOpen={openId} autorun={autorun} hideAnswer showSteps={false} />
@@ -118,6 +131,7 @@ export default function Board() {
         </div>
         <StepsGrid steps={steps} onOpen={openId} hideAnswer lifts={liftByLine} />
         {answer && <AnswerBar text={answer.text} onOpen={openId} />}
+        <WatchActions steps={steps} busy={busy} onHandOff={(alertId) => runFixed({ mode: "alert", alertId })} />
       </main>
       <RecordDrawer open={open} onClose={() => { setOpen(null); setSelected(null); }} />
     </>

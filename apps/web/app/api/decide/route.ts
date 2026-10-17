@@ -1,21 +1,26 @@
 import { runTool } from "@blackbox/graph/src/run";
 import { CYPHER } from "@blackbox/graph/queries/cypher";
-// A person's decision on a proposed failure mode: approve -> confirmed, defer -> dormant,
-// reopen -> proposed (demo reset). UI only: the MCP server never exposes this, so the
-// agent can draft a mode but cannot approve one.
+// A person's decisions. Failure modes: approve -> confirmed, defer -> dormant, reopen ->
+// proposed (demo reset), merge -> folded into another mode. Work orders: dispatch a draft
+// (assigned to the least-loaded engineer). Alerts: dismiss. UI only: the MCP server never
+// exposes these, so the agent can draft modes and work orders but cannot decide them.
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+type Decision = "approve" | "defer" | "reopen" | "merge" | "dispatch" | "dismiss";
+const QUERY: Record<Decision, string> = {
+  approve: "decide_mode", defer: "decide_mode", reopen: "decide_mode", merge: "merge_mode",
+  dispatch: "dispatch_work_order", dismiss: "dismiss_alert",
+};
+
 export async function POST(req: Request) {
-  const b = (await req.json()) as { id: string; decision: "approve" | "defer" | "reopen" | "merge"; by: string; reason?: string; into?: string };
-  if (!b.id || !["approve", "defer", "reopen", "merge"].includes(b.decision) || !b.by?.trim()) return Response.json({ error: "id, decision and by are required" }, { status: 400 });
+  const b = (await req.json()) as { id: string; decision: Decision; by: string; reason?: string; into?: string };
+  if (!b.id || !(b.decision in QUERY) || !b.by?.trim()) return Response.json({ error: "id, decision and by are required" }, { status: 400 });
+  const name = QUERY[b.decision];
   try {
-    const at = new Date().toISOString();
-    const rows = b.decision === "merge"
-      ? ((await runTool("merge_mode", { id: b.id, into: b.into, by: b.by.trim(), reason: b.reason?.trim() || null, at })) as unknown[])
-      : ((await runTool("decide_mode", { id: b.id, decision: b.decision, by: b.by.trim(), reason: b.reason?.trim() || null, at })) as unknown[]);
-    if (!rows.length) return Response.json({ error: "No failure mode in a state that allows this decision" }, { status: 409 });
-    return Response.json({ ...(rows[0] as object), cypher: (b.decision === "merge" ? CYPHER.merge_mode : CYPHER.decide_mode).trim() });
+    const rows = (await runTool(name, { id: b.id, decision: b.decision, into: b.into ?? null, by: b.by.trim(), reason: b.reason?.trim() || null, at: new Date().toISOString() })) as unknown[];
+    if (!rows.length) return Response.json({ error: "Nothing in a state that allows this decision" }, { status: 409 });
+    return Response.json({ ...(rows[0] as object), cypher: CYPHER[name].trim() });
   } catch (e) {
     return Response.json({ error: (e as Error).message }, { status: 503 });
   }

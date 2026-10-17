@@ -41,7 +41,11 @@ export function buildServer(query: (name: string, args: unknown) => Promise<unkn
     { caseId: z.string() });
   tool("reoffer_candidates", "Deferred or proposed modes whose evidence grew since the last human decision (3+ new items, or a newer accident). Offer these to a person again.",
     {});
-  tool("who_fixed", "Engineers of the (fictional) maintenance company who worked at a location.", { bin });
+  tool("open_alerts", "Alerts the watcher raised and nobody has actioned or dismissed yet, up to asOf: the hand-off from the watcher to an investigator.",
+    { asOf });
+  tool("alert_aircraft", "The aircraft behind one alert: those it names (most reports first), then others with a matching report on the same line in the window. Pass condition 'CRACK' to widen from skin cracks to any crack.",
+    { id: z.string().describe("alert id from open_alerts or raise_alert"), condition: z.string().optional(), windowDays: z.number().optional() });
+  tool("who_fixed", "Engineers of the (fictional) maintenance company assigned to work orders at a location.", { bin });
   tool("why_task", "Why a (fictional) maintenance task card exists: the fix order it cites and the orders that one replaced.",
     { task_id: z.string() });
   tool("stale_tasks", "Task cards that still cite a fix order that has since been replaced.", {});
@@ -49,15 +53,15 @@ export function buildServer(query: (name: string, args: unknown) => Promise<unkn
   // Write / action (agent memory + org actions). A human approves failure modes in the UI.
   tool("record_precursor", "Save a judged warning sign: this report preceded this accident, with confidence 0-1 and a one-line reason.",
     { reportId: z.string(), accidentId: z.string(), confidence: z.number(), reason: z.string(), asOf, runId: z.string().optional().describe("set by the harness; leave empty") });
-  tool("raise_alert", "Open an alert on an aircraft that shows a known danger pattern.",
-    { tail: z.string(), modeId: z.string().optional(), hotspotId: z.string().optional(), reason: z.string() });
+  tool("raise_alert", "Open an alert on a stringer line that is rising across the fleet (from hotspots). Links every aircraft that reported there in the window under the same part/condition filter. One alert per line and date. A lead worth review, not a prediction.",
+    { bin, asOf, reason: z.string(), part: z.string().optional(), condition: z.string().optional(), windowDays: z.number().optional() });
   tool("propose_failure_mode", "Draft a NEW failure mode when no known or dormant mode fits. It stays 'proposed' until a human approves it.",
     { draft: z.object({ name: z.string(), system: z.string(), mechanism: z.string() }), evidence: z.array(z.string()).describe("report ids / ev_ids supporting it") });
   tool("add_support", "Attach new evidence (a case) to an existing dormant or proposed failure mode instead of creating a duplicate.",
     { caseId: z.string(), modeId: z.string() });
   tool("record_observation", "Log a mechanic's observation on an aircraft at a location.",
     { tail: z.string(), bin, text: z.string(), date: z.string() });
-  tool("create_work_order", "Create a work order from an alert for a team; assigns the least-loaded engineer.",
-    { alertId: z.string(), team: z.string(), bin: bin.optional() });
+  tool("create_work_order", "Draft an inspection work order for an alert, for a team of the (fictional) maintenance company, on the aircraft the alert names. Only a draft: a person dispatches it in the UI; you cannot.",
+    { alertId: z.string(), team: z.string().describe("Structures, Propulsion or Avionics"), task: z.string().describe("what to inspect, where, and which aircraft first") });
   return s;
 }

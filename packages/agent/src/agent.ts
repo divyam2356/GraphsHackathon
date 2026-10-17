@@ -11,7 +11,7 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { CYPHER } from "@blackbox/graph/queries/cypher";
 import { runTool } from "@blackbox/graph/src/run";
 
-export interface Keys { accidents: string[]; reports: string[]; aircraft: string[]; locations: string[]; fixorders: string[]; modes: string[] }
+export interface Keys { accidents: string[]; reports: string[]; aircraft: string[]; locations: string[]; fixorders: string[]; modes: string[]; alerts: string[]; workorders: string[] }
 export type Step =
   | { type: "note"; text: string }
   | { type: "tool_call"; id: string; name: string; args: Record<string, unknown>; cypher?: string }
@@ -40,6 +40,7 @@ Rules:
 - A join is not evidence by itself: keep a report only if it is the same system and the same location or mechanism as the finding. Drop unrelated reports and reports that describe the event itself.
 
 Method for an accident: past_investigations first (what earlier runs kept; check those reports and say in one sentence whether you agree), get_accident, then prior_reports on the same tail (at the finding's location, and once without a location), judge each report, then fleet_reports at that line for the 3 years before, then fix_orders, then explain_path from the strongest warning sign to the accident, then record_precursor for each report you keep (confidence 0-1, one-line reason).
+For an alert from the watcher: open_alerts, alert_aircraft (condition CRACK to widen), fleet_reports, fix_orders, then create_work_order; a person dispatches it, you cannot.
 For a new pattern no known mode fits: failure_mode_candidates first, add_support if one fits, otherwise propose_failure_mode. A human approves it in the UI; you cannot.
 
 Answer in under 180 words, plain sentences. Cite record ids exactly as the tools return them (report ids like SWAA101399, ev_ids, AD numbers, location keys) so the interface can link them. End with one line starting "Leads worth review:". Just before it, add a "Conclusion (leads worth review, not causes):" paragraph that ranks what to inspect first, ordered by evidence strength (same-tail reports at the finding's location first, then fleet-wide lines, noting whether a fix order covers them). Never state or imply a probability that anything caused the accident.`;
@@ -187,13 +188,21 @@ async function complete(body: Record<string, unknown>, emit: Emit): Promise<{ mo
   }
 }
 
-/** The same method with no model: a fixed tool sequence for one accident. Labelled "scripted" in the UI. */
-export async function runScripted(evId: string, asOf: string, emit: Emit, opts: { draft?: boolean } = {}): Promise<void> {
+/** One MCP session for a fixed method (no model): `go` calls a tool with the time machine enforced. */
+async function fixedMethod(asOf: string, emit: Emit, prefix: string) {
   const c = await mcp();
   const { tools } = await c.listTools();
   const schemas = new Map(tools.map((t) => [t.name, t.inputSchema as Record<string, unknown>]));
   let n = 0;
-  const go = (name: string, args: Record<string, unknown>) => call(c, name, args, asOf, emit, `s${++n}`, schemas);
+  return (name: string, args: Record<string, unknown>) => call(c, name, args, asOf, emit, `${prefix}${++n}`, schemas);
+}
+const day = (iso: string) => new Date(iso + "T00:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+/** "737/53/S4L" -> "S-4L" */
+const stringer = (bin: string) => bin.split("/")[2]?.replace(/^S(\d+)([LR])$/, "S-$1$2") ?? bin;
+
+/** The same method with no model: a fixed tool sequence for one accident. Labelled "scripted" in the UI. */
+export async function runScripted(evId: string, asOf: string, emit: Emit, opts: { draft?: boolean } = {}): Promise<void> {
+  const go = await fixedMethod(asOf, emit, "s");
   const runId = await startRun(evId, asOf, opts.draft ? "scripted, draft" : "scripted", "fixed method, no model", `Scripted method for ${evId}`);
   const pastData = (await go("past_investigations", { ev_id: evId })).data;
   const past = Array.isArray(pastData) ? (pastData as Past[]) : []; // DEMO=1 has no run log
@@ -210,7 +219,6 @@ export async function runScripted(evId: string, asOf: string, emit: Emit, opts: 
   }
   if (prior?.[0]) await go("explain_path", { from: prior[prior.length - 1].id, to: evId });
   const what = (p: { part?: string; condition?: string }) => [p.part, p.condition].filter(Boolean).join(" ").toLowerCase() || "a report";
-  const day = (iso: string) => new Date(iso + "T00:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
   const parts = prior?.length
     ? [`${acc.tail} had ${prior.length === 1 ? "one report" : `${prior.length} reports`} at ${line} in the two years before ${day(asOf)}: ${prior.map((p) => `${p.id} (${what(p)}, ${day(p.date)})`).join(", ")}.`]
     : [`No reports on ${acc.tail} at ${line ?? "the finding's location"} in the two years before ${day(asOf)}.`];
@@ -240,9 +248,8 @@ export async function runScripted(evId: string, asOf: string, emit: Emit, opts: 
     const ranked = (await go("rank_failure_modes", { tail: acc.tail, family: acc.family, system: chapter, narrative: damaged, asOf })).data as { decision?: string } | null;
     if (ranked?.decision && ranked.decision !== "none") parts.push(`A known failure mode may fit (${ranked.decision}); see the ranking.`);
     await go("failure_mode_candidates", { caseId: evId });
-    const stringer = line.split("/")[2].replace(/^S(\d+)([LR])$/, "S-$1$2");
     const r = (await go("propose_failure_mode", {
-      draft: { name: `Fatigue cracking at the ${stringer} lap joint, ${acc.family} Classic`, system: line.split("/")[1], mechanism: `Cracked stringer clips and skin along ${stringer} ahead of a skin fracture` },
+      draft: { name: `Fatigue cracking at the ${stringer(line)} lap joint, ${acc.family} Classic`, system: line.split("/")[1], mechanism: `Cracked stringer clips and skin along ${stringer(line)} ahead of a skin fracture` },
       evidence: [...prior.map((p) => p.id), evId],
     })).data as Array<{ id: string; status: string }>;
     if (r?.[0]) parts.push(`Drafted failure mode ${r[0].id} (${r[0].status}) for a person to review.`);
@@ -251,6 +258,55 @@ export async function runScripted(evId: string, asOf: string, emit: Emit, opts: 
   emit({ type: "answer", text });
   await finishRun(runId, text);
 }
+/** The watcher: the fastest-rising skin-crack lines on 737 fuselages at asOf, one alert each.
+ *  The alerts are shared state in the graph; an investigator picks one up (runAlert). */
+export async function runWatch(asOf: string, emit: Emit, top = 3): Promise<void> {
+  const go = await fixedMethod(asOf, emit, "w");
+  const filter = { part: "SKIN", condition: "CRACK" };
+  const hot = (await go("hotspots", { family: "737", chapter: "53", ...filter, asOf })).data;
+  const raised: Array<{ bin: string; ac: number; ac_prev: number; status: string }> = [];
+  for (const h of (Array.isArray(hot) ? (hot as Array<{ bin: string; ac: number; ac_prev: number }>) : []).slice(0, top)) {
+    const reason = `skin cracks rising on ${stringer(h.bin)}: ${h.ac} aircraft in the 12 months before, up from ${h.ac_prev}`;
+    const r = (await go("raise_alert", { bin: h.bin, asOf, reason, ...filter })).data;
+    // one alert per line and date: a repeat watch returns the existing alert, maybe already decided
+    if (Array.isArray(r) && r.length) raised.push({ ...h, status: String((r[0] as { status?: string }).status ?? "open") });
+  }
+  const done = raised.filter((h) => h.status !== "open");
+  emit({ type: "answer", text: raised.length
+    ? `Watching 737 fuselage skin cracks on ${day(asOf)}: alerts on ${raised.map((h) => `${stringer(h.bin)} (${h.ac} aircraft, up from ${h.ac_prev})`).join(", ")}.${done.length ? ` Already handled: ${done.map((h) => `${stringer(h.bin)} (${h.status})`).join(", ")}.` : ""} Leads worth review, not predictions: most rising lines turn out to be routine. Hand an alert to the investigator to act on it.`
+    : `Watching 737 fuselage skin cracks on ${day(asOf)}: no line rose enough to raise an alert.` });
+}
+
+/** The investigator, handed an alert: who is behind it (widened to any crack on that line),
+ *  how wide the trouble is over three years, whether a fix order covers it, then a draft work
+ *  order for the Structures team. Only a person dispatches it (UI). */
+export async function runAlert(alertId: string, asOf: string, emit: Emit): Promise<void> {
+  const go = await fixedMethod(asOf, emit, "a");
+  const open = (await go("open_alerts", { asOf })).data;
+  const al = (Array.isArray(open) ? (open as Array<{ id: string; bin: string; asOf: string }>) : []).find((a) => a.id === alertId);
+  if (!al) { emit({ type: "error", text: "That alert is not open (actioned or dismissed), or it is dated after the investigation date." }); return; }
+  const rowsData = (await go("alert_aircraft", { id: alertId, condition: "CRACK" })).data;
+  const rows = Array.isArray(rowsData) ? (rowsData as Array<{ tail: string; named: boolean; reports: number; what: string[] }>) : [];
+  const named = rows.filter((r) => r.named), wider = rows.filter((r) => !r.named);
+  const from = `${Number(asOf.slice(0, 4)) - 3}${asOf.slice(4)}`;
+  const fleet = ((await go("fleet_reports", { family: "737", bin: al.bin, from, to: asOf })).data as Array<{ aircraft?: number }> | null)?.[0];
+  const orders = (await go("fix_orders", { family: "737", bin: al.bin, asOf })).data;
+  const covered = Array.isArray(orders) && orders.length > 0;
+  const line = stringer(al.bin);
+  const first = named.slice(0, 3).map((r) => r.tail).join(", ");
+  const task = `Inspect the ${line} lap joint: the ${named.length} aircraft with skin-crack reports first (${first}${named.length > 3 ? " and others" : ""}), then the ${wider.length} with other crack reports on that line.`;
+  const wo = ((await go("create_work_order", { alertId, team: "Structures", task })).data as Array<{ id: string }> | null)?.[0];
+  const kinds = [...new Set(wider.flatMap((w) => w.what ?? []))].slice(0, 3).join(", ");
+  emit({ type: "answer", text: [
+    `Alert on ${al.bin} (${day(al.asOf)}): ${named.length} aircraft reported skin cracks on ${line} in the 12 months before.`,
+    wider.length ? `Widening to any crack on that line adds ${wider.length} aircraft (${kinds}).` : "No other crack reports on that line.",
+    fleet?.aircraft ? `Over three years, ${fleet.aircraft} aircraft reported trouble on ${line}.` : "",
+    covered ? "A fix order already covers it, so check compliance first." : `No fix order covers ${line} yet.`,
+    `Leads worth review: ${task}`,
+    wo ? `Work order drafted for the Structures team; a person dispatches it.` : "",
+  ].filter(Boolean).join(" ") });
+}
+
 interface Past { run_at: string; mode: string; model?: string; asOf: string; kept: Array<{ report: string; confidence: number; reason?: string }>; leads?: string }
 
 // ---------- helpers ----------
@@ -267,7 +323,7 @@ function trim(v: unknown): unknown {
 
 /** Graph node keys a tool call touched, so the UI can draw the evidence subgraph. */
 export function keysFrom(name: string, args: Record<string, unknown>, data: unknown): Keys {
-  const k: Keys = { accidents: [], reports: [], aircraft: [], locations: [], fixorders: [], modes: [] };
+  const k: Keys = { accidents: [], reports: [], aircraft: [], locations: [], fixorders: [], modes: [], alerts: [], workorders: [] };
   // rank_failure_modes returns { scored: [{ modeId }], decision }, the rest return rows
   const scored = name === "rank_failure_modes" ? (data as { scored?: Array<{ modeId: string }> } | null)?.scored?.map((s) => ({ id: s.modeId })) : undefined;
   const rows = (scored ?? (Array.isArray(data) ? data : data ? [data] : [])) as Array<Record<string, unknown>>;
@@ -284,6 +340,9 @@ export function keysFrom(name: string, args: Record<string, unknown>, data: unkn
     else if (name === "rank_failure_modes" || name === "failure_mode_candidates") add(k.modes, r.id);
     else if (name === "past_investigations") for (const x of (r.kept as Array<{ report?: string }> | undefined) ?? []) add(k.reports, x.report);
     else if (name === "hotspots") chain(r.bin);
+    else if (name === "raise_alert" || name === "open_alerts") { add(k.alerts, r.id); chain(r.bin); }
+    else if (name === "alert_aircraft") { if (r.named) add(k.aircraft, r.aircraft); chain(r.bin); }
+    else if (name === "create_work_order") add(k.workorders, r.id);
     else if (name === "explain_path") {
       for (const h of (r.hops as Array<{ labels: string[]; id: string }> | undefined) ?? []) {
         const l = h.labels[0];
@@ -292,5 +351,6 @@ export function keysFrom(name: string, args: Record<string, unknown>, data: unkn
     }
   }
   if (name === "record_precursor") { add(k.reports, args.reportId); add(k.accidents, args.accidentId); }
+  if (name === "alert_aircraft" || name === "create_work_order") add(k.alerts, args.id ?? args.alertId);
   return k;
 }

@@ -47,7 +47,7 @@ asking about a line automatically includes every slice on it."
 **Each folder in one line:**
 - `services/ingest` — downloads public records and pins them on the board.
 - `packages/graph` — the board itself, plus the fixed questions anyone may ask it.
-- `packages/mcp-server` — 21 labeled buttons; the agent may press buttons but never reach behind the board.
+- `packages/mcp-server` — 23 labeled buttons; the agent may press buttons but never reach behind the board.
 - `packages/agent` — the investigator: presses buttons in order, judges each report, writes down what it kept.
 - `apps/web` — the two screens: the Board (investigate) and the Story (presentation).
 - `services/eval` — the honesty check: replays old accidents to see if the method would have flagged them.
@@ -85,10 +85,16 @@ Say: "warning signs", "leads worth review", "inspect first."
    never offers it before it was known: `known_from` is 5 Apr 2011 (AD 2011-08-51). Replayed
    on 31 Mar 2011, no known mode fits ("none"), which is why the agent drafts a new one for a
    person to approve (Story step 8).
+9. "Where does the agent act, and how do agents share state?" — The watcher stores alerts in the
+   graph (`raise_alert`: one per line and date, linked to the aircraft). The investigator reads
+   them back (`open_alerts`), widens the scope, and drafts a work order; a person dispatches it
+   (`/api/decide`, not an MCP tool). A second viewer sees the alert as already actioned. Be
+   straight: on 1 Jan 2011 the S-4L alert named 17 aircraft and N632SW was not one of them (its
+   reports were clip cracks); the investigator's any-crack view adds it among 49 more.
 
 ## File tour (who owns what — put names here)
 - `packages/graph/{schema.cypher,queries/cypher.ts,src/hotspotJob.ts}` — model + fixed queries + LP job
-- `packages/mcp-server/src/{tools.ts,index.ts}` — 21 domain tools; errors surface, no fallback
+- `packages/mcp-server/src/{tools.ts,index.ts}` — 23 domain tools; errors surface, no fallback
 - `packages/agent/src/{loop.ts,scoring.ts}` — flows A/B/D/E/F, formula + decision rule
 - `services/{ingest,org-generator,eval}` — pipeline, Northwind Aero, backtests
 - `apps/web` — Board (map, time slider, agent trace, evidence graph), Story (9 steps, approval card), API routes agent/view/decide
