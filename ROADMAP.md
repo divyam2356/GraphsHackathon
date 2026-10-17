@@ -4,7 +4,7 @@ Shared plan for Graph Hacks. **Submissions close Oct 18, 11:59 PM IST** (aim to 
 that day). Both of us edit this file: tick boxes as things land, and when you settle a pending
 decision, move it to "Decided" with the date and your name.
 
-Last updated: Oct 17, 15:00 IST (Manish + Claude). The plan for the last 29 hours is under "Plan to the deadline".
+Last updated: Oct 17, 16:00 IST (Manish + Claude). The plan for the last 29 hours is under "Plan to the deadline".
 
 ## Submission checklist (rules 10–13)
 
@@ -45,6 +45,34 @@ Last updated: Oct 17, 15:00 IST (Manish + Claude). The plan for the last 29 hour
 | D2 | Which tracks? | Rules allow any or all; each one entered must be named at submission. | **Decided Oct 17 (Manish): Tracks 1 and 3.** Open: also name Track 2? Memory across sessions and the watcher → investigator hand-off are its key focus items, and entering costs nothing. | Manish | Oct 17 |
 | D3 | Who voices the video? | Manish, divyam2356, or an AI voice (ElevenLabs; the rules don't forbid it). | One of us. Rule 13 can reject projects without visible human contribution, and a human voice is the cheapest proof we understand it. | Both | Oct 17 |
 
+## Tracks: what the judges look for, and where we stand
+
+Key focus items are quoted from the rules page (checked Oct 17). "Gap" says who closes it in the plan below.
+
+**Track 1: Agents That Act on Connected Data** ("an agent that uses the graph to decide and act")
+
+| Key focus | What we have | Gap |
+|---|---|---|
+| Multi-hop reasoning | `explain_path`: report → aircraft → accident in up to 4 hops, only through records dated before the investigation date. Location hierarchy bin → line → zone. The hand-off chains five tools. | — |
+| Graph queries and algorithms as agent tools | 23 MCP tools, each a fixed Cypher query: shortest path, full-text search, date windows. | Only one algorithm (shortest path). `why` tool if time (Manish). |
+| Tool selection through MCP | The live model picks the tools itself (the Recorded Nemotron run). Works from any MCP client. | Show it outside our app: MCP Inspector clip (Manish). |
+| Actions based on what the graph shows | The watcher raises `Alert`s, the investigator drafts `WorkOrder`s, a person dispatches. The agent drafts failure modes; a person approves. | — |
+| Explainable results | Every call shows its Cypher, rows and time; the evidence graph; tooltips; leads, never causes. | The fleet count mixes 737 generations: Classics only (Manish). |
+
+**Track 3: Company Brain** ("people, teams, projects, documents, and decisions in one graph")
+
+| Key focus | What we have | Gap |
+|---|---|---|
+| Knowledge from docs, tickets and chats in one graph | 225,627 maintenance reports (the airline's defect tickets) and NTSB findings, joined by aircraft and location. | **No documents.** The two FAA fix orders and the NTSB brief as linked sections (divyam2356). |
+| Who owns what, and who knows what | 3 teams and 15 engineers (made up); `who_fixed` from assignments. | Teams own ATA chapters; dispatch prefers the engineer who knows the line (Manish). |
+| Tracing decisions back to their source | Every decision stores who, why and when; `why_task`: task card → fix order → the order it replaced. | Cite the paragraph behind a fix order (divyam2356); `why` tool if time (Manish). |
+| Keeping knowledge current | `stale_tasks` (cards citing a replaced order); `reoffer_candidates` (deferred modes with new evidence); the time machine. | Dated documents, so citations follow the time machine (divyam2356). |
+| Answers with clear sources | Record ids link to the source record; the drawer quotes it in full. | Answers cite document sections (divyam2356 builds, Manish wires in). |
+
+**Track 2: Agent Memory and Coordination** (only if we name it, D2): memory across sessions
+(`Investigation` run log + `past_investigations`), shared state and a hand-off between two agents
+(`Alert` → `WorkOrder`), persistent history. Not covered: high-concurrency writes, memory per user.
+
 ## Plan to the deadline
 
 **Working in parallel without conflicts**
@@ -58,6 +86,9 @@ Last updated: Oct 17, 15:00 IST (Manish + Claude). The plan for the last 29 hour
 
 **divyam2356, with your own agent: Track 3, real documents in the graph.** Today the company layer is
 all made up; Track 3 asks for "knowledge from docs" and "answers with clear sources".
+**Full brief for your agent: [`docs/briefs/track3-documents.md`](docs/briefs/track3-documents.md)**
+(files, existing code to reuse, milestones, constraints, done-when, challenger check). Prompt:
+"Read ROADMAP.md, then docs/briefs/track3-documents.md, and execute it."
 - [ ] Load the texts of AD 2011-08-51, AD 2015-16-08 (Federal Register) and NTSB brief AAB-13/02 as
       `Document` → `Section` nodes (US government works, public domain). Link each section to the
       `Location`s it names (reuse `locationChain` in `services/ingest/src/normalize.ts`) and to its
@@ -89,7 +120,7 @@ all made up; Track 3 asks for "knowledge from docs" and "answers with clear sour
 - [ ] Settle D2 and D3 today.
 
 ### Phase 2: freeze and verify (Oct 18, 12:00 → 15:00)
-- [ ] Claude: rules page re-check; secret scan of the new commits; fresh-clone run.
+- [ ] Claude: rules page re-check; secret scan of the new commits; fresh-clone run; delete `docs/briefs/` once its report is read.
 - [ ] Manish: deploy if D1 is yes; open the link in a private window.
 - [ ] divyam2356: make the repo public.
 - [ ] Reset the demo state (`docs/DEMO.md`, "Before recording").
