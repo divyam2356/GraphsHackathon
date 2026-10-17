@@ -4,7 +4,7 @@ Shared plan for Graph Hacks. **Submissions close Oct 18, 11:59 PM IST** (aim to 
 that day). Both of us edit this file: tick boxes as things land, and when you settle a pending
 decision, move it to "Decided" with the date and your name.
 
-Last updated: Oct 17, 16:00 IST (Manish + Claude). The plan for the last 29 hours is under "Plan to the deadline".
+Last updated: Oct 17, 16:30 IST (Manish + Claude). Order from here: improvements (Phase 1) first, then the video. The plan for the last 29 hours is under "Plan to the deadline".
 
 ## Submission checklist (rules 10–13)
 
@@ -41,9 +41,9 @@ Last updated: Oct 17, 16:00 IST (Manish + Claude). The plan for the last 29 hour
 
 | # | Question | Options | Recommendation | Decides | By |
 |---|---|---|---|---|---|
-| D1 | Live deployment? The rules prefer one. | Modal, tested Oct 17: a web endpoint runs FalkorDB + the app with no card, on the free $30/month credit. **Warm** (always on, about $5 through Oct 23, inside the credit) or **sleep when idle** (about $0–1; the first visit waits 10–20 s). Fallback: video plus the verified local setup. FalkorDB Cloud free (100 MB) and Hugging Face Spaces (PRO only) don't fit. | Modal, warm, until judging ends. Nothing is deployed until Manish says yes. | Manish | Oct 18, 12:00 |
+| D1 | Live deployment? The rules prefer one; not required (rule 10: deployment *or* full local setup). | Modal, tested Oct 17: a web endpoint runs FalkorDB + the app with no card, on the free $30/month credit. Warm (about $5 through Oct 23, inside the credit) or sleep when idle (first visit waits 10–20 s). FalkorDB Cloud free (100 MB) and Hugging Face Spaces (PRO only) don't fit. | **Oct 17 (Manish): divyam2356 handles the deploy.** Suggest Modal, warm, with the Live model mode off on the public site (no OpenRouter key exposed). | divyam2356 | Oct 18, 15:00 |
 | D2 | Which tracks? | Rules allow any or all; each one entered must be named at submission. | **Decided Oct 17 (Manish): Tracks 1 and 3.** Open: also name Track 2? Memory across sessions and the watcher → investigator hand-off are its key focus items, and entering costs nothing. | Manish | Oct 17 |
-| D3 | Who voices the video? | Manish, divyam2356, or an AI voice (ElevenLabs; the rules don't forbid it). | One of us. Rule 13 can reject projects without visible human contribution, and a human voice is the cheapest proof we understand it. | Both | Oct 17 |
+| D3 | The video | | **Decided Oct 17 (Manish): Manish + Claude make the video in code (`common/videokit`, captions carry the narration, no dramatic music). Both of us voice it: Claude writes a two-voice script from `docs/DEMO.md`. Improvements come first.** | Both | Oct 18 |
 
 ## Tracks: what the judges look for, and where we stand
 
@@ -117,16 +117,16 @@ all made up; Track 3 asks for "knowledge from docs" and "answers with clear sour
 - [ ] Use the app yourself: Board (Scripted run; Watch → hand-off → Dispatch; 3D aircraft → Unroll), Story.
 - [ ] Check 2–3 facts against the sources (e.g. SWAA101399 against NTSB brief AAB-13/02; the 9 → 18 → 31 counts).
 - [ ] Each pick one Cypher query and explain it out loud (`docs/DEFENSE.md`).
-- [ ] Settle D2 and D3 today.
+- [ ] Settle D2 today.
 
 ### Phase 2: freeze and verify (Oct 18, 12:00 → 15:00)
 - [ ] Claude: rules page re-check; secret scan of the new commits; fresh-clone run; delete `docs/briefs/` once its report is read.
-- [ ] Manish: deploy if D1 is yes; open the link in a private window.
+- [ ] divyam2356: deploy (D1); open the link in a private window.
 - [ ] divyam2356: make the repo public.
 - [ ] Reset the demo state (`docs/DEMO.md`, "Before recording").
 
 ### Phase 3: record and submit (Oct 18, 15:00 → 20:00)
-- [ ] Voice (D3): record the video from `docs/DEMO.md`, under 4 minutes; re-check the ✓ numbers on screen.
+- [ ] Claude: re-capture the footage after the freeze and render the video in code; both of us record our voice lines from the two-voice script, then Claude mixes them in.
 - [ ] Both: one practice round of `docs/DEFENSE.md`.
 - [ ] Video and deploy links in the README; final read of the Limits section.
 - [ ] Submit by 20:00 IST (hard close 23:59), naming every track entered. One of us submits; Claude doesn't.
