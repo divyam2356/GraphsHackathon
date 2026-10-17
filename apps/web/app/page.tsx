@@ -10,6 +10,8 @@ import { AgentPanel, AnswerBar, StepsGrid, type Lift, type Mode } from "../compo
 import { EvidenceGraph, nodeKey, type SubRow } from "../components/EvidenceGraph";
 import { RecordDrawer, type Open } from "../components/RecordDrawer";
 import { WatchActions, WatchButton } from "../components/Watch";
+import { Term } from "../components/Tip";
+import { FILTER_TIPS, TERMS } from "../lib/glossary";
 import { streamAgent, view, type Step } from "../lib/api";
 import { useView } from "../lib/useView";
 import { SWA812, parseKey, stationIn } from "../lib/fuselage";
@@ -108,16 +110,16 @@ export default function Board() {
         <section aria-labelledby="map-title">
           <div className="map-head">
             <h1 className="map-title" id="map-title">
-              {FILTERS[filter].label} on Boeing 737 Classics
-              <small>Each cell is a location node in the graph, coloured by how many aircraft reported it in the 12 months before the date below. The dashed outlines mark where Southwest 812 tore open (NTSB brief AAB-13/02).</small>
+              {FILTERS[filter].label} on <Term tip={TERMS.classics}>Boeing 737 Classics</Term>
+              <small>Each cell is a <Term tip={TERMS.location}>location node</Term> in the graph, coloured by how many aircraft reported it in the 12 months before the date below. The dashed outlines mark where Southwest 812 tore open (<Term tip={TERMS.ntsb}>NTSB</Term> brief AAB-13/02).</small>
             </h1>
             <div className="seg" role="group" aria-label="Which reports">
               {(Object.keys(FILTERS) as FilterKey[]).map((k) => (
-                <button key={k} aria-pressed={filter === k} onClick={() => setFilter(k)}>{FILTERS[k].label}</button>
+                <button key={k} aria-pressed={filter === k} onClick={() => setFilter(k)} data-tip={FILTER_TIPS[k]}>{FILTERS[k].label}</button>
               ))}
             </div>
             <HeatLegend />
-            <span className="query-time">{map.error ? map.error : map.ms !== undefined ? `fleet_map ${map.ms} ms, ${map.rows?.length ?? 0} cells` : "Loading the graph"}</span>
+            <span className="query-time" data-tip={TERMS.queryTime}>{map.error ? map.error : map.ms !== undefined ? `fleet_map ${map.ms} ms, ${map.rows?.length ?? 0} cells` : "Loading the graph"}</span>
           </div>
           <FuselageMap cells={map.rows ?? []} lines={lines.rows ?? []} pins={pins} pinLabel={pins.length ? `${SWA812.tail}'s own reports` : undefined} alerts={alertLines}
             asOf={asOf} selected={selected} onCell={openCell} onPin={openId} />

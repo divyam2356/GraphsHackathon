@@ -3,6 +3,8 @@
 // records dated before the chosen day. Play steps a month at a time.
 import { useEffect, useRef, useState } from "react";
 import { fmtDate } from "../lib/fuselage";
+import { TERMS } from "../lib/glossary";
+import { Term } from "./Tip";
 
 export const SLIDER_FROM = "2009-01-01";
 export const SLIDER_TO = "2013-01-01";
@@ -49,7 +51,7 @@ export function TimeSlider({ asOf, onChange, marks = [], stopAt, prefetch }: {
           aria-valuetext={fmtDate(asOf)} onChange={(e) => { setPlaying(false); onChange(addMonths(SLIDER_FROM, Number(e.target.value))); }} />
         <div className="years">{[2009, 2010, 2011, 2012, 2013].map((y) => <span key={y} style={{ left: pos(`${y}-01-01`) }}>{y}</span>)}</div>
       </div>
-      <div className="date-big">{fmtDate(asOf)}<small>Records before this day only</small></div>
+      <div className="date-big">{fmtDate(asOf)}<small><Term tip={TERMS.timeMachine}>Records before this day only</Term></small></div>
     </div>
   );
 }

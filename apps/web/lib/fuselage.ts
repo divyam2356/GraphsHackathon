@@ -30,6 +30,7 @@ export const SWA812 = {
   date: "2011-04-01",
   evId: "20110401X24330",
   tail: "N632SW",
+  variant: "737-300",
   crown: { from: 540, to: 727 },   // crown skin panel, S-4L to S-4R
   rupture: { from: 663, to: 727 }, // fractured skin, between S-4L and S-5L
   clips: [685, 706],               // cracked stringer clips on S-4L found after the accident

@@ -4,6 +4,7 @@
 // New nodes join as the agent works; nodes already placed keep their position.
 import { useEffect, useRef, useState } from "react";
 import { forceCollide, forceLink, forceManyBody, forceSimulation, forceX, forceY, type SimulationLinkDatum, type SimulationNodeDatum } from "d3-force";
+import { TERMS } from "../lib/glossary";
 
 export interface GraphNode { id: number; labels: string[]; properties: Record<string, unknown> }
 export interface SubRow { node: GraphNode; out: Array<{ type: string; to: number } | null> }
@@ -12,7 +13,9 @@ interface E extends SimulationLinkDatum<N> { type: string }
 
 const W = 760, H = 470;
 const ZONES: Record<string, string> = { "52": "doors", "53": "fuselage", "54": "nacelles", "55": "stabilizers", "56": "windows", "57": "wings", "32": "landing gear" };
-const DIST: Record<string, number> = { WITHIN: 70, AT: 90, ON: 100, INVOLVED: 110, FOUND: 80 };
+const DIST: Record<string, number> = { WITHIN: 70, AT: 90, ON: 100, INVOLVED: 110, FOUND: 80, FOR: 100, FROM: 90 };
+/** Above this many aircraft (an alert's fleet), aircraft are unlabelled squares; hover names them. */
+const AIRCRAFT_LABELS = 6;
 
 /** The id a node is known by in the UI (report id, ev_id, tail, location key, AD number). */
 export function nodeKey(n: GraphNode): string {
@@ -71,9 +74,10 @@ export function EvidenceGraph({ rows, kept, focus, onNode }: { rows: SubRow[]; k
   }, [rows]);
 
   const few = g.nodes.length <= 28;
+  const fleet = g.nodes.filter((n) => n.label === "Aircraft").length > AIRCRAFT_LABELS;
   // In a big graph only the nodes that carry the story get a label; the rest stay dots (hover for the id).
-  const named = (n: N) => few || ["Accident", "Aircraft", "FixOrder", "FailureMode", "Alert", "WorkOrder"].includes(n.label) || kept?.has(n.key) || focus === n.key
-    || (n.label === "Location" && !n.key.includes("/BS"));
+  const named = (n: N) => kept?.has(n.key) || focus === n.key || (n.label === "Aircraft" ? !fleet : few || ["Accident", "FixOrder", "FailureMode", "Alert", "WorkOrder"].includes(n.label)
+    || (n.label === "Location" && !n.key.includes("/BS")));
   // Fit the view to the nodes (with room for labels), never zooming in past 1.6x.
   const xs = g.nodes.map((n) => n.x!), ys = g.nodes.map((n) => n.y!);
   let [x0, x1, y0, y1] = xs.length ? [Math.min(...xs) - 40, Math.max(...xs) + 120, Math.min(...ys) - 30, Math.max(...ys) + 30] : [0, W, 0, H];
@@ -100,8 +104,8 @@ export function EvidenceGraph({ rows, kept, focus, onNode }: { rows: SubRow[]; k
           const node = byId.get(n.id);
           return (
             <g key={n.id} transform={`translate(${n.x},${n.y}) scale(${ks})`} className="gnode" onClick={() => node && onNode?.(node)} tabIndex={0}
-              onKeyDown={(e) => { if (e.key === "Enter" && node) onNode?.(node); }} aria-label={`${n.label} ${n.name}`}>
-              <title>{`${n.label} ${n.key}`}</title>
+              onKeyDown={(e) => { if (e.key === "Enter" && node) onNode?.(node); }} aria-label={`${n.label} ${n.name}`}
+              data-tip={`${["Alert", "WorkOrder", "Finding"].includes(n.label) ? n.name : `${LEGEND[n.label] ?? n.label} ${n.key}`}. Click to open.`}>
               <Shape label={n.label} hot={hot} small={!named(n)} />
               {on && <circle r={15} fill="none" stroke="var(--ink)" strokeWidth={1.4} strokeDasharray="3 2" />}
               {named(n) && <text x={11} y={4} fontSize={11} fontWeight={n.label === "Accident" || hot ? 700 : 400} className="nlabel">{n.name}</text>}
@@ -112,9 +116,9 @@ export function EvidenceGraph({ rows, kept, focus, onNode }: { rows: SubRow[]; k
       </svg>
       <div className="glegend">
         {["Accident", "Report", "Aircraft", "Location", "Finding", "FixOrder", ...["Alert", "WorkOrder"].filter((l) => g.nodes.some((n) => n.label === l))].map((l) => (
-          <span key={l}><svg width="16" height="16" viewBox="-8 -8 16 16"><Shape label={l} small /></svg>{LEGEND[l]}</span>
+          <span key={l} className="term" data-tip={LEGEND_TIPS[l]}><svg width="16" height="16" viewBox="-8 -8 16 16"><Shape label={l} small /></svg>{LEGEND[l]}</span>
         ))}
-        <span><svg width="16" height="16" viewBox="-8 -8 16 16"><Shape label="Report" hot small /></svg>Earlier report at the same location</span>
+        <span className="term" data-tip={TERMS.precursor}><svg width="16" height="16" viewBox="-8 -8 16 16"><Shape label="Report" hot small /></svg>Earlier report at the same location</span>
       </div>
     </div>
   );
@@ -145,6 +149,7 @@ function placeEdgeLabels(g: { nodes: N[]; links: E[] }, named: (n: N) => boolean
 }
 
 const LEGEND: Record<string, string> = { Accident: "NTSB event", Report: "Maintenance report", Aircraft: "Aircraft", Location: "Location", Finding: "NTSB finding", FixOrder: "Fix order (AD)", Alert: "Alert (watcher)", WorkOrder: "Work order" };
+const LEGEND_TIPS: Record<string, string> = { Accident: TERMS.ntsb, Report: TERMS.report, Aircraft: TERMS.tail, Location: TERMS.location, Finding: TERMS.finding, FixOrder: TERMS.ad, Alert: TERMS.alert, WorkOrder: TERMS.workOrder };
 
 function Shape({ label, hot, small }: { label: string; hot?: boolean; small?: boolean }) {
   const k = small ? 0.75 : 1;

@@ -53,6 +53,11 @@ a { color: inherit; }
 .fmap .pin { cursor: pointer; }
 .tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--sheet); padding: 7px 10px; border-radius: 2px; font-size: 12px; line-height: 1.4; white-space: nowrap; transform: translate(-50%, calc(-100% - 10px)); }
 .tip b { font-weight: 700; }
+/* Terms explained on hover or focus (components/Tip.tsx): one fixed box for the whole page. */
+.term { text-decoration: underline dotted; text-decoration-color: color-mix(in srgb, currentColor 55%, transparent); text-underline-offset: 3px; cursor: help; }
+[data-tip] { cursor: help; }
+button[data-tip] { cursor: pointer; }
+.term-tip { position: fixed; z-index: 60; max-width: 300px; pointer-events: none; background: var(--ink); color: var(--sheet); padding: 8px 11px; border-radius: 2px; font-size: 12.5px; font-weight: 400; line-height: 1.45; letter-spacing: 0; text-transform: none; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18); }
 
 /* ---------- time slider ---------- */
 .slider { display: grid; grid-template-columns: auto 1fr auto; gap: 16px; align-items: center; }
@@ -78,10 +83,14 @@ a { color: inherit; }
 .lower > * { min-width: 0; }
 .askrow { display: grid; grid-template-columns: minmax(360px, 5fr) 7fr; gap: 28px; align-items: stretch; border-top: 1px solid var(--alclad); padding-top: 18px; }
 .askrow > * { min-width: 0; }
-/* Question box fills the column so the form meets the graph height with no gap. */
+/* The case card fills the column so the form meets the graph height with no gap. */
 .askrow .agent { height: 100%; display: flex; flex-direction: column; }
 .askrow .ask { display: flex; flex-direction: column; flex: 1; }
-.askrow .ask textarea { flex: 1; min-height: 120px; resize: vertical; }
+.askrow .ask .case { flex: 1; }
+.case { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 12px 18px; align-content: start; padding: 18px 20px; border: 1px solid var(--alclad); border-radius: 2px; background: var(--sheet); }
+.case dt { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--graphite); padding-top: 3px; }
+.case dd { margin: 0; line-height: 1.5; }
+.case dd textarea { min-height: 96px; }
 /* Trace as a wrapping card grid: chronological left-to-right, notes/errors span full width. */
 .steps.grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
 .steps.grid > li { border: 1px solid var(--alclad); border-radius: 2px; padding: 16px 18px; background: var(--sheet); display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06); transition: box-shadow 200ms ease-out; }
@@ -93,8 +102,9 @@ a { color: inherit; }
 .panel-title small { font-weight: 400; font-size: 12px; letter-spacing: 0; text-transform: none; color: var(--graphite); margin-left: 8px; }
 .ask textarea { width: 100%; resize: vertical; padding: 12px; border: 1px solid var(--alclad); border-radius: 2px; background: var(--sheet); line-height: 1.5; }
 .ask textarea:disabled { color: var(--graphite); }
-.ask-row { display: flex; gap: 12px; align-items: center; margin-top: 8px; }
-.seg button:disabled { opacity: 0.45; cursor: not-allowed; }
+.ask-row { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-top: 8px; }
+.ask-row .seg button { white-space: nowrap; }
+.seg button:disabled, .seg button[aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; }
 .go { margin-left: auto; padding: 9px 20px; border-radius: 2px; border: 0; background: var(--ink); color: var(--sheet); font-weight: 600; cursor: pointer; transition: background 200ms ease-out; }
 .go:hover:not(:disabled) { background: #000; }
 .go:disabled { opacity: 0.55; cursor: progress; }

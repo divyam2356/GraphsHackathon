@@ -6,6 +6,8 @@
 import { useState } from "react";
 import type { Step } from "../lib/api";
 import { fmtDate } from "../lib/fuselage";
+import { TERMS } from "../lib/glossary";
+import { Term } from "./Tip";
 
 interface AlertRow { id: string; bin: string; asOf: string; status: string; aircraft: number }
 interface OrderRow { id: string; status: string; team: string; task: string; aircraft: number }
@@ -19,7 +21,7 @@ export function WatchButton({ asOf, busy, onWatch }: { asOf: string; busy: boole
   return (
     <div className="watch-row">
       <button className="go" onClick={onWatch} disabled={busy}>{busy ? "Working" : "Watch the fleet"}</button>
-      <p className="caption">The watcher flags the three stringer lines where skin-crack reports rose fastest in the 12 months before {fmtDate(asOf)}, and saves an alert for each in the graph for the investigator to pick up.</p>
+      <p className="caption">The watcher flags the three <Term tip={TERMS.line}>stringer lines</Term> where skin-crack reports rose fastest in the 12 months before {fmtDate(asOf)}, and saves an <Term tip={TERMS.alert}>alert</Term> for each in the graph for the investigator to pick up.</p>
     </div>
   );
 }
@@ -46,7 +48,7 @@ export function WatchActions({ steps, busy, onHandOff }: { steps: Step[]; busy: 
     const settled = done?.id === order.id;
     return (
       <article className="mode-card order-card" aria-live="polite">
-        <p className="mode-kind">Draft work order from the investigator</p>
+        <p className="mode-kind"><Term tip={TERMS.workOrder}>Draft work order</Term> from the investigator</p>
         <h2>{order.team}: inspection</h2>
         <p className="mode-mech">{order.task}</p>
         <p className="caption">Saved in the graph, linked to the alert, the line and the {order.aircraft} aircraft it names. The teams and engineers are made up; the reports are real.</p>
@@ -71,7 +73,7 @@ export function WatchActions({ steps, busy, onHandOff }: { steps: Step[]; busy: 
     <div className="handoff">
       <p className="caption">Hand an alert to the investigator:</p>
       {alerts.map((a) => a.status === "open"
-        ? <button key={a.id} className="ghost" disabled={busy} onClick={() => onHandOff(a.id)}>{short(a.bin)}, {a.aircraft} aircraft</button>
+        ? <button key={a.id} className="ghost" disabled={busy} onClick={() => onHandOff(a.id)} data-tip={`${a.aircraft} aircraft reported skin cracks on stringer ${short(a.bin)}. The investigator checks who they are and drafts a work order.`}>{short(a.bin)}, {a.aircraft} aircraft</button>
         : <span key={a.id} className="caption">{short(a.bin)}: already {a.status}</span>)}
     </div>
   );

@@ -6,6 +6,8 @@
 import { useEffect, useRef, useState } from "react";
 import { streamAgent, type Step } from "../lib/api";
 import { SWA812, fmtDate } from "../lib/fuselage";
+import { MODE_TIPS, TERMS, TOOL_TIPS, idTip } from "../lib/glossary";
+import { Term } from "./Tip";
 
 export type Mode = "agent" | "scripted" | "recorded";
 /** Fleet lift per stringer line: distinct aircraft in the window vs the one before. */
@@ -17,7 +19,8 @@ type Call = Extract<Step, { type: "tool_call" }>;
 type Result = Extract<Step, { type: "tool_result" }>;
 type Row = { kind: "tool"; call: Call; result?: Result } | { kind: "note" | "answer" | "error"; text: string };
 
-export const DEFAULT_QUESTION = `Southwest 812 (NTSB ev_id ${SWA812.evId}) lost part of its fuselage skin on 1 April 2011. Were there warning signs in the maintenance records before it?`;
+const ASK = "Were there warning signs in the maintenance records before it?";
+export const DEFAULT_QUESTION = `Southwest 812 (NTSB ev_id ${SWA812.evId}) lost part of its fuselage skin on 1 April 2011. ${ASK}`;
 const ID = /(SWAA\d+|[A-Z]{4}\d{6}|\d{8}X\d{5}|AD-\d{4}-\d{2}-\d{2}|737\/53(?:\/S\d+[LR])?(?:\/BS\d+)?)/g;
 
 /** Replays a recorded run, keeping its rhythm (gaps clamped so it never stalls). */
@@ -66,22 +69,36 @@ export function AgentPanel({ asOf, steps, onStep, onReset, onOpen, replayUrl = "
     <section className="agent" aria-labelledby="agent-title">
       <h2 id="agent-title" className="panel-title">Ask the graph</h2>
       <form className="ask" onSubmit={(e) => { e.preventDefault(); run(); }}>
-        <textarea value={question} onChange={(e) => setQuestion(e.target.value)} rows={3} aria-label="Question" disabled={mode === "scripted" || mode === "recorded"} />
+        {/* the case, labelled for viewers who don't know aircraft; only the live model takes a free question */}
+        <dl className="case">
+          <dt>Accident</dt>
+          <dd>Southwest 812, {fmtDate(SWA812.date)} · <Term tip={TERMS.ntsb}>NTSB</Term> event {SWA812.evId}</dd>
+          <dt>Aircraft</dt>
+          <dd><Term tip={TERMS.tail}>{SWA812.tail}</Term>, a <Term tip={TERMS.classics}>Boeing {SWA812.variant}</Term></dd>
+          <dt>Part</dt>
+          <dd>Crown skin at the <Term tip={TERMS.lapJoint}>lap joint</Term> on <Term tip={TERMS.stringer}>stringer S-4L</Term>, <Term tip={TERMS.bodyStation}>body station</Term> {SWA812.rupture.from}–{SWA812.rupture.to}</dd>
+          <dt>Fleet</dt>
+          <dd><Term tip={TERMS.fleet}>Every Boeing 737</Term> in the FAA maintenance reports</dd>
+          <dt>Records</dt>
+          <dd><Term tip={TERMS.timeMachine}>Dated before {fmtDate(mode === "recorded" && replay ? replay.asOf : asOf)}</Term></dd>
+          <dt>Question</dt>
+          <dd>{mode === "agent"
+            ? <textarea value={question} onChange={(e) => setQuestion(e.target.value)} rows={4} aria-label="Question for the live model" />
+            : ASK}</dd>
+        </dl>
         <div className="ask-row">
           <div className="seg" role="group" aria-label="How to run">
-            <button type="button" aria-pressed={mode === "agent"} disabled={!live?.live} onClick={() => setMode("agent")}
-              title={live?.live ? `${live.model} via OpenRouter` : "Set OPENROUTER_API_KEY in .env to use a live model"}>Live model</button>
-            <button type="button" aria-pressed={mode === "scripted"} onClick={() => setMode("scripted")}>Scripted</button>
-            <button type="button" aria-pressed={mode === "recorded"} onClick={() => setMode("recorded")}>Recorded</button>
+            <button type="button" aria-pressed={mode === "agent"} aria-disabled={!live?.live} onClick={() => live?.live && setMode("agent")}
+              data-tip={live?.live ? `${MODE_TIPS.agent} Model: ${live.model}.` : `${MODE_TIPS.agent} ${MODE_TIPS.agentOff}`}>Live model</button>
+            <button type="button" aria-pressed={mode === "scripted"} onClick={() => setMode("scripted")} data-tip={MODE_TIPS.scripted}>Scripted</button>
+            <button type="button" aria-pressed={mode === "recorded"} onClick={() => setMode("recorded")} data-tip={MODE_TIPS.recorded}>Recorded</button>
           </div>
           <button type="submit" className="go" disabled={busy}>{busy ? "Investigating" : "Investigate"}</button>
         </div>
         <p className="ask-note">
-          {mode === "agent" && live?.live && <>{live.model} (free tier) picks the MCP tools itself. Free models can take a few minutes. </>}
-          {mode === "scripted" && <>The same MCP tools in a fixed order, with no model. </>}
-          {mode === "recorded" && replay
-            ? <>A real {replay.mode === "agent" ? `run of ${replay.model}` : "scripted run"}, saved {new Date(replay.recorded).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} and replayed faster. It saw records before {fmtDate(replay.asOf)}.</>
-            : <>It sees records before {fmtDate(asOf)}.</>}
+          {mode === "agent" && live?.live && <>{live.model} (free tier) picks the MCP tools itself. Free models can take a few minutes.</>}
+          {mode === "scripted" && <>The same MCP tools in a fixed order, with no model.</>}
+          {mode === "recorded" && replay && <>A real {replay.mode === "agent" ? `run of ${replay.model}` : "scripted run"}, saved {new Date(replay.recorded).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} and replayed faster.</>}
         </p>
       </form>
 
@@ -137,16 +154,16 @@ function StepsList({ rows, kept, lifts, onOpen }: { rows: Row[]; kept: Map<strin
               <span className="step-n">{n}</span>
               <div className="step-body">
                 <div className="step-line">
-                  <b>{r.call.name}</b>
+                  <b className={TOOL_TIPS[r.call.name] ? "term" : undefined} data-tip={TOOL_TIPS[r.call.name]}>{r.call.name}</b>
                   <span className="args">{Object.entries(r.call.args).map(([k, v]) => <span key={k}>{k} <em>{Array.isArray(v) ? v.join(", ") : String(v)}</em></span>)}</span>
-                  {ids.length > 0 && <span className="chips inline">{ids.slice(0, 5).map((id) => { const kc = kept.get(id); return <button key={id} onClick={() => onOpen(id)} className={kc !== undefined ? "chip kept" : "chip"} title={kc !== undefined && !Number.isNaN(kc) ? `kept as precursor · confidence ${kc}` : id}>{id}{kc !== undefined && !Number.isNaN(kc) ? <span className="conf">{kc}</span> : null}</button>; })}{ids.length > 5 && <span className="more">+{ids.length - 5}</span>}</span>}
+                  {ids.length > 0 && <span className="chips inline">{ids.slice(0, 5).map((id) => { const kc = kept.get(id); return <button key={id} onClick={() => onOpen(id)} className={kc !== undefined ? "chip kept" : "chip"} data-tip={kc !== undefined && !Number.isNaN(kc) ? `Kept as a possible warning sign, confidence ${kc}. ${idTip(id)}` : idTip(id)}>{id}{kc !== undefined && !Number.isNaN(kc) ? <span className="conf">{kc}</span> : null}</button>; })}{ids.length > 5 && <span className="more">+{ids.length - 5}</span>}</span>}
                   <span className="res">{res ? (res.isError ? "error" : `${res.rows} ${res.rows === 1 ? "row" : "rows"}, ${res.ms} ms`) : "running"}</span>
                 </div>
                 {lift && (
-                  <div className="lift" title="Distinct aircraft on this stringer line, 12 months before the investigation date vs the 12 before that (same count the map uses)">fleet lift <b>{lift.lift}×</b> · {lift.ac} vs {lift.acPrev} aircraft</div>
+                  <div className="lift"><span className="term" data-tip={TERMS.fleetLift}>fleet lift</span> <b>{lift.lift}×</b> · {lift.ac} vs {lift.acPrev} aircraft</div>
                 )}
                 {res?.isError && <p className="step-error">{String(res.preview)}</p>}
-                {r.call.cypher && <details><summary>Cypher</summary><pre>{r.call.cypher.replace(/^ {4}/gm, "")}</pre></details>}
+                {r.call.cypher && <details><summary><span className="term" data-tip={TERMS.cypher}>Cypher</span></summary><pre>{r.call.cypher.replace(/^ {4}/gm, "")}</pre></details>}
               </div>
             </li>
           );
@@ -162,7 +179,7 @@ function StepsList({ rows, kept, lifts, onOpen }: { rows: Row[]; kept: Map<strin
 export function AnswerBar({ text, onOpen }: { text: string; onOpen: (id: string) => void }) {
   return (
     <div className="conclusion" role="status">
-      <p className="eyebrow">Conclusion — leads worth review, not causes</p>
+      <p className="eyebrow">Conclusion — <Term tip={TERMS.leads}>leads worth review, not causes</Term></p>
       <Linked text={text} onOpen={onOpen} />
     </div>
   );
@@ -171,5 +188,5 @@ export function AnswerBar({ text, onOpen }: { text: string; onOpen: (id: string)
 /** Answer text with record ids turned into buttons that open the record. */
 function Linked({ text, onOpen }: { text: string; onOpen: (id: string) => void }) {
   const parts = text.split(ID);
-  return <p>{parts.map((p, i) => (i % 2 ? <button key={i} className="id-link" onClick={() => onOpen(p)}>{p}</button> : p))}</p>;
+  return <p>{parts.map((p, i) => (i % 2 ? <button key={i} className="id-link" onClick={() => onOpen(p)} data-tip={idTip(p)}>{p}</button> : p))}</p>;
 }
