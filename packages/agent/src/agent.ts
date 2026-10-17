@@ -177,7 +177,7 @@ export async function runScripted(evId: string, asOf: string, emit: Emit, opts: 
   const schemas = new Map(tools.map((t) => [t.name, t.inputSchema as Record<string, unknown>]));
   let n = 0;
   const go = (name: string, args: Record<string, unknown>) => call(c, name, args, asOf, emit, `s${++n}`, schemas);
-  const acc = (await go("get_accident", { ev_id: evId })).data as { tail?: string; family?: string; findings?: Array<{ at?: string; kind?: string }> } | null;
+  const acc = (await go("get_accident", { ev_id: evId })).data as { tail?: string; family?: string; findings?: Array<{ at?: string; kind?: string; finding?: string }> } | null;
   if (!acc?.tail) { emit({ type: "error", text: `No mechanical NTSB event ${evId} in the graph` }); return; }
   const at = acc.findings?.find((f) => f.kind === "cause")?.at ?? acc.findings?.[0]?.at;
   const line = at?.split("/").slice(0, 3).join("/");
@@ -196,17 +196,22 @@ export async function runScripted(evId: string, asOf: string, emit: Emit, opts: 
     : [`No reports on ${acc.tail} at ${line ?? "the finding's location"} in the two years before ${day(asOf)}.`];
   if (fleet?.aircraft) parts.push(`Across the fleet, ${fleet.aircraft} ${acc.family}s reported trouble on that line in the three years before.`);
   parts.push(orders.length ? `${orders.length} fix order(s) already covered it.` : "No fix order covered that line yet.");
-  if (prior?.length) parts.push(`Leads worth review: ${line}.`);
   if (prior?.length && line) {
     // Decisive but non-causal: rank what to inspect first by evidence strength.
     // Never a probability of causation — the NTSB determines causes.
-    const sameTail = `${prior.length} same-tail report${prior.length === 1 ? "" : "s"} (${prior.map((p) => p.id).join(", ")})`;
-    const fleetEv = fleet?.aircraft ? ` plus ${fleet.aircraft} fleet aircraft on ${line}` : "";
-    const coverage = orders.length ? "a fix order exists — check compliance first" : "no fix order covers it — unaddressed";
-    parts.push(`Conclusion (leads worth review, not causes). Inspect first: ${line} — ${sameTail}${fleetEv}; ${coverage}.`);
+    const sameTail = `${prior.length} same-tail report${prior.length === 1 ? "" : "s"}`;
+    const fleetEv = fleet?.aircraft ? ` and ${fleet.aircraft} fleet aircraft` : "";
+    const coverage = orders.length ? "a fix order exists, so check compliance first" : "no fix order covers it";
+    parts.push(`Leads worth review: inspect ${line} first (${sameTail}${fleetEv} on that line; ${coverage}).`);
   }
   if (opts.draft && prior?.length && line) {
-    // the method's last step: check known candidates, then draft one for a person to decide
+    // the method's last step: does a mode known before asOf fit? If not, check the
+    // unconfirmed candidates, then draft one for a person to decide
+    // narrative = the damaged component only ("Aircraft structures-Fuselage-…-<cause>" minus the cause)
+    const chapter = line.split("/")[1];
+    const damaged = acc.findings?.find((f) => f.at === at)?.finding?.split("-").slice(1, -1).join(" ") || line;
+    const ranked = (await go("rank_failure_modes", { tail: acc.tail, family: acc.family, system: chapter, narrative: damaged, asOf })).data as { decision?: string } | null;
+    if (ranked?.decision && ranked.decision !== "none") parts.push(`A known failure mode may fit (${ranked.decision}); see the ranking.`);
     await go("failure_mode_candidates", { caseId: evId });
     const stringer = line.split("/")[2].replace(/^S(\d+)([LR])$/, "S-$1$2");
     const r = (await go("propose_failure_mode", {
@@ -233,7 +238,9 @@ function trim(v: unknown): unknown {
 /** Graph node keys a tool call touched, so the UI can draw the evidence subgraph. */
 export function keysFrom(name: string, args: Record<string, unknown>, data: unknown): Keys {
   const k: Keys = { accidents: [], reports: [], aircraft: [], locations: [], fixorders: [], modes: [] };
-  const rows = (Array.isArray(data) ? data : data ? [data] : []) as Array<Record<string, unknown>>;
+  // rank_failure_modes returns { scored: [{ modeId }], decision }, the rest return rows
+  const scored = name === "rank_failure_modes" ? (data as { scored?: Array<{ modeId: string }> } | null)?.scored?.map((s) => ({ id: s.modeId })) : undefined;
+  const rows = (scored ?? (Array.isArray(data) ? data : data ? [data] : [])) as Array<Record<string, unknown>>;
   const add = (list: string[], v: unknown) => { if (typeof v === "string" && v && !list.includes(v)) list.push(v); };
   const chain = (bin: unknown) => { if (typeof bin === "string") bin.split("/").forEach((_, i, a) => i >= 1 && add(k.locations, a.slice(0, i + 1).join("/"))); };
   if (typeof args.bin === "string") chain(args.bin);

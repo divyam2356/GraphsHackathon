@@ -252,7 +252,7 @@ function AskIt() {
 /** First sentence of a record, for evidence lists (the drawer has the full text). */
 const firstSentence = (t: string) => (t.match(/^.*?[.;](?=\s|$)/)?.[0] ?? t).slice(0, 300);
 interface ModeCard { mode: Record<string, string | number | null>; merged_into?: string | null; evidence: Array<{ label: string; id: string; date?: string; text?: string }> }
-interface Reoffer { id: string; name: string; status: string; reason: string; then: number; now: number }
+interface Reoffer { id: string; name: string; status: string; reason: string; then: number; now: number; newAcc: number }
 function Decides() {
   const [steps, setSteps] = useState<Step[]>([]);
   const [id, setId] = useState<string | null>(null);
@@ -269,7 +269,7 @@ function Decides() {
   useEffect(() => { refreshReoffer(); }, []);
   const load = (m: string) => {
     view<ModeCard[]>("mode_card", { id: m }, true).then((r) => setCard(r.rows[0] ?? null));
-    view<Array<{ id: string; name: string; status: string }>>("failure_mode_candidates", {}, true).then((r) => setCands((r.rows ?? []).filter((c) => c.id !== m)), () => {});
+    view<Array<{ id: string; name: string; status: string }>>("mode_list", {}, true).then((r) => setCands((r.rows ?? []).filter((c) => c.id !== m)), () => {});
   };
   async function draft() {
     setBusy(true); setSteps([]); setErr(null);
@@ -295,7 +295,7 @@ function Decides() {
     <>
       <Text n={8}>
         <p>The agent can draft a failure mode from what it found, with its evidence linked in the graph. It cannot approve one: there is no such tool on its MCP server.</p>
-        <p>A person reads the evidence and decides. The decision, who made it and why are written to the graph, and only confirmed modes are used to rank future investigations.</p>
+        <p>A person reads the evidence and decides. The decision, who made it and why are written to the graph. Only confirmed modes rank later investigations, and only those dated after the records the mode was approved on.</p>
         {!card && <button className="go" onClick={draft} disabled={busy}>{busy ? "Drafting" : "Draft a failure mode from this investigation"}</button>}
         {tools.length > 0 && <ol className="mini-steps">{tools.map((t) => <li key={t.id}><b>{t.name}</b> {t.rows} {t.rows === 1 ? "row" : "rows"}, {t.ms} ms</li>)}</ol>}
       </Text>
@@ -303,12 +303,12 @@ function Decides() {
         {reoffer.length > 0 && (
           <div className="reoffer">
             <p className="caption">On hold, with new evidence since the decision — worth another look:</p>
-            {reoffer.map((r) => <button key={r.id} className="chip" onClick={() => { setId(r.id); load(r.id); }}>{r.name} (+{Number(r.now) - Number(r.then)})</button>)}
+            {reoffer.map((r) => <button key={r.id} className="chip" onClick={() => { setId(r.id); load(r.id); }}>{r.name} ({Number(r.newAcc) > 0 ? `${r.newAcc} new NTSB event${Number(r.newAcc) === 1 ? "" : "s"}` : `+${Number(r.now) - Number(r.then)} records`})</button>)}
           </div>
         )}
         {card && m && (
           <article className={`mode-card status-${m.status}`} aria-live="polite">
-            <p className="mode-kind">Failure mode, {m.status === "proposed" ? "drafted through the agent's MCP tools, waiting for a person" : m.status === "confirmed" ? "confirmed by a person" : "deferred by a person"}</p>
+            <p className="mode-kind">Failure mode, {m.status === "proposed" ? "drafted through the agent's MCP tools, waiting for a person" : m.status === "confirmed" ? "confirmed by a person" : m.status === "merged" ? "merged by a person" : "deferred by a person"}</p>
             <h2>{String(m.name)}</h2>
             <p className="mode-mech">{String(m.mechanism)}. ATA chapter {String(m.system)}.</p>
             <h3>Evidence linked in the graph ({card.evidence.filter((e) => e.id).length})</h3>
@@ -334,7 +334,7 @@ function Decides() {
                 <p><b>{m.status === "confirmed" ? "Confirmed" : "Deferred"} by {String(m.decided_by)}</b>, {new Date(String(m.decided_at)).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}, with {String(m.support_at_decision)} pieces of evidence.{m.decision_reason ? ` "${m.decision_reason}"` : ""}</p>
                 )}
                 <p className="caption">Stored on FailureMode {String(m.id).slice(0, 8)} in FalkorDB.</p>
-                <button className="ghost" onClick={() => decide("reopen")}>Reopen for review</button>
+                {m.status !== "merged" && <button className="ghost" onClick={() => decide("reopen")}>Reopen for review</button>}
               </div>
             )}
             {err && <p className="step-error">{err}</p>}

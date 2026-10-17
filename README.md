@@ -118,7 +118,7 @@ matched every row (1,000 instead of 198 in our repro). We dropped the date index
 
 ### MCP server and agent
 
-- `packages/mcp-server`: 19 domain tools, each a fixed Cypher query with typed arguments.
+- `packages/mcp-server`: 20 domain tools, each a fixed Cypher query with typed arguments.
   Read tools include `get_accident`, `prior_reports`, `fleet_reports`, `explain_path` and
   `similar_reports`; write tools include `record_precursor` and `propose_failure_mode`.
   There is no approve tool.
@@ -160,11 +160,12 @@ SWA 812 fixture instead of FalkorDB; it is off by default and never used for the
 
 - **No per-aircraft signal at the system level** (the backtest above). The Southwest 812 signal is
   location-level and fleet-level, shown for one case; it is not validated across events.
-- **Leads ranking fixed Oct 16 (D6).** It scored hand-seeded modes with a keyword
-  stand-in, so it could not fail and proved nothing. Now every component comes from
-  the graph (family/system match + signature-line overlap + full-text similarity);
-  SWA 812 ranks first at 0.8/clear, the door-frame case says weak. Sketch code
-  remains only in the CLI demo path.
+- **Leads ranking is mechanics, not evidence.** `rank_failure_modes` scores confirmed
+  modes from the graph (family and ATA chapter match, signature-line overlap with the
+  aircraft's earlier reports, full-text similarity), and only modes known before the
+  investigation date take part. For Southwest 812 that is none: the crown S-4L mode only
+  became known with AD 2011-08-51 on 5 April 2011, so the honest answer is "no known mode,
+  draft a new one for a person" (Story step 8). With 2 confirmed modes it is not evaluated.
 - `similar_reports` uses the full-text index; no embeddings are loaded.
 - Fix orders: the two S-4L ADs only. Company layer (Track 3): 3 teams, 15 engineers, 2 task cards
   and 1 decision, all `synthetic: true`, reachable through the `who_fixed`, `why_task` and `stale_tasks` tools.

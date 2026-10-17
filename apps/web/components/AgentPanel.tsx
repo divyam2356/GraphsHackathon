@@ -46,7 +46,7 @@ export function AgentPanel({ asOf, steps, onStep, onReset, onOpen, replayUrl = "
     fetch("/api/agent").then((r) => r.json()).then((j) => setLive(j), () => setLive({ live: false, model: "" }));
     fetch(replayUrl).then((r) => (r.ok ? r.json() : null)).then(setReplay, () => {});
   }, []);
-  useEffect(() => { if (autorun) run(autorun); }, [autorun]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (autorun) { setMode(autorun); run(autorun); } }, [autorun]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function run(m: Mode = mode) {
     abort.current?.abort();

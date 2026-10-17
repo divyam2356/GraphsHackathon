@@ -19,14 +19,18 @@ export const DEMO = {
     { ad: "AD-2011-08-51", date: "2011-04-05", family: "737", bin: "737/53/S4L", replaces: [] },
   ],
   failureModes: [
-    { id: "FM-CROWN-S4L", name: "737 crown-skin lap-joint cracking (S-4L)", system: "structures",
+    // known_from: the first public record of the mode. Leads ranking only offers a mode to
+    // investigations dated after it, so replaying SWA 812 never sees the mode it produced.
+    // Crown S-4L: emergency AD 2011-08-51 (5 Apr 2011, after the accident).
+    { id: "FM-CROWN-S4L", name: "737 crown-skin lap-joint cracking (S-4L)", system: "53",
       mechanism: "fatigue cracking at lap joint, stringer 4 left", status: "confirmed", origin: "seed",
-      family: "737", sig: [{ bin: "737/53/S4L", w: 1 }, { bin: "737/53/S4R", w: 0.8 }] },
-    { id: "FM-ENG-FAN", name: "CFM56 fan-blade fatigue", system: "engines",
+      family: "737", known_from: "2011-04-05", sig: [{ bin: "737/53/S4L", w: 1 }, { bin: "737/53/S4R", w: 0.8 }] },
+    // Fan blade: Southwest 3472 fan-blade separation, NTSB DCA16FA217 (27 Aug 2016, in the graph).
+    { id: "FM-ENG-FAN", name: "CFM56 fan-blade fatigue", system: "72",
       mechanism: "low-cycle fatigue, blade dovetail", status: "confirmed", origin: "seed",
-      family: "737", sig: [{ bin: "737/72", w: 1 }] },
+      family: "737", known_from: "2016-08-27", sig: [{ bin: "737/72", w: 1 }] },
     // Demo-only candidate for the dormant flow; not a real finding.
-    { id: "FM-DOOR-AFT", name: "aft cargo door frame cracking (demo candidate)", system: "structures",
+    { id: "FM-DOOR-AFT", name: "aft cargo door frame cracking (demo candidate)", system: "52",
       mechanism: "unconfirmed demo candidate", status: "dormant", origin: "observation",
       family: "737", sig: [{ bin: "737/52", w: 0.5 }], decision_reason: "demo: too little evidence so far" },
   ],

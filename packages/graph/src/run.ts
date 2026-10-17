@@ -49,13 +49,14 @@ interface Scored { modeId: string; name: string; structure: number; signature: n
  * - text_sim: best FalkorDB full-text score of the narrative among reports on the
  *   mode's signature lines, normalized by the top hit (0 when nothing matches).
  * Modes without same-family, same-system, same-line or textual overlap score ~0:
- * there is no hard-coded 0.9 for any accident.
+ * there is no hard-coded 0.9 for any accident. Only modes known before asOf are
+ * candidates (rank_failure_modes query), so a replay never ranks a mode written later.
  */
 export function scoreCandidates(input: RankInput, modes: Array<{ id: string; name: string; system: string; mechanism?: string; sig: Array<{ bin: string }> }>, priors: Array<{ bin?: string }>, sims: Array<{ bin?: string; score?: number }>): { scored: Scored[]; decision: "clear" | "ambiguous" | "weak" | "none" } {
   const top = Math.max(0, ...sims.map((s) => Number(s.score ?? 0)));
   const scored = modes.map((m) => {
     const fam = (m as { family?: string }).family;
-    const structure = (fam === input.family ? 0.5 : 0) + (m.system === input.system ? 0.5 : 0);
+    const structure = (fam === input.family ? 0.5 : 0) + (String(m.system) === String(input.system) ? 0.5 : 0);
     const sigLines = new Set(m.sig.map((s) => s.bin).filter(Boolean));
     const priorLines = new Set(priors.map((p) => (p.bin ? lineOf(p.bin) : "")).filter(Boolean));
     const hit = [...sigLines].filter((l) => priorLines.has(l) || [...priorLines].some((p) => p.startsWith(l + "/") || l.startsWith(p + "/")));
@@ -72,7 +73,7 @@ export function scoreCandidates(input: RankInput, modes: Array<{ id: string; nam
 /** Fixed multi-query pipeline behind the rank_failure_modes tool (still no raw Cypher for the agent). */
 export async function rankModes(db: Db, a: Record<string, unknown>): Promise<unknown> {
   const input = a as unknown as RankInput;
-  const modes = (await db.query(CYPHER.rank_failure_modes)) as Array<{ id: string; name: string; system: string; sig: Array<{ bin: string }> }>;
+  const modes = (await db.query(CYPHER.rank_failure_modes, { asOf: input.asOf })) as Array<{ id: string; name: string; system: string; sig: Array<{ bin: string }> }>;
   const priors = (await db.query(CYPHER.prior_reports, { tail: input.tail, bin: null, asOf: input.asOf, windowDays: input.windowDays ?? 730 })) as Array<{ bin?: string }>;
   const sims = (await db.query(CYPHER.similar_reports, { text: input.narrative, asOf: input.asOf })) as Array<{ bin?: string; score?: number }>;
   return { input: { tail: input.tail, family: input.family, system: input.system, asOf: input.asOf }, ...scoreCandidates(input, modes, priors, sims) };
@@ -85,7 +86,7 @@ function demo(name: string, a: Record<string, unknown>): unknown {
     case "prior_reports": return DEMO.priorReports.filter((r) => !a.tail || r.tail === a.tail);
     case "fleet_reports": return [{ bin: a.bin, note: DEMO.fleetNote }];
     case "fix_orders": return DEMO.fixOrders;
-    case "rank_failure_modes": return DEMO.failureModes.filter((m) => m.status === "confirmed");
+    case "rank_failure_modes": return DEMO.failureModes.filter((m) => m.status === "confirmed" && ("known_from" in m ? m.known_from ?? "9999" : "9999") < String(a.asOf));
     case "failure_mode_candidates": return DEMO.failureModes.filter((m) => m.status !== "confirmed");
     case "why_task": return DEMO.org.taskCards;
     default: return { demo: true, tool: name, note: "no fixture for this tool; run against FalkorDB" };

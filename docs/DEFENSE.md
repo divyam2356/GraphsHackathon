@@ -8,8 +8,8 @@ approval decisions, blog rewrite) goes in HUMAN_LOG below.
 ## 30-second pitch
 "Black Box finds warning signs before plane accidents. One FalkorDB graph holds
 NTSB accidents, FAA reports, fix orders, learned failure modes, and a fictional
-maintenance company. The agent investigates through fixed-Cypher MCP tools, scores
-with a formula — never vibes — and needs a human to approve every new failure mode."
+maintenance company. The agent investigates through fixed-Cypher MCP tools, shows the query behind
+every step, and needs a human to approve every new failure mode."
 
 ## Say-it-out-loud version (if the above feels like jargon, memorize this instead)
 
@@ -47,7 +47,7 @@ asking about a line automatically includes every slice on it."
 **Each folder in one line:**
 - `services/ingest` — downloads public records and pins them on the board.
 - `packages/graph` — the board itself, plus the fixed questions anyone may ask it.
-- `packages/mcp-server` — 19 labeled buttons; the agent may press buttons but never reach behind the board.
+- `packages/mcp-server` — 20 labeled buttons; the agent may press buttons but never reach behind the board.
 - `packages/agent` — the investigator: presses buttons in order, judges each report, writes down what it kept.
 - `apps/web` — the two screens: the Board (investigate) and the Story (presentation).
 - `services/eval` — the honesty check: replays old accidents to see if the method would have flagged them.
@@ -79,10 +79,10 @@ Say: "warning signs", "leads worth review", "inspect first."
 
 ## File tour (who owns what — put names here)
 - `packages/graph/{schema.cypher,queries/cypher.ts,src/hotspotJob.ts}` — model + fixed queries + LP job
-- `packages/mcp-server/src/{tools.ts,index.ts}` — 19 domain tools, demo fallback
+- `packages/mcp-server/src/{tools.ts,index.ts}` — 20 domain tools; errors surface, no fallback
 - `packages/agent/src/{loop.ts,scoring.ts}` — flows A/B/D/E/F, formula + decision rule
 - `services/{ingest,org-generator,eval}` — pipeline, Northwind Aero, backtests
-- `apps/web` — chat, time slider, approval cards, 3 API routes
+- `apps/web` — Board (map, time slider, agent trace, evidence graph), Story (9 steps, approval card), API routes agent/view/decide
 
 ## HUMAN_LOG (rule 13 evidence — fill in as you go)
 - [ ] Thresholds (0.6/0.15/0.35) reviewed against backtests by: ___

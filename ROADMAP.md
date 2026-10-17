@@ -4,7 +4,7 @@ Shared plan for Graph Hacks. **Submissions close Oct 18, 11:59 PM IST** (aim to 
 that day). Both of us edit this file: tick boxes as things land, and when you settle a pending
 decision, move it to "Decided" with the date and your name.
 
-Last updated: Oct 15, evening (Manish).
+Last updated: Oct 17, morning (Manish).
 
 ## Submission checklist (rules 10–13)
 
@@ -31,6 +31,7 @@ Last updated: Oct 15, evening (Manish).
 | Oct 15 | The evaluation is the backtest over all NTSB events, reported honestly: no per-aircraft signal (0.88× chance). | A fair test, shown in Story step 5. It is stronger than single-case checks that cannot fail. |
 | Oct 15 | Leads ranking (`rank_failure_modes`) and `services/eval/src/all.ts` are not presented as evidence. | Both are built from the SWA 812 answer (seeded mode, keyword rule). |
 | Oct 16 | D6 closed: leads ranking fixed — structure + signature overlap + full-text similarity, all from the graph; verified SWA 812 rank 1 (0.8, clear), door-frame case weak. | The keyword rule could not fail and proved nothing; the fix keeps D6's recommended approach. |
+| Oct 17 | Leads ranking only uses modes known before the investigation date (`known_from`). SWA 812 on 31 Mar 2011 → none (new pattern), which is what Story step 8 drafts. Still not presented as evidence. | FM-CROWN-S4L was written from SWA 812 (known from AD 2011-08-51, 5 Apr 2011), so "rank 1, clear" was hindsight: the date rule the agent follows applies to the ranker too. (Manish + Claude) |
 
 ## Pending decisions
 
@@ -41,7 +42,6 @@ Last updated: Oct 15, evening (Manish).
 | D3 | Who records and voices the video? | Manish or divyam2356 records; Claude can build a captioned screen capture. | One of us voices it (rule 13 favours visible human work); follow `docs/DEMO.md`. | Both | Oct 16 |
 | D4 | Blog post for the AirPods side prize? | Write it, or skip. | Write it in our own words; `docs/BLOG.md` is an AI draft and must not be submitted as is. Lead with the backtest result. | divyam2356 | Oct 17 |
 | D5 | Who owns what from here (below)? | | Confirm or change the proposed owners. | Both | Oct 16 |
-| D6 | Leads ranking: fix, or leave documented as a sketch? | Fix: replace the keyword rule with FalkorDB full-text scores and evaluate it. Or leave it as is. | Leave it as a sketch unless time remains on Oct 17. | Both | Oct 17 |
 
 ## Work plan (owners proposed, see D5)
 
@@ -60,7 +60,7 @@ Manish works with Claude Code; divyam2356 with their own tools.
 - [ ] Owner of D3: record the video; re-check the ✓ numbers in `docs/DEMO.md` against the live screens.
 - [ ] divyam2356: blog draft in our own words (D4).
 - [ ] Both: practise the judge questions in `docs/DEFENSE.md` (update answers that changed).
-- [ ] Optional: D2 deepening, or D6.
+- [ ] Optional: D2 deepening.
 
 **Oct 18**
 - [ ] Manish: final re-check of the rules page.

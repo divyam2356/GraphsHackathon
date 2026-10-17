@@ -21,7 +21,7 @@ export async function runLeads(
   }>;
   const prior = (await tools.prior_reports.call({ tail: input.tail, asOf: input.asOf })) as Array<{ bin?: string }>;
   const sims = (await tools.similar_reports?.call({ text: input.narrative, asOf: input.asOf }).catch(() => [])) as Array<{ bin?: string; score?: number }>;
-  return scoreCandidates({ ...input, system: input.system ?? "" }, modes, prior, sims ?? []);
+  return scoreCandidates({ ...input, system: input.system ?? "" }, modes, Array.isArray(prior) ? prior : [], Array.isArray(sims) ? sims : []);
 }
 
 export async function runInvestigate(

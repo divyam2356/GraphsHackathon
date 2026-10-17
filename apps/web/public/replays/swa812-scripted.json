@@ -2,10 +2,10 @@
  "mode": "scripted",
  "asOf": "2011-04-01",
  "question": "Southwest 812 (NTSB ev_id 20110401X24330) lost part of its fuselage skin on 1 April 2011. Were there warning signs in the maintenance records before it?",
- "recorded": "2026-10-16T06:06:24.332Z",
+ "recorded": "2026-10-17T03:54:58.867Z",
  "steps": [
   {
-   "t": 698,
+   "t": 208,
    "step": {
     "type": "tool_call",
     "id": "s1",
@@ -17,12 +17,12 @@
    }
   },
   {
-   "t": 1798,
+   "t": 353,
    "step": {
     "type": "tool_result",
     "id": "s1",
     "name": "get_accident",
-    "ms": 1099,
+    "ms": 145,
     "isError": false,
     "rows": 1,
     "preview": {
@@ -62,7 +62,7 @@
    }
   },
   {
-   "t": 1798,
+   "t": 354,
    "step": {
     "type": "tool_call",
     "id": "s2",
@@ -77,12 +77,12 @@
    }
   },
   {
-   "t": 1896,
+   "t": 397,
    "step": {
     "type": "tool_result",
     "id": "s2",
     "name": "prior_reports",
-    "ms": 98,
+    "ms": 43,
     "isError": false,
     "rows": 2,
     "preview": [
@@ -122,7 +122,7 @@
    }
   },
   {
-   "t": 1896,
+   "t": 397,
    "step": {
     "type": "tool_call",
     "id": "s3",
@@ -137,12 +137,12 @@
    }
   },
   {
-   "t": 2090,
+   "t": 474,
    "step": {
     "type": "tool_result",
     "id": "s3",
     "name": "fleet_reports",
-    "ms": 194,
+    "ms": 77,
     "isError": false,
     "rows": 1,
     "preview": [
@@ -175,7 +175,7 @@
    }
   },
   {
-   "t": 2090,
+   "t": 474,
    "step": {
     "type": "tool_call",
     "id": "s4",
@@ -189,12 +189,12 @@
    }
   },
   {
-   "t": 2096,
+   "t": 475,
    "step": {
     "type": "tool_result",
     "id": "s4",
     "name": "fix_orders",
-    "ms": 6,
+    "ms": 1,
     "isError": false,
     "rows": 0,
     "preview": [],
@@ -212,7 +212,7 @@
    }
   },
   {
-   "t": 2096,
+   "t": 475,
    "step": {
     "type": "tool_call",
     "id": "s5",
@@ -226,12 +226,12 @@
    }
   },
   {
-   "t": 2111,
+   "t": 479,
    "step": {
     "type": "tool_result",
     "id": "s5",
     "name": "explain_path",
-    "ms": 14,
+    "ms": 4,
     "isError": false,
     "rows": 1,
     "preview": [
@@ -245,20 +245,13 @@
        },
        {
         "labels": [
-         "Aircraft"
-        ],
-        "id": "N632SW|27707"
-       },
-       {
-        "labels": [
          "Accident"
         ],
         "id": "20110401X24330"
        }
       ],
       "rels": [
-       "ON",
-       "INVOLVED"
+       "PRECURSOR_OF"
       ]
      }
     ],
@@ -269,9 +262,7 @@
      "reports": [
       "SWAA101399"
      ],
-     "aircraft": [
-      "N632SW|27707"
-     ],
+     "aircraft": [],
      "locations": [],
      "fixorders": [],
      "modes": []
@@ -279,10 +270,10 @@
    }
   },
   {
-   "t": 2127,
+   "t": 486,
    "step": {
     "type": "answer",
-    "text": "N632SW had 2 reports at 737/53/S4L in the two years before 1 April 2011: SWAA101400 (stringer clip cracked, 9 March 2010), SWAA101399 (stringer clip cracked, 9 March 2010). Across the fleet, 156 737s reported trouble on that line in the three years before. No fix order covered that line yet. Leads worth review: 737/53/S4L. Conclusion (leads worth review, not causes). Inspect first: 737/53/S4L — 2 same-tail reports (SWAA101400, SWAA101399) plus 156 fleet aircraft on 737/53/S4L; no fix order covers it — unaddressed."
+    "text": "N632SW had 2 reports at 737/53/S4L in the two years before 1 April 2011: SWAA101400 (stringer clip cracked, 9 March 2010), SWAA101399 (stringer clip cracked, 9 March 2010). Across the fleet, 156 737s reported trouble on that line in the three years before. No fix order covered that line yet. Leads worth review: inspect 737/53/S4L first (2 same-tail reports and 156 fleet aircraft on that line; no fix order covers it)."
    }
   }
  ]

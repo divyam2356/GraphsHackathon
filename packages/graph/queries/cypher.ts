@@ -97,8 +97,10 @@ export const CYPHER: Record<string, string> = {
     WITH fwd, nodes(path) AS ns, [r IN relationships(path) | type(r)] AS rs
     RETURN [n IN CASE WHEN fwd THEN ns ELSE reverse(ns) END | {labels:labels(n), id:coalesce(n.id, n.ev_id, n.ad_no, n.bin)}] AS hops,
       CASE WHEN fwd THEN rs ELSE reverse(rs) END AS rels`,
+  // Only modes known before the investigation date: seeds carry a sourced known_from,
+  // approval stamps it from the evidence. No known_from, never ranked (no hindsight).
   rank_failure_modes: `
-    MATCH (m:FailureMode) WHERE m.status = 'confirmed'
+    MATCH (m:FailureMode) WHERE m.status = 'confirmed' AND m.known_from < $asOf
     OPTIONAL MATCH (m)-[s:SIGNATURE]->(l:Location)
     OPTIONAL MATCH (m)-[:FOR]->(mo:Model)
     RETURN m.id AS id, m.name AS name, m.system AS system,
@@ -208,39 +210,48 @@ export const CYPHER: Record<string, string> = {
     OPTIONAL MATCH (e)-[:EVIDENCE_FOR]->(m)
     OPTIONAL MATCH (m)-[:MERGED_INTO]->(n:FailureMode)
     RETURN m {.*} AS mode, n.id AS merged_into, collect({label: labels(e)[0], id: coalesce(e.id, e.ev_id), date: e.date, text: coalesce(e.text, e.cause_text)}) AS evidence`,
-  // Dormant/proposed modes whose evidence grew since the last human decision:
-  // 3+ new linked items, or an accident linked after the decision. Offer again.
+  // Modes a person already decided on (deferred, or reopened) whose evidence grew since:
+  // 3+ new linked items, or a new accident. Offer again. Never-decided drafts don't count;
+  // a decision stored without acc_at_decision claims no new accident.
   reoffer_candidates: `
-    MATCH (m:FailureMode) WHERE m.status IN ['dormant','proposed']
+    MATCH (m:FailureMode) WHERE m.status IN ['dormant','proposed'] AND m.decided_at IS NOT NULL
     OPTIONAL MATCH (e)-[:EVIDENCE_FOR]->(m)
-    WITH m, count(e) AS now,
-      count(CASE WHEN e:Accident AND m.decided_at IS NOT NULL AND e.date > m.decided_at THEN 1 END) AS newAcc
+    WITH m, count(e) AS now, count(CASE WHEN e:Accident THEN 1 END) AS acc
+    WITH m, now, acc - coalesce(m.acc_at_decision, acc) AS newAcc
     WHERE now > coalesce(m.support_at_decision, 0) + 2 OR newAcc > 0
     RETURN m.id AS id, m.name AS name, m.status AS status, m.decision_reason AS reason,
       coalesce(m.support_at_decision, 0) AS then, now, newAcc ORDER BY now DESC`,
+  // UI only: every live mode, for the Same-as-X picker.
+  mode_list: `
+    MATCH (m:FailureMode) WHERE m.status <> 'merged'
+    RETURN m.id AS id, m.name AS name, m.status AS status ORDER BY m.status, m.name`,
   // UI only, never an MCP tool: fold a draft into an existing mode (Same-as-X).
   // Evidence links move to the surviving mode; the old node stays as a merged stub.
   merge_mode: `
     MATCH (old:FailureMode {id:$id}) WHERE old.status IN ['proposed','dormant']
     MATCH (new:FailureMode {id:$into}) WHERE new.id <> old.id AND new.status IN ['confirmed','dormant','proposed']
-    OPTIONAL MATCH (e)-[:EVIDENCE_FOR]->(old)
-    WITH old, new, collect(e) AS ev
+    OPTIONAL MATCH (e)-[r:EVIDENCE_FOR]->(old)
+    WITH old, new, collect(e) AS ev, collect(r) AS rs
     MERGE (old)-[:MERGED_INTO]->(new)
     SET old.status = 'merged', old.decided_by = $by, old.decided_at = $at, old.decision_reason = $reason
     FOREACH (x IN ev | MERGE (x)-[:EVIDENCE_FOR]->(new))
+    FOREACH (x IN rs | DELETE x)
     RETURN old.id AS id, old.status AS status, new.id AS into, size(ev) AS moved`,
   // UI only, never an MCP tool: a person approves (confirmed) or defers (dormant) a proposed
-  // mode, or reopens it; who, when, why and the evidence count are stored on the node.
+  // mode, or reopens it; who, when, why and the evidence counts are stored on the node.
+  // Approval stamps known_from (latest evidence date), so replays before then never rank it.
   decide_mode: `
     MATCH (m:FailureMode {id:$id})
     WHERE ($decision = 'reopen' AND m.status IN ['confirmed', 'dormant'] AND m.origin <> 'seed')
        OR ($decision <> 'reopen' AND m.status IN ['proposed', 'dormant'])
     OPTIONAL MATCH (e)-[:EVIDENCE_FOR]->(m)
-    WITH m, count(e) AS support
+    WITH m, count(e) AS support, count(CASE WHEN e:Accident THEN 1 END) AS acc, max(e.date) AS lastEv
     SET m.status = CASE $decision WHEN 'approve' THEN 'confirmed' WHEN 'defer' THEN 'dormant' ELSE 'proposed' END,
       m.approved_by = CASE $decision WHEN 'approve' THEN $by ELSE null END,
       m.approved_at = CASE $decision WHEN 'approve' THEN $at ELSE null END,
-      m.decided_by = $by, m.decided_at = $at, m.decision_reason = $reason, m.support_at_decision = support
+      m.known_from = CASE $decision WHEN 'approve' THEN coalesce(m.known_from, lastEv) ELSE m.known_from END,
+      m.decided_by = $by, m.decided_at = $at, m.decision_reason = $reason, m.support_at_decision = support,
+      m.acc_at_decision = acc
     RETURN m.id AS id, m.status AS status, support`,
   // Live node/edge counts for the data-model view.
   graph_stats: `
