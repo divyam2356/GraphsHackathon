@@ -14,7 +14,7 @@ const SCHEMA_EDGES: Array<[string, string, string]> = [
   ["Location", "FOR", "Model"], ["FixOrder", "TARGETS", "Location"], ["FixOrder", "APPLIES_TO", "Model"],
   ["FixOrder", "SUPERSEDES", "FixOrder"], ["FailureMode", "SIGNATURE", "Location"], ["FailureMode", "FOR", "Model"],
   ["Report", "EVIDENCE_FOR", "FailureMode"], ["Accident", "EVIDENCE_FOR", "FailureMode"], ["Report", "PRECURSOR_OF", "Accident"],
-  ["FailureMode", "MERGED_INTO", "FailureMode"],
+  ["FailureMode", "MERGED_INTO", "FailureMode"], ["Investigation", "ABOUT", "Accident"], ["Investigation", "KEPT", "Report"],
   ["Engineer", "MEMBER_OF", "Team"], ["TaskCard", "CITES", "FixOrder"], ["Decision", "BASED_ON", "FixOrder"],
 ];
 
@@ -108,10 +108,41 @@ export const CYPHER: Record<string, string> = {
   failure_mode_candidates: `
     MATCH (m:FailureMode) WHERE m.status IN ['dormant','proposed']
     RETURN m.id AS id, m.name AS name, m.status AS status, m.decision_reason AS reason`,
+  // PRECURSOR_OF holds the latest judgment; KEPT keeps every run's own (runId is set by the harness).
   record_precursor: `
     MATCH (r:Report {id:$reportId}), (a:Accident {ev_id:$accidentId})
     MERGE (r)-[p:PRECURSOR_OF]->(a)
-    SET p.confidence=$confidence, p.reason=$reason, p.asOf=$asOf RETURN p.confidence AS ok`,
+    SET p.confidence=$confidence, p.reason=$reason, p.asOf=$asOf
+    WITH r, p OPTIONAL MATCH (i:Investigation {id:$runId})
+    FOREACH (_ IN CASE WHEN i IS NULL THEN [] ELSE [1] END |
+      MERGE (i)-[k:KEPT]->(r) SET k.confidence=$confidence, k.reason=$reason)
+    RETURN p.confidence AS ok`,
+  // Memory across sessions: what earlier runs on this accident kept and concluded, judged runs
+  // first. Only runs whose investigation date is not later than this one's (no hindsight).
+  past_investigations: `
+    MATCH (i:Investigation)-[:ABOUT]->(:Accident {ev_id:$ev_id})
+    WHERE i.finished IS NOT NULL AND i.asOf <= $asOf
+    OPTIONAL MATCH (i)-[k:KEPT]->(r:Report)
+    WITH i, collect(CASE WHEN r IS NULL THEN null ELSE {report: r.id, confidence: k.confidence, reason: k.reason} END) AS kept
+    RETURN i.id AS id, i.started AS run_at, i.mode AS mode, i.model AS model, i.asOf AS asOf, kept, i.leads AS leads
+    ORDER BY CASE WHEN size(kept) > 0 THEN 0 ELSE 1 END, run_at DESC LIMIT 5`,
+  // Harness only, never MCP tools: the run log behind past_investigations (the model can't write it).
+  start_investigation: `
+    MATCH (a:Accident {ev_id:$ev_id})
+    CREATE (i:Investigation {id:randomUUID(), asOf:$asOf, mode:$mode, model:$model, question:$question, started:$at})-[:ABOUT]->(a)
+    RETURN i.id AS id`,
+  // A recorded run (replay file) added to the log once, under a fixed id (remember.ts).
+  remember_replay: `
+    MATCH (a:Accident {ev_id:$ev_id})
+    MERGE (i:Investigation {id:$id})
+      ON CREATE SET i.asOf = $asOf, i.mode = $mode, i.model = $model, i.question = $question,
+        i.started = $at, i.finished = $at, i.leads = $leads, i.answer = $answer, i.source = 'replay'
+    MERGE (i)-[:ABOUT]->(a)
+    RETURN i.id AS id`,
+  finish_investigation: `
+    MATCH (i:Investigation {id:$id})
+    SET i.finished = $at, i.leads = $leads, i.answer = $answer
+    RETURN i.id AS id`,
   raise_alert: `
     MATCH (t:Aircraft {tail:$tail})
     CREATE (al:Alert {id:randomUUID(), date:toString(date()), status:'open', reason:$reason})-[:FOR]->(t)

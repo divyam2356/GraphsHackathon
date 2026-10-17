@@ -88,7 +88,8 @@ npm run backtest -w services/eval -- --days=365 --gap=7 --out=$PWD/apps/web/publ
 | `Location` | 8,483 | hierarchy: model + ATA chapter (zone) → stringer line → 20-inch body-station bin |
 | `System` | 46 | ATA chapters |
 | `FixOrder` | 2 | AD 2011-08-51, superseded by AD 2015-16-08 |
-| `FailureMode` | 4 | 3 seeded, 1 drafted by the agent and waiting for a person |
+| `FailureMode` | 4 | 3 seeded (each with a sourced `known_from` date), 1 drafted by the agent and waiting for a person |
+| `Investigation` | grows | the run log: one per investigation (model or scripted method, investigation date, leads), written by the harness |
 
 ```
 (Report)-[:ON]->(Aircraft)<-[:INVOLVED]-(Accident)-[:FOUND]->(Finding)
@@ -96,6 +97,7 @@ npm run backtest -w services/eval -- --days=365 --gap=7 --out=$PWD/apps/web/publ
 (Finding)-[:AT]->(Location)   (Location|Finding)-[:IN_SYSTEM]->(System)   (Aircraft)-[:IS_A]->(Model)
 (FixOrder)-[:TARGETS]->(Location)   (FixOrder)-[:SUPERSEDES]->(FixOrder)
 written by the agent:  (Report)-[:PRECURSOR_OF]->(Accident)   (Report|Accident)-[:EVIDENCE_FOR]->(FailureMode)
+run log (harness):     (Investigation)-[:ABOUT]->(Accident)   (Investigation)-[:KEPT {confidence, reason}]->(Report)
 ```
 
 The two sources were never meant to be read together. They meet at the aircraft (tail and
@@ -118,10 +120,16 @@ matched every row (1,000 instead of 198 in our repro). We dropped the date index
 
 ### MCP server and agent
 
-- `packages/mcp-server`: 20 domain tools, each a fixed Cypher query with typed arguments.
-  Read tools include `get_accident`, `prior_reports`, `fleet_reports`, `explain_path` and
-  `similar_reports`; write tools include `record_precursor` and `propose_failure_mode`.
-  There is no approve tool.
+- `packages/mcp-server`: 21 domain tools, each a fixed Cypher query with typed arguments.
+  Read tools include `past_investigations`, `get_accident`, `prior_reports`, `fleet_reports`,
+  `explain_path` and `similar_reports`; write tools include `record_precursor` and
+  `propose_failure_mode`. There is no approve tool.
+- **Memory across sessions:** the harness logs every run as an `Investigation` node, and each
+  report the model keeps as a `KEPT` edge with its confidence and reason. The next run starts
+  with `past_investigations` and says whether it agrees ("An earlier run (nemotron-3-super,
+  run on 15 October 2026) kept SWAA101400, SWAA101399; this run finds the same reports").
+  Only runs dated on or before the investigation date are visible. Approved failure modes are
+  the longer-term memory: confirmed modes rank later investigations (`rank_failure_modes`).
 - `packages/agent`: a tool-calling loop over that MCP server, on OpenRouter. Default model
   NVIDIA Nemotron 3 Super (free tier), with two free fallbacks. The harness clamps every date
   argument to the investigation date, so the model cannot read past it. Two guard rails for
@@ -149,6 +157,7 @@ npm run graph:indexes
 npm run ingest:ntsb           # 4,235 events (~10 s)
 npm run ingest:reports        # 225,627 reports (~35 s, ~600 MB in FalkorDB)
 npm run ingest:fixorders && npm run seed:modes && npm run org:gen
+npm run remember -w packages/agent   # the recorded Nemotron run, into the run log
 npm run dev                   # http://localhost:3001 (Board) and /story
 npm run backtest -w services/eval
 ```

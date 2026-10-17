@@ -9,11 +9,11 @@ interface LabelCount { label: string; n: number }
 interface EdgeCount { from: string; type: string; to: string; n: number }
 const W = 820, H = 500;
 const AT: Record<string, [number, number]> = {
-  Model: [410, 52], Aircraft: [230, 165], FailureMode: [610, 165],
+  Investigation: [80, 120], Model: [410, 52], Aircraft: [230, 165], FailureMode: [610, 165],
   Accident: [80, 300], Location: [410, 300], Report: [730, 300],
   Finding: [210, 430], System: [410, 445], FixOrder: [610, 430],
 };
-const NAMES: Record<string, string> = { Accident: "NTSB events", Report: "Maintenance reports", Aircraft: "Aircraft", Location: "Locations", Finding: "NTSB findings", Model: "Models", System: "Systems (ATA)", FixOrder: "Fix orders", FailureMode: "Failure modes" };
+const NAMES: Record<string, string> = { Accident: "NTSB events", Report: "Maintenance reports", Aircraft: "Aircraft", Location: "Locations", Finding: "NTSB findings", Model: "Models", System: "Systems (ATA)", FixOrder: "Fix orders", FailureMode: "Failure modes", Investigation: "Investigations" };
 const r = (n: number) => 7 + 5.2 * Math.log10(Math.max(1, n));
 // Where along each edge its label sits (0 = at `from`), chosen to keep labels apart.
 const LABEL_AT: Record<string, number> = { "Report ON Aircraft": 0.22, "FixOrder APPLIES_TO Model": 0.2, "FailureMode SIGNATURE Location": 0.35, "FixOrder TARGETS Location": 0.45, "FailureMode FOR Model": 0.5, "Report PRECURSOR_OF Accident": 0.3 };
@@ -40,7 +40,8 @@ export function SchemaView() {
   const edges = useView<EdgeCount[]>("edge_stats", {});
   const count = new Map((labels.rows ?? []).map((l) => [l.label, l.n]));
   const total = { nodes: (labels.rows ?? []).reduce((a, l) => a + l.n, 0), edges: (edges.rows ?? []).reduce((a, e) => a + e.n, 0) };
-  const shown = (edges.rows ?? []).filter((e) => AT[e.from] && AT[e.to]);
+  // KEPT (Investigation -> Report) would cross the whole figure; its count is in the total
+  const shown = (edges.rows ?? []).filter((e) => AT[e.from] && AT[e.to] && e.type !== "KEPT");
   return (
     <figure className="schema">
       <div className="scroll-x"><svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Graph data model with live counts">

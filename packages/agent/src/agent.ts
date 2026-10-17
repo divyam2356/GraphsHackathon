@@ -9,6 +9,7 @@ import { dirname, join } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { CYPHER } from "@blackbox/graph/queries/cypher";
+import { runTool } from "@blackbox/graph/src/run";
 
 export interface Keys { accidents: string[]; reports: string[]; aircraft: string[]; locations: string[]; fixorders: string[]; modes: string[] }
 export type Step =
@@ -38,7 +39,7 @@ Rules:
 - Location keys: "737/53" = 737 fuselage (ATA chapter 53), "737/53/S4L" = stringer 4 left, "737/53/S4L/BS620" = body stations 620-639 on that stringer. A query at a line includes the bins inside it.
 - A join is not evidence by itself: keep a report only if it is the same system and the same location or mechanism as the finding. Drop unrelated reports and reports that describe the event itself.
 
-Method for an accident: get_accident, then prior_reports on the same tail (at the finding's location, and once without a location), judge each report, then fleet_reports at that line for the 3 years before, then fix_orders, then explain_path from the strongest warning sign to the accident, then record_precursor for each report you keep (confidence 0-1, one-line reason).
+Method for an accident: past_investigations first (what earlier runs kept; check those reports and say in one sentence whether you agree), get_accident, then prior_reports on the same tail (at the finding's location, and once without a location), judge each report, then fleet_reports at that line for the 3 years before, then fix_orders, then explain_path from the strongest warning sign to the accident, then record_precursor for each report you keep (confidence 0-1, one-line reason).
 For a new pattern no known mode fits: failure_mode_candidates first, add_support if one fits, otherwise propose_failure_mode. A human approves it in the UI; you cannot.
 
 Answer in under 180 words, plain sentences. Cite record ids exactly as the tools return them (report ids like SWAA101399, ev_ids, AD numbers, location keys) so the interface can link them. End with one line starting "Leads worth review:". Just before it, add a "Conclusion (leads worth review, not causes):" paragraph that ranks what to inspect first, ordered by evidence strength (same-tail reports at the finding's location first, then fleet-wide lines, noting whether a fix order covers them). Never state or imply a probability that anything caused the accident.`;
@@ -72,11 +73,12 @@ export function mcp(): Promise<Client> {
 }
 
 // ---------- one tool call through MCP, with the time machine enforced ----------
-async function call(c: Client, name: string, args: Record<string, unknown>, asOf: string, emit: Emit, id: string, schemas: Map<string, Record<string, unknown>>) {
+async function call(c: Client, name: string, args: Record<string, unknown>, asOf: string, emit: Emit, id: string, schemas: Map<string, Record<string, unknown>>, runId?: string) {
   const props = (schemas.get(name)?.properties ?? {}) as Record<string, unknown>;
   const isDate = (v: unknown): v is string => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
   if ("asOf" in props && (!isDate(args.asOf) || args.asOf > asOf)) args.asOf = asOf;
   if (isDate(args.to) && args.to > asOf) args.to = asOf; // fleet_reports' end date (explain_path's `to` is a record id)
+  if (name === "record_precursor") args.runId = runId; // the harness, not the model, names the run
   emit({ type: "tool_call", id, name, args, cypher: CYPHER[name]?.trim() });
   const t0 = Date.now();
   const res = (await c.callTool({ name, arguments: args })) as { content?: Array<{ type: string; text?: string }>; isError?: boolean };
@@ -103,13 +105,28 @@ export async function toolSpecs(c: Client) {
   return { schemas, oaTools };
 }
 
+// ---------- the run log behind past_investigations (written by the harness, never the model) ----------
+async function startRun(evId: string | undefined, asOf: string, mode: string, model: string, question: string): Promise<string | undefined> {
+  if (!evId) return undefined;
+  const rows = (await runTool("start_investigation", { ev_id: evId, asOf, mode, model, question, at: new Date().toISOString() }).catch(() => [])) as Array<{ id: string }>;
+  return rows[0]?.id;
+}
+async function finishRun(id: string | undefined, answer: string): Promise<void> {
+  if (!id) return;
+  const leads = answer.match(/Leads worth review:[^\n]*/)?.[0] ?? null;
+  await runTool("finish_investigation", { id, at: new Date().toISOString(), leads, answer: answer.slice(0, 2000) }).catch(() => undefined);
+}
+
 /** Model-driven investigation: the model picks tools until it answers (max steps).
  *  Free OpenRouter models allow 50 requests a day, so the step budget is kept small. */
-export async function runAgent(question: string, asOf: string, emit: Emit, maxSteps = 10): Promise<void> {
+export async function runAgent(question: string, asOf: string, emit: Emit, opts: { evId?: string; maxSteps?: number } = {}): Promise<void> {
+  const maxSteps = opts.maxSteps ?? 10;
   if (!apiKey()) throw new Error("No LLM key: set OPENROUTER_API_KEY in .env (or use the scripted run)");
   const c = await mcp();
   const { schemas, oaTools } = await toolSpecs(c);
   const messages: Msg[] = [{ role: "system", content: system(asOf) }, { role: "user", content: question }];
+  const runId = await startRun(question.match(/\b\d{8}X\d{5}\b/)?.[0] ?? opts.evId, asOf, "agent", model(), question);
+  const answer = async (text: string) => { emit({ type: "answer", text }); await finishRun(runId, text); };
   let answeredBy = "";
   const used = new Set<string>(), nudged = new Set<string>();
   for (let i = 0; i < maxSteps; i++) {
@@ -132,7 +149,7 @@ export async function runAgent(question: string, asOf: string, emit: Emit, maxSt
         messages.push({ role: "user", content: fix });
         continue;
       }
-      emit({ type: "answer", text });
+      await answer(text);
       return;
     }
     if (msg.content?.trim()) emit({ type: "note", text: msg.content.trim() });
@@ -140,11 +157,11 @@ export async function runAgent(question: string, asOf: string, emit: Emit, maxSt
       let args: Record<string, unknown> = {};
       try { args = JSON.parse(tc.function.arguments || "{}"); } catch { /* model sent bad JSON: call with none, the tool reports what's missing */ }
       used.add(tc.function.name);
-      const { text } = await call(c, tc.function.name, args, asOf, emit, tc.id, schemas);
+      const { text } = await call(c, tc.function.name, args, asOf, emit, tc.id, schemas, runId);
       messages.push({ role: "tool", tool_call_id: tc.id, content: text.slice(0, 12000) });
     }
   }
-  emit({ type: "answer", text: "Stopped at the step limit before a final answer." });
+  await answer("Stopped at the step limit before a final answer.");
 }
 
 // Causal language the answer must not use (we report warning signs; the NTSB determines causes).
@@ -177,6 +194,9 @@ export async function runScripted(evId: string, asOf: string, emit: Emit, opts: 
   const schemas = new Map(tools.map((t) => [t.name, t.inputSchema as Record<string, unknown>]));
   let n = 0;
   const go = (name: string, args: Record<string, unknown>) => call(c, name, args, asOf, emit, `s${++n}`, schemas);
+  const runId = await startRun(evId, asOf, opts.draft ? "scripted, draft" : "scripted", "fixed method, no model", `Scripted method for ${evId}`);
+  const pastData = (await go("past_investigations", { ev_id: evId })).data;
+  const past = Array.isArray(pastData) ? (pastData as Past[]) : []; // DEMO=1 has no run log
   const acc = (await go("get_accident", { ev_id: evId })).data as { tail?: string; family?: string; findings?: Array<{ at?: string; kind?: string; finding?: string }> } | null;
   if (!acc?.tail) { emit({ type: "error", text: `No mechanical NTSB event ${evId} in the graph` }); return; }
   const at = acc.findings?.find((f) => f.kind === "cause")?.at ?? acc.findings?.[0]?.at;
@@ -196,6 +216,13 @@ export async function runScripted(evId: string, asOf: string, emit: Emit, opts: 
     : [`No reports on ${acc.tail} at ${line ?? "the finding's location"} in the two years before ${day(asOf)}.`];
   if (fleet?.aircraft) parts.push(`Across the fleet, ${fleet.aircraft} ${acc.family}s reported trouble on that line in the three years before.`);
   parts.push(orders.length ? `${orders.length} fix order(s) already covered it.` : "No fix order covered that line yet.");
+  // memory across sessions: compare with what the latest judged run kept
+  const judged = past.find((p) => p.kept?.length);
+  if (judged) {
+    const same = judged.kept.every((k) => prior?.some((p) => p.id === k.report));
+    const who = judged.model?.split("/").pop()?.replace(/:free$/, "") ?? judged.mode;
+    parts.push(`An earlier run (${who}, run on ${day(judged.run_at.slice(0, 10))}) kept ${judged.kept.map((k) => `${k.report} (confidence ${k.confidence})`).join(", ")}; ${same ? "this run finds the same reports" : "this run's reports differ"}.`);
+  } else if (past.length) parts.push(`${past.length} earlier run${past.length === 1 ? "" : "s"} on this accident, none with judged reports yet.`);
   if (prior?.length && line) {
     // Decisive but non-causal: rank what to inspect first by evidence strength.
     // Never a probability of causation — the NTSB determines causes.
@@ -220,8 +247,11 @@ export async function runScripted(evId: string, asOf: string, emit: Emit, opts: 
     })).data as Array<{ id: string; status: string }>;
     if (r?.[0]) parts.push(`Drafted failure mode ${r[0].id} (${r[0].status}) for a person to review.`);
   }
-  emit({ type: "answer", text: parts.join(" ") });
+  const text = parts.join(" ");
+  emit({ type: "answer", text });
+  await finishRun(runId, text);
 }
+interface Past { run_at: string; mode: string; model?: string; asOf: string; kept: Array<{ report: string; confidence: number; reason?: string }>; leads?: string }
 
 // ---------- helpers ----------
 function preview(data: unknown): unknown {
@@ -252,6 +282,7 @@ export function keysFrom(name: string, args: Record<string, unknown>, data: unkn
     else if (name === "prior_reports" || name === "similar_reports") { add(k.reports, r.id); chain(r.bin); }
     else if (name === "fix_orders") { add(k.fixorders, r.ad); chain(r.bin); }
     else if (name === "rank_failure_modes" || name === "failure_mode_candidates") add(k.modes, r.id);
+    else if (name === "past_investigations") for (const x of (r.kept as Array<{ report?: string }> | undefined) ?? []) add(k.reports, x.report);
     else if (name === "hotspots") chain(r.bin);
     else if (name === "explain_path") {
       for (const h of (r.hops as Array<{ labels: string[]; id: string }> | undefined) ?? []) {

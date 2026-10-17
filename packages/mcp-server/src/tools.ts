@@ -3,7 +3,8 @@ import { z } from "zod";
 
 // Our MCP server: fixed Cypher inside, agent never writes raw queries.
 // Read tools return evidence paths (every hop has a source for the UI animation).
-// Write tools append agent memory (PRECURSOR_OF, Alert, FailureMode, Case…).
+// Write tools append agent memory (PRECURSOR_OF + per-run KEPT, Alert, FailureMode…).
+// The run log itself (Investigation nodes) is written by the harness, not through here.
 // Approval transitions (approve/defer/merge) are UI-only — NOT exposed to the agent.
 // The descriptions are what the model reads when it picks a tool, so they say what
 // each tool answers and the exact id / location formats it expects.
@@ -20,6 +21,8 @@ export function buildServer(query: (name: string, args: unknown) => Promise<unkn
     { text: z.string().describe("keywords, e.g. 'lap joint fatigue'"), asOf: asOf.optional() });
   tool("get_accident", "One NTSB event by ev_id: aircraft (tail, variant), probable cause text, and each cause/factor finding with its ATA chapter and location key.",
     { ev_id: z.string().describe("NTSB ev_id, e.g. 20110401X24330") });
+  tool("past_investigations", "Earlier investigations of this accident (memory across sessions): when each ran, which model or method, the reports it kept with confidence and reason, and its leads. Check it first and say where this run agrees or differs.",
+    { ev_id: z.string().describe("NTSB ev_id, e.g. 20110401X24330"), asOf });
   tool("prior_reports", "FAA maintenance reports (Service Difficulty Reports) filed on one aircraft before asOf, newest first, optionally only at or inside a location. Use it to find warning signs on the same plane.",
     { tail: z.string().describe("US tail number, e.g. N632SW"), bin: bin.optional(), asOf, windowDays: z.number().default(730).describe("look-back window in days") });
   tool("fleet_reports", "How many reports and distinct aircraft of the whole fleet reported trouble at a location in a date range. Use it to see whether a plane's problem was fleet-wide.",
@@ -45,7 +48,7 @@ export function buildServer(query: (name: string, args: unknown) => Promise<unkn
 
   // Write / action (agent memory + org actions). A human approves failure modes in the UI.
   tool("record_precursor", "Save a judged warning sign: this report preceded this accident, with confidence 0-1 and a one-line reason.",
-    { reportId: z.string(), accidentId: z.string(), confidence: z.number(), reason: z.string(), asOf });
+    { reportId: z.string(), accidentId: z.string(), confidence: z.number(), reason: z.string(), asOf, runId: z.string().optional().describe("set by the harness; leave empty") });
   tool("raise_alert", "Open an alert on an aircraft that shows a known danger pattern.",
     { tail: z.string(), modeId: z.string().optional(), hotspotId: z.string().optional(), reason: z.string() });
   tool("propose_failure_mode", "Draft a NEW failure mode when no known or dormant mode fits. It stays 'proposed' until a human approves it.",

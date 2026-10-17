@@ -17,7 +17,7 @@ const t0 = Date.now();
 const steps: Array<{ t: number; step: Step }> = [];
 const emit = (step: Step) => { steps.push({ t: Date.now() - t0, step }); console.error(step.type, "name" in step ? step.name : ""); };
 try {
-  if (mode === "agent") await runAgent(question, asOf, emit); else await runScripted("20110401X24330", asOf, emit);
+  if (mode === "agent") await runAgent(question, asOf, emit, { evId: "20110401X24330" }); else await runScripted("20110401X24330", asOf, emit);
 } catch (e) {
   emit({ type: "error", text: (e as Error).message }); // keep the partial run for inspection
 }

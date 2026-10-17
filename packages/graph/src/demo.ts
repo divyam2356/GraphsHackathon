@@ -5,7 +5,8 @@ export const DEMO = {
   accidents: [
     { ev_id: "20110401X24330", ntsb_no: "DCA11MA039", tail: "N632SW", family: "737", date: "2011-04-01", phase: "climb",
       narrative: "rapid decompression, fuselage crown skin rupture",
-      cause: "the improper installation of the fuselage crown skin panel at the S-4L lap joint during the manufacturing process, which resulted in multiple site damage fatigue cracking and eventual failure of the lower skin panel" },
+      cause: "the improper installation of the fuselage crown skin panel at the S-4L lap joint during the manufacturing process, which resulted in multiple site damage fatigue cracking and eventual failure of the lower skin panel",
+      findings: [{ finding: "Aircraft-Aircraft structures-Fuselage-Fuselage main structure-Incorrect service/maintenance", kind: "cause", chapter: "53", at: "737/53/S4L" }] },
   ],
   priorReports: [
     { id: "SWAA101399", tail: "N632SW", bin: "737/53/S4L/BS620", date: "2010-03-09", text: "DURING SCHEDULED 14Y CHECK, FOUND STRINGER CLIP CRACKED AT BS 639, STR 4L.  REMOVED AND REPLACED CLIP PER SRM." },

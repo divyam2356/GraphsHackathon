@@ -12,7 +12,7 @@ export async function POST(req: Request) {
     async start(ctrl) {
       const emit = (s: Step) => ctrl.enqueue(enc.encode(JSON.stringify(s) + "\n"));
       try {
-        if (b.mode === "agent") await runAgent(b.question ?? "", b.asOf, emit);
+        if (b.mode === "agent") await runAgent(b.question ?? "", b.asOf, emit, { evId: b.evId });
         else await runScripted(b.evId ?? "20110401X24330", b.asOf, emit, { draft: b.draft });
       } catch (e) {
         emit({ type: "error", text: (e as Error).message });

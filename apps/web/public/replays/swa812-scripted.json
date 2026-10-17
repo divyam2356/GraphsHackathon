@@ -2,13 +2,79 @@
  "mode": "scripted",
  "asOf": "2011-04-01",
  "question": "Southwest 812 (NTSB ev_id 20110401X24330) lost part of its fuselage skin on 1 April 2011. Were there warning signs in the maintenance records before it?",
- "recorded": "2026-10-17T03:54:58.867Z",
+ "recorded": "2026-10-17T04:05:16.296Z",
  "steps": [
   {
-   "t": 208,
+   "t": 364,
    "step": {
     "type": "tool_call",
     "id": "s1",
+    "name": "past_investigations",
+    "args": {
+     "ev_id": "20110401X24330",
+     "asOf": "2011-04-01"
+    },
+    "cypher": "MATCH (i:Investigation)-[:ABOUT]->(:Accident {ev_id:$ev_id})\n    WHERE i.finished IS NOT NULL AND i.asOf <= $asOf\n    OPTIONAL MATCH (i)-[k:KEPT]->(r:Report)\n    WITH i, collect(CASE WHEN r IS NULL THEN null ELSE {report: r.id, confidence: k.confidence, reason: k.reason} END) AS kept\n    RETURN i.id AS id, i.started AS run_at, i.mode AS mode, i.model AS model, i.asOf AS asOf, kept, i.leads AS leads\n    ORDER BY CASE WHEN size(kept) > 0 THEN 0 ELSE 1 END, run_at DESC LIMIT 5"
+   }
+  },
+  {
+   "t": 517,
+   "step": {
+    "type": "tool_result",
+    "id": "s1",
+    "name": "past_investigations",
+    "ms": 153,
+    "isError": false,
+    "rows": 2,
+    "preview": [
+     {
+      "id": "replay:2026-10-15T12:43:59.973Z",
+      "run_at": "2026-10-15T12:43:59.973Z",
+      "mode": "agent",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free",
+      "asOf": "2011-04-01",
+      "kept": [
+       {
+        "report": "SWAA101400",
+        "confidence": 0.8,
+        "reason": "Stringer clip crack at S4L indicates fatigue in lap joint where accident originated"
+       },
+       {
+        "report": "SWAA101399",
+        "confidence": 0.8,
+        "reason": "Stringer clip crack at S4L indicates fatigue in lap joint where accident originated"
+       }
+      ],
+      "leads": "Leads worth review: SWAA101399, SWAA101400."
+     },
+     {
+      "id": "52d21b43-ac4a-40a0-9970-656809ba4ed3",
+      "run_at": "2026-10-17T04:04:42.789Z",
+      "mode": "scripted",
+      "model": "fixed method, no model",
+      "asOf": "2011-04-01",
+      "kept": [],
+      "leads": "Leads worth review: inspect 737/53/S4L first (2 same-tail reports and 156 fleet aircraft on that line; no fix order covers it)."
+     }
+    ],
+    "keys": {
+     "accidents": [],
+     "reports": [
+      "SWAA101400",
+      "SWAA101399"
+     ],
+     "aircraft": [],
+     "locations": [],
+     "fixorders": [],
+     "modes": []
+    }
+   }
+  },
+  {
+   "t": 517,
+   "step": {
+    "type": "tool_call",
+    "id": "s2",
     "name": "get_accident",
     "args": {
      "ev_id": "20110401X24330"
@@ -17,12 +83,12 @@
    }
   },
   {
-   "t": 353,
+   "t": 519,
    "step": {
     "type": "tool_result",
-    "id": "s1",
+    "id": "s2",
     "name": "get_accident",
-    "ms": 145,
+    "ms": 1,
     "isError": false,
     "rows": 1,
     "preview": {
@@ -62,10 +128,10 @@
    }
   },
   {
-   "t": 354,
+   "t": 519,
    "step": {
     "type": "tool_call",
-    "id": "s2",
+    "id": "s3",
     "name": "prior_reports",
     "args": {
      "tail": "N632SW",
@@ -77,12 +143,12 @@
    }
   },
   {
-   "t": 397,
+   "t": 559,
    "step": {
     "type": "tool_result",
-    "id": "s2",
+    "id": "s3",
     "name": "prior_reports",
-    "ms": 43,
+    "ms": 40,
     "isError": false,
     "rows": 2,
     "preview": [
@@ -122,10 +188,10 @@
    }
   },
   {
-   "t": 397,
+   "t": 559,
    "step": {
     "type": "tool_call",
-    "id": "s3",
+    "id": "s4",
     "name": "fleet_reports",
     "args": {
      "family": "737",
@@ -137,12 +203,12 @@
    }
   },
   {
-   "t": 474,
+   "t": 634,
    "step": {
     "type": "tool_result",
-    "id": "s3",
+    "id": "s4",
     "name": "fleet_reports",
-    "ms": 77,
+    "ms": 75,
     "isError": false,
     "rows": 1,
     "preview": [
@@ -175,10 +241,10 @@
    }
   },
   {
-   "t": 474,
+   "t": 634,
    "step": {
     "type": "tool_call",
-    "id": "s4",
+    "id": "s5",
     "name": "fix_orders",
     "args": {
      "family": "737",
@@ -189,12 +255,12 @@
    }
   },
   {
-   "t": 475,
+   "t": 636,
    "step": {
     "type": "tool_result",
-    "id": "s4",
+    "id": "s5",
     "name": "fix_orders",
-    "ms": 1,
+    "ms": 2,
     "isError": false,
     "rows": 0,
     "preview": [],
@@ -212,10 +278,10 @@
    }
   },
   {
-   "t": 475,
+   "t": 636,
    "step": {
     "type": "tool_call",
-    "id": "s5",
+    "id": "s6",
     "name": "explain_path",
     "args": {
      "from": "SWAA101399",
@@ -226,12 +292,12 @@
    }
   },
   {
-   "t": 479,
+   "t": 637,
    "step": {
     "type": "tool_result",
-    "id": "s5",
+    "id": "s6",
     "name": "explain_path",
-    "ms": 4,
+    "ms": 1,
     "isError": false,
     "rows": 1,
     "preview": [
@@ -270,10 +336,10 @@
    }
   },
   {
-   "t": 486,
+   "t": 638,
    "step": {
     "type": "answer",
-    "text": "N632SW had 2 reports at 737/53/S4L in the two years before 1 April 2011: SWAA101400 (stringer clip cracked, 9 March 2010), SWAA101399 (stringer clip cracked, 9 March 2010). Across the fleet, 156 737s reported trouble on that line in the three years before. No fix order covered that line yet. Leads worth review: inspect 737/53/S4L first (2 same-tail reports and 156 fleet aircraft on that line; no fix order covers it)."
+    "text": "N632SW had 2 reports at 737/53/S4L in the two years before 1 April 2011: SWAA101400 (stringer clip cracked, 9 March 2010), SWAA101399 (stringer clip cracked, 9 March 2010). Across the fleet, 156 737s reported trouble on that line in the three years before. No fix order covered that line yet. An earlier run (nemotron-3-super-120b-a12b, run on 15 October 2026) kept SWAA101400 (confidence 0.8), SWAA101399 (confidence 0.8); this run finds the same reports. Leads worth review: inspect 737/53/S4L first (2 same-tail reports and 156 fleet aircraft on that line; no fix order covers it)."
    }
   }
  ]

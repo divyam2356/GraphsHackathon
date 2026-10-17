@@ -8,7 +8,7 @@ Last updated: Oct 17, morning (Manish).
 
 ## Submission checklist (rules 10–13)
 
-- [ ] Repo public, after a secret scan of the full git history (keys must never have been committed)
+- [ ] Repo public (divyam2356 owns it). Secret scan done Oct 17: gitleaks v8.24.3 + regex over all 37 commits, all branches: no leaks; no `.env` ever committed. Re-run before flipping if commits land.
 - [x] README with setup and graph model (verified on a fresh clone, Oct 15)
 - [x] Cypher and algorithms explained (README "How it works", Story step 9)
 - [ ] Demo video, linked in the README (script ready: `docs/DEMO.md`)
@@ -31,13 +31,14 @@ Last updated: Oct 17, morning (Manish).
 | Oct 15 | The evaluation is the backtest over all NTSB events, reported honestly: no per-aircraft signal (0.88× chance). | A fair test, shown in Story step 5. It is stronger than single-case checks that cannot fail. |
 | Oct 15 | Leads ranking (`rank_failure_modes`) and `services/eval/src/all.ts` are not presented as evidence. | Both are built from the SWA 812 answer (seeded mode, keyword rule). |
 | Oct 16 | D6 closed: leads ranking fixed — structure + signature overlap + full-text similarity, all from the graph; verified SWA 812 rank 1 (0.8, clear), door-frame case weak. | The keyword rule could not fail and proved nothing; the fix keeps D6's recommended approach. |
+| Oct 17 | Memory across sessions (Track 2): the harness logs every run as an `Investigation` (`ABOUT` the accident, `KEPT` reports with confidence); new MCP tool `past_investigations`, called first. The recorded Nemotron run is imported (`npm run remember -w packages/agent`). | Track 2 asks for memory that persists across sessions; before this, judgments were overwritten and never read back. (Manish + Claude) |
 | Oct 17 | Leads ranking only uses modes known before the investigation date (`known_from`). SWA 812 on 31 Mar 2011 → none (new pattern), which is what Story step 8 drafts. Still not presented as evidence. | FM-CROWN-S4L was written from SWA 812 (known from AD 2011-08-51, 5 Apr 2011), so "rank 1, clear" was hindsight: the date rule the agent follows applies to the ranker too. (Manish + Claude) |
 
 ## Pending decisions
 
 | # | Question | Options | Recommendation | Decides | By |
 |---|---|---|---|---|---|
-| D1 | Live deployment? The rules prefer one. | A: FalkorDB Cloud + a host for the Next app. B: tunnel to the home PC (must stay on through judging). C: video plus the verified local setup. | Find out whether FalkorDB Cloud's free tier fits the graph (~600 MB in FalkorDB). If yes, A with Recorded and Scripted modes; if not, C. | Manish | Oct 17 noon |
+| D1 | Live deployment? The rules prefer one. | Checked Oct 17: FalkorDB Cloud free = 100 MB RAM (our graph ~200 MB, ~520 MB process), stopped after 1 idle day, deleted after 7: does not fit. Hugging Face Docker Spaces now need PRO ($9/month; our HF account has none). B: Tailscale Funnel from the home PC: free, stable https URL, but the PC must stay on Oct 19–22 (power cut on Oct 17 morning). C: video plus the verified local setup. | B with C as the fallback, if Manish is OK exposing the PC (production build, auto-restart units); otherwise C. | Manish | Oct 17 noon |
 | D2 | Keep entering Track 3 (Company Brain)? | Keep (3 teams, 15 engineers, 2 task cards today), deepen it, or drop it. | Enter Tracks 1 and 2 only, unless someone deepens Track 3 by Oct 17. A thin entry can read as overclaiming. | Both | Oct 17 |
 | D3 | Who records and voices the video? | Manish or divyam2356 records; Claude can build a captioned screen capture. | One of us voices it (rule 13 favours visible human work); follow `docs/DEMO.md`. | Both | Oct 16 |
 | D4 | Blog post for the AirPods side prize? | Write it, or skip. | Write it in our own words; `docs/BLOG.md` is an AI draft and must not be submitted as is. Lead with the backtest result. | divyam2356 | Oct 17 |

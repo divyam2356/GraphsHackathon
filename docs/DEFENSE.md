@@ -47,7 +47,7 @@ asking about a line automatically includes every slice on it."
 **Each folder in one line:**
 - `services/ingest` — downloads public records and pins them on the board.
 - `packages/graph` — the board itself, plus the fixed questions anyone may ask it.
-- `packages/mcp-server` — 20 labeled buttons; the agent may press buttons but never reach behind the board.
+- `packages/mcp-server` — 21 labeled buttons; the agent may press buttons but never reach behind the board.
 - `packages/agent` — the investigator: presses buttons in order, judges each report, writes down what it kept.
 - `apps/web` — the two screens: the Board (investigate) and the Story (presentation).
 - `services/eval` — the honesty check: replays old accidents to see if the method would have flagged them.
@@ -64,11 +64,12 @@ Say: "warning signs", "leads worth review", "inspect first."
 2. "Why one graph for real + synthetic?" — A Cypher query spans one graph; Track 3
    crosses company → real data, so they must co-reside. Synthetic nodes carry
    `synthetic:true` + own labels.
-3. "Why can't the LLM set the score?" — `score = 0.4·structure + 0.4·signature +
-   0.2·text_sim` is deterministic and tunable via backtests; the LLM judges
-   relevance per report (UPS1354/SWA1380 false matches prove the join isn't enough).
-4. "What happens to rejected patterns?" — No permanent reject: dormant keeps
-   collecting SUPPORTS, re-offered on new accident or ≥3 new tails.
+3. "Why can't the LLM set the score?" — The leads ranking is deterministic:
+   `score = 0.4·structure + 0.4·signature + 0.2·text_sim`, every part from the graph. The
+   LLM only judges relevance per report (keep or drop, with a confidence and a reason).
+4. "What happens to rejected patterns?" — No permanent reject: a deferred (dormant) mode
+   keeps its evidence and is offered again when it gains 3+ records or a new NTSB event
+   since the person's decision (`reoffer_candidates`).
 5. "How do you know it works?" — We backtested every NTSB mechanical event
    (`services/eval/src/backtest.ts`). The naive test says 2.9x chance; closing two leaks
    (the event's own report, family habits) takes it to 0.88x: one aircraft's system-level
@@ -76,10 +77,18 @@ Say: "warning signs", "leads worth review", "inspect first."
    findings carry no locations, so that part is shown for one case, not validated.
 6. "Framing?" — Leads worth review, never causes. NTSB determines causes.
    Mechanical/structural only; pilot error + weather out of scope by design.
+7. "Does it remember across sessions?" — Yes, in the graph. Every run is an `Investigation`
+   node; each report the model keeps is a `KEPT` edge with confidence and reason. The next
+   run calls `past_investigations` first and says whether it agrees. The harness writes the
+   run log, not the model, and a replay only sees runs dated on or before its date.
+8. "Wasn't the crown S-4L failure mode written from this accident?" — Yes, so the ranking
+   never offers it before it was known: `known_from` is 5 Apr 2011 (AD 2011-08-51). Replayed
+   on 31 Mar 2011, no known mode fits ("none"), which is why the agent drafts a new one for a
+   person to approve (Story step 8).
 
 ## File tour (who owns what — put names here)
 - `packages/graph/{schema.cypher,queries/cypher.ts,src/hotspotJob.ts}` — model + fixed queries + LP job
-- `packages/mcp-server/src/{tools.ts,index.ts}` — 20 domain tools; errors surface, no fallback
+- `packages/mcp-server/src/{tools.ts,index.ts}` — 21 domain tools; errors surface, no fallback
 - `packages/agent/src/{loop.ts,scoring.ts}` — flows A/B/D/E/F, formula + decision rule
 - `services/{ingest,org-generator,eval}` — pipeline, Northwind Aero, backtests
 - `apps/web` — Board (map, time slider, agent trace, evidence graph), Story (9 steps, approval card), API routes agent/view/decide
