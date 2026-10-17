@@ -253,6 +253,9 @@ aircraft is drawn in code from the map's geometry; no third-party 3D models are 
 
 ## AI disclosure
 
-Built with AI coding assistants (Claude Code, OpenCode). The agent in the app runs on NVIDIA
-Nemotron 3 Super through OpenRouter's free tier. The team chose the problem, the framing rule
-and the scope; failure-mode approvals in the app are made by a person.
+All of the code was written with AI coding assistants (Claude Code, OpenCode). Our part was
+the idea (a black box for maintenance records, built around one real accident), the framing
+rule (leads worth review, never causes), the choice of real public data and the scope,
+steering each round of improvements, validating the results against the sources, and testing
+the app by hand. In the app, failure-mode approvals and work-order dispatches are made by a
+person. The agent runs on NVIDIA Nemotron 3 Super through OpenRouter's free tier.

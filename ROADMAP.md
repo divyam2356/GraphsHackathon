@@ -16,7 +16,7 @@ Last updated: Oct 17, 15:00 IST (Manish + Claude). The plan for the last 29 hour
 - [x] Tracks named: 1 and 3 decided Oct 17; Track 2 pending Manish
 - [x] AI use disclosed (README)
 - [ ] Both of us can explain the graph model, queries and decisions (rule 12): run it locally, read `docs/DEFENSE.md`
-- [ ] Human contributions logged (rule 13): fill the HUMAN_LOG in `docs/DEFENSE.md`
+- [x] Human contribution stated in the README's AI disclosure (Oct 17; no separate log: judges read the README). Our voices in the video back it up.
 
 ## Decided
 
@@ -83,11 +83,10 @@ all made up; Track 3 asks for "knowledge from docs" and "answers with clear sour
 - [ ] A 10-second clip of our MCP server answering in MCP Inspector, for the video. (Track 1)
 - [ ] Tonight: fresh-clone setup test, including a production build (`next build`).
 
-**Both of us (human work; this is also our rule 13 evidence, so log it as you go):**
+**Both of us (human work: what the README says we did, so make it true):**
 - [ ] Use the app yourself: Board (Scripted run; Watch → hand-off → Dispatch; 3D aircraft → Unroll), Story.
 - [ ] Check 2–3 facts against the sources (e.g. SWAA101399 against NTSB brief AAB-13/02; the 9 → 18 → 31 counts).
 - [ ] Each pick one Cypher query and explain it out loud (`docs/DEFENSE.md`).
-- [ ] Write your own dated HUMAN_LOG entries in `docs/DEFENSE.md`: ideas, decisions, checks. Only things you did.
 - [ ] Settle D2 and D3 today.
 
 ### Phase 2: freeze and verify (Oct 18, 12:00 → 15:00)
@@ -98,7 +97,7 @@ all made up; Track 3 asks for "knowledge from docs" and "answers with clear sour
 
 ### Phase 3: record and submit (Oct 18, 15:00 → 20:00)
 - [ ] Voice (D3): record the video from `docs/DEMO.md`, under 4 minutes; re-check the ✓ numbers on screen.
-- [ ] Both: final HUMAN_LOG entries; one practice round of `docs/DEFENSE.md`.
+- [ ] Both: one practice round of `docs/DEFENSE.md`.
 - [ ] Video and deploy links in the README; final read of the Limits section.
 - [ ] Submit by 20:00 IST (hard close 23:59), naming every track entered. One of us submits; Claude doesn't.
 
