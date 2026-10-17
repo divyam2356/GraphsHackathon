@@ -33,6 +33,7 @@ export default function Board() {
   const [open, setOpen] = useState<Open | null>(null);
   const [autorun, setAutorun] = useState<Mode | undefined>();
   const [busy, setBusy] = useState(false);
+  const [watchOnLoad, setWatchOnLoad] = useState(false);
   // The watcher and the hand-off: fixed methods streamed into the same trace as the agent.
   const runFixed = async (body: { mode: "watch" | "alert"; alertId?: string }) => {
     setBusy(true); setSteps([]);
@@ -40,14 +41,15 @@ export default function Board() {
     setBusy(false);
   };
 
-  // Deep links for demos and screenshots: ?asOf=2010-04-01&filter=crack&cell=737/53/S4L/BS620&run=scripted
+  // Deep links for demos and screenshots: ?asOf=2010-04-01&filter=crack&cell=737/53/S4L/BS620&run=scripted (or run=watch)
   useEffect(() => {
     const q = new URLSearchParams(location.search);
     if (q.get("asOf")) setAsOf(q.get("asOf")!);
     const f = q.get("filter");
     if (f && f in FILTERS) setFilter(f as FilterKey);
     if (q.get("cell")) setSelected(q.get("cell"));
-    if (q.get("run")) setAutorun(q.get("run") as Mode);
+    if (q.get("run") === "watch") setWatchOnLoad(true);
+    else if (q.get("run")) setAutorun(q.get("run") as Mode);
   }, []);
 
   // Every key a tool result touched, accumulated; the evidence graph is their subgraph.
@@ -82,6 +84,7 @@ export default function Board() {
   useEffect(() => { if (selected && !open) openCell(selected); }, [selected]); // eslint-disable-line react-hooks/exhaustive-deps
   const prefetch = useCallback((d: string) => { view("fleet_map", args(d)); view("line_window", args(d)); }, [filter]); // eslint-disable-line react-hooks/exhaustive-deps
   const answer = [...steps].reverse().find((s) => s.type === "answer");
+  useEffect(() => { if (watchOnLoad) { setWatchOnLoad(false); runFixed({ mode: "watch" }); } }, [watchOnLoad, asOf]); // eslint-disable-line react-hooks/exhaustive-deps
   // Lines with an alert in this run (raised by the watcher, or open when the investigator took over).
   const alertLines = useMemo(() => [...new Set(steps.flatMap((s) => (s.type === "tool_result" && (s.name === "raise_alert" || s.name === "open_alerts") && Array.isArray(s.preview)
     ? (s.preview as Array<{ bin?: string }>).map((r) => r.bin ?? "") : [])).filter(Boolean))], [steps]);

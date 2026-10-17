@@ -162,6 +162,7 @@ function Loudest() {
           {ranks.map((r) => <li key={r.date}><b>{r.line}</b> ranked {r.rank === 2 ? "2nd" : r.rank === 1 ? "1st" : `${r.rank}th`} of {r.of} lines on {fmtDate(r.date)}: {r.ac} aircraft, up from {r.prev}</li>)}
         </ol>
         <p>The last of these came three months before the accident. A rising line is a lead worth review, not a prediction.</p>
+        <p><a href="/?asOf=2011-01-01&amp;run=watch">Run the watcher on 1 January 2011</a>: it stores an alert on the three fastest-rising lines, and an investigator agent takes one over.</p>
       </Text>
       <div className="story-visual"><TrendChart series={series} /></div>
     </>
