@@ -23,7 +23,7 @@ export const TERMS = {
   aircraftPerCell: "How many different aircraft reported a matching defect in that cell in the 12 months before the date.",
   aircraftPerLine: "Aircraft that reported something on each stringer line in the 12 months before the date. The tick is the same count a year earlier; orange is the rise.",
   fleetLift: "Aircraft on this line in the last 12 months divided by the 12 months before. Above 1 means rising.",
-  fleet: "The run compares N632SW with every Boeing 737 in the FAA reports. The map shows the 737 Classics.",
+  fleet: "The run compares N632SW with every Boeing 737 in the FAA reports: US airlines, two-thirds of the reports from Southwest. The map shows only the 737 Classics (-300, -400, -500).",
   queryTime: "The graph query behind the map, and how long FalkorDB took to answer it.",
   cypher: "Cypher is the query language of the graph database (FalkorDB). Each tool runs one fixed query.",
   leads: "The system points at what to inspect first. Only the NTSB decides causes.",

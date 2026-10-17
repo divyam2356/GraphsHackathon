@@ -32,6 +32,37 @@ Graph Hacks (FalkorDB × WeMakeDevs), Oct 15–18 2026. Tracks: **1. Agents That
 - **Story** (`/story`): a nine-step presentation where every number and picture is a live
   query, apart from the saved evaluation run below.
 
+## The data, and why this data
+
+Two public US government datasets, joined in one graph by aircraft (tail and serial number)
+and by location on the aircraft.
+
+| Dataset | What we loaded | Why |
+|---|---|---|
+| **FAA Service Difficulty Reports**, 2008–2026 | Defects that mechanics found and reported to the FAA: date, aircraft, part, condition, and free text that often says where ("AT BS 639, STR 4L"). Every structural report (ATA chapters 52–57: doors, fuselage, nacelles, stabilisers, windows, wings) on any Boeing 737: **213,272 reports on 3,360 aircraft**. Plus every report on an aircraft that appears in an NTSB event: 12,355 more, mostly on light aircraft. | Southwest 812 was a 737, one of the most common airliners in the US, so there is a deep fleet to compare one aircraft against. Structures, because the case is a structural failure. The NTSB-linked reports let the backtest ask, for every accident, whether that aircraft had reports beforehand. |
+| **NTSB aviation accident database** (avall) | **4,235 mechanical events**, January 2008 to September 2020: accidents and incidents with a cause or factor finding in aircraft systems, structures, propeller/rotor or power plant. Each finding is coded by ATA chapter. | The NTSB says what went wrong and where. That is the ground truth: were the warning signs at the place the NTSB later blamed? |
+
+**Why Southwest 812 as the case:** the NTSB brief (AAB-13/02) pins the failure to one place,
+the S-4L lap joint at body stations 663–727, and the same aircraft had earlier reports on that
+stringer. The graph can be checked against a known answer.
+
+**What this data is, and is not:**
+- **US only.** These are FAA reports, so every aircraft is US-registered and flown by a US operator.
+- **Two-thirds Southwest.** 143,613 of the 213,272 737 reports (67%) come from 1,290 Southwest
+  aircraft (operator code SWAA, which also starts each report id). Southwest flies only 737s and
+  is the largest 737 operator, so "the fleet" in the app means US 737s, mostly Southwest's.
+- **Report counts measure reporting as well as cracking.** Airlines differ in what and how much
+  they report, so a rise can be a change in reporting.
+- **Locations are parsed from free text.** 68% of the 737 reports name a stringer and a body
+  station, and those are the ones on the map; 32% give only the zone.
+- **The map shows the 737 Classics** (737-300, -400 and -500: 619 aircraft), the generation
+  Southwest 812 belonged to, so like is compared with like. The agent's fleet count currently
+  includes every 737 generation.
+- **Light aircraft rarely file reports.** Only 270 of the 4,235 NTSB events have any FAA report
+  on the same aircraft before the event, which limits the backtest.
+- **The company layer is made up.** Teams, engineers, task cards and work orders are synthetic
+  and marked `synthetic: true`; the maintenance and accident records are real.
+
 ## The case: Southwest 812
 
 On 1 April 2011 a 737-300, N632SW, lost a 60 × 8 inch section of crown skin at 34,000 feet.
@@ -213,11 +244,11 @@ docs/                   GRAPH_MODEL, FLOWS (the original plan), DEFENSE, DEMO
 ROADMAP.md              decisions, pending decisions and the plan to the deadline
 ```
 
-## Data and licences
+## Licences
 
-NTSB aviation accident database (avall) and FAA Service Difficulty Reports: US government
-public data. NTSB brief AAB-13/02 and the Federal Register AD texts were used to check facts.
-No private or scraped data. Libraries: Next.js, React, d3-force and three.js (all MIT). The 3D
+The NTSB and FAA data (see [The data](#the-data-and-why-this-data)) are US government public
+data. NTSB brief AAB-13/02 and the Federal Register AD texts were used to check facts. No
+private or scraped data. Libraries: Next.js, React, d3-force and three.js (all MIT). The 3D
 aircraft is drawn in code from the map's geometry; no third-party 3D models are used.
 
 ## AI disclosure
