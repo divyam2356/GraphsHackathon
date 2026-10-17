@@ -4,7 +4,7 @@ Shared plan for Graph Hacks. **Submissions close Oct 18, 11:59 PM IST** (aim to 
 that day). Both of us edit this file: tick boxes as things land, and when you settle a pending
 decision, move it to "Decided" with the date and your name.
 
-Last updated: Oct 17, morning (Manish).
+Last updated: Oct 17, 15:00 IST (Manish + Claude). The plan for the last 29 hours is under "Plan to the deadline".
 
 ## Submission checklist (rules 10–13)
 
@@ -40,36 +40,67 @@ Last updated: Oct 17, morning (Manish).
 
 | # | Question | Options | Recommendation | Decides | By |
 |---|---|---|---|---|---|
-| D1 | Live deployment? The rules prefer one. | Checked Oct 17: FalkorDB Cloud free = 100 MB RAM (our graph ~200 MB, ~520 MB process), stopped after 1 idle day, deleted after 7: does not fit. Hugging Face Docker Spaces now need PRO ($9/month; our HF account has none). B: Tailscale Funnel from the home PC: free, stable https URL, but the PC must stay on Oct 19–22 (power cut on Oct 17 morning). C: video plus the verified local setup. | B with C as the fallback, if Manish is OK exposing the PC (production build, auto-restart units); otherwise C. | Manish | Oct 17 noon |
-| D2 | Which tracks? | Rules allow any or all; each one entered must be named at submission. | **Decided Oct 17 (Manish): Tracks 1 and 3.** Claude suggested also naming Track 2 (memory across sessions + watcher→investigator hand-off are its key focus items; entering costs nothing). README track line waits on that answer. | Manish | Oct 17 |
-| D3 | Who records and voices the video? | Manish or divyam2356 records; Claude can build a captioned screen capture. | One of us voices it (rule 13 favours visible human work); follow `docs/DEMO.md`. | Both | Oct 16 |
-| D4 | Blog post for the AirPods side prize? | Write it, or skip. | Write it in our own words; `docs/BLOG.md` is an AI draft and must not be submitted as is. Lead with the backtest result. | divyam2356 | Oct 17 |
-| D5 | Who owns what from here (below)? | | Confirm or change the proposed owners. | Both | Oct 16 |
+| D1 | Live deployment? The rules prefer one. | Modal, tested Oct 17: a web endpoint runs FalkorDB + the app with no card, on the free $30/month credit. **Warm** (always on, about $5 through Oct 23, inside the credit) or **sleep when idle** (about $0–1; the first visit waits 10–20 s). Fallback: video plus the verified local setup. FalkorDB Cloud free (100 MB) and Hugging Face Spaces (PRO only) don't fit. | Modal, warm, until judging ends. Nothing is deployed until Manish says yes. | Manish | Oct 18, 12:00 |
+| D2 | Which tracks? | Rules allow any or all; each one entered must be named at submission. | **Decided Oct 17 (Manish): Tracks 1 and 3.** Open: also name Track 2? Memory across sessions and the watcher → investigator hand-off are its key focus items, and entering costs nothing. | Manish | Oct 17 |
+| D3 | Who voices the video? | Manish, divyam2356, or an AI voice (ElevenLabs; the rules don't forbid it). | One of us. Rule 13 can reject projects without visible human contribution, and a human voice is the cheapest proof we understand it. | Both | Oct 17 |
+| D4 | Blog post for the side prize? | Write it, or skip. | Optional. In our own words; `docs/BLOG.md` is an AI draft and must not be submitted as is. | divyam2356 | Oct 18 |
 
-## Work plan (owners proposed, see D5)
+## Plan to the deadline
 
-Manish works with Claude Code; divyam2356 with their own tools.
+**Working in parallel without conflicts**
+- Pull `main` before you start and before you push. Small commits, pushed often.
+- Each of us owns different files (listed per task). In shared files (`packages/graph/queries/cypher.ts`,
+  `packages/mcp-server/src/tools.ts`, `apps/web/lib/glossary.ts`) only add entries at the end; don't reformat.
+- **Feature freeze: Oct 18, 12:00 IST.** After that: fixes, docs and the video only.
+- Tick a box when it lands and write the commit id next to it.
 
-**Oct 16**
-- [ ] Both: read this file, agree owners (D5), pull `main` (many files changed on Oct 15).
-- [ ] divyam2356: run it locally from the README, then walk the Story and the Board. Note anything unclear.
-- [ ] divyam2356: research D1. FalkorDB Cloud free tier limits, and where to host the Next app. Note that the
-      live agent spawns the MCP server as a child process; Recorded and Scripted modes don't need a model key.
-- [x] Rules page re-checked Oct 17 09:30 IST (Claude): same 18 rules, judging criteria still unpublished. Discord not checked (needs Manish's login).
-- [ ] Manish: decide D3; do a practice run of the video script.
+### Phase 1: build (now → Oct 18, 12:00)
 
-**Oct 17**
-- [ ] Manish: decide D1 by noon; deploy if A or B.
-- [ ] Owner of D3: record the video; re-check the ✓ numbers in `docs/DEMO.md` against the live screens.
-- [ ] divyam2356: blog draft in our own words (D4).
-- [ ] Both: practise the judge questions in `docs/DEFENSE.md` (update answers that changed).
-- [ ] Optional: D2 deepening.
+**divyam2356, with your own agent: Track 3, real documents in the graph.** Today the company layer is
+all made up; Track 3 asks for "knowledge from docs" and "answers with clear sources".
+- [ ] Load the texts of AD 2011-08-51, AD 2015-16-08 (Federal Register) and NTSB brief AAB-13/02 as
+      `Document` → `Section` nodes (US government works, public domain). Link each section to the
+      `Location`s it names (reuse `locationChain` in `services/ingest/src/normalize.ts`) and to its
+      `FixOrder` or `Accident`. Give each section the document's date.
+- [ ] MCP tool `cite_documents {bin, asOf}`: sections about a location, dated before `asOf`
+      (fixed Cypher, like the other tools).
+- [ ] Show a location's cited sections in the record drawer.
+- Files: new `services/ingest/src/documents.ts`, appended entries in `cypher.ts` and `tools.ts`,
+  `apps/web/components/RecordDrawer.tsx`. Leave `packages/agent/` to Manish (he wires the tool in).
+- Done when: `cite_documents` for `737/53/S4L` returns nothing at 2011-04-01 (no AD yet) and the
+  AD 2011-08-51 inspection paragraph at 2011-05-01; screenshot of the drawer.
+- [ ] Optional: blog draft (D4).
 
-**Oct 18**
-- [ ] Manish: final re-check of the rules page.
-- [ ] Manish: secret scan of the git history, then make the repo public.
-- [ ] Both: put the video (and deploy) links in the README; final read of the README Limits section.
-- [ ] Submit by 8 PM IST (hard close 11:59 PM IST).
+**Manish, with Claude: Track 1 and the rest of Track 3.**
+- [ ] Same-generation fleet: the agent's fleet count uses 737 Classics only, like the map; update
+      the numbers that change in the README, Story and `docs/DEMO.md`. (Track 1, correctness)
+- [ ] Who owns what and who knows what: `Team OWNS System` (ATA chapter) picks the team; dispatch
+      prefers the engineer with earlier work orders on that line (made-up history, marked
+      `synthetic`), and the card says why. (Track 3)
+- [ ] Wire `cite_documents` into the scripted method and the agent's instructions once it lands.
+- [ ] If time: a `why` tool that walks back from a work order or an approved mode to its evidence
+      and the person who decided. (Tracks 1 and 3)
+- [ ] A 10-second clip of our MCP server answering in MCP Inspector, for the video. (Track 1)
+- [ ] Tonight: fresh-clone setup test, including a production build (`next build`).
+
+**Both of us (human work; this is also our rule 13 evidence, so log it as you go):**
+- [ ] Use the app yourself: Board (Scripted run; Watch → hand-off → Dispatch; 3D aircraft → Unroll), Story.
+- [ ] Check 2–3 facts against the sources (e.g. SWAA101399 against NTSB brief AAB-13/02; the 9 → 18 → 31 counts).
+- [ ] Each pick one Cypher query and explain it out loud (`docs/DEFENSE.md`).
+- [ ] Write your own dated HUMAN_LOG entries in `docs/DEFENSE.md`: ideas, decisions, checks. Only things you did.
+- [ ] Settle D2 and D3 today.
+
+### Phase 2: freeze and verify (Oct 18, 12:00 → 15:00)
+- [ ] Claude: rules page re-check; secret scan of the new commits; fresh-clone run.
+- [ ] Manish: deploy if D1 is yes; open the link in a private window.
+- [ ] divyam2356: make the repo public.
+- [ ] Reset the demo state (`docs/DEMO.md`, "Before recording").
+
+### Phase 3: record and submit (Oct 18, 15:00 → 20:00)
+- [ ] Voice (D3): record the video from `docs/DEMO.md`, under 4 minutes; re-check the ✓ numbers on screen.
+- [ ] Both: final HUMAN_LOG entries; one practice round of `docs/DEFENSE.md`.
+- [ ] Video and deploy links in the README; final read of the Limits section.
+- [ ] Submit by 20:00 IST (hard close 23:59), naming every track entered. One of us submits; Claude doesn't.
 
 ## Parked (not before the deadline)
 
