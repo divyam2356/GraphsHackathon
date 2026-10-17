@@ -19,7 +19,10 @@ Graph Hacks (FalkorDB × WeMakeDevs), Oct 15–18 2026. Tracks: **1. Agents That
 - **Board** (`/`): an unrolled Boeing 737 fuselage. Each cell is a location in the graph
   (stringer line × 20-inch body-station bin), coloured by how many aircraft reported cracks
   there in the 12 months before the slider date. Drag or play the date; click a cell to read
-  the reports behind it.
+  the reports behind it. **3D aircraft** shows the same cells on a simplified 737 drawn in
+  code (three.js); "Unroll it into the map" cuts the skin along the bottom and lays it flat,
+  so viewers who don't know aircraft can see where each cell sits. Underlined terms
+  (stringer, body station, fix order, every MCP tool) explain themselves on hover.
 - **Agent**: ask a question in plain English. The model picks tools on our MCP server, each a
   fixed Cypher query. Every call appears with its arguments, Cypher, rows and time, and the
   records it touched join an evidence graph.
@@ -214,7 +217,8 @@ ROADMAP.md              decisions, pending decisions and the plan to the deadlin
 
 NTSB aviation accident database (avall) and FAA Service Difficulty Reports: US government
 public data. NTSB brief AAB-13/02 and the Federal Register AD texts were used to check facts.
-No private or scraped data.
+No private or scraped data. Libraries: Next.js, React, d3-force and three.js (all MIT). The 3D
+aircraft is drawn in code from the map's geometry; no third-party 3D models are used.
 
 ## AI disclosure
 

@@ -3,6 +3,7 @@
 // agent's trace and the evidence graph it touched below; records open in a drawer.
 // The watcher raises alerts at the slider date and hands one to the investigator.
 import { useCallback, useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { FuselageMap, HeatLegend, type Cell, type LineCount, type Pin } from "../components/FuselageMap";
 import { TimeSlider } from "../components/TimeSlider";
 import { Header } from "../components/Header";
@@ -18,6 +19,8 @@ import { SWA812, parseKey, stationIn } from "../lib/fuselage";
 import type { Keys } from "@blackbox/agent/src/agent";
 
 const CLASSIC = ["737-300", "737-400", "737-500"];
+// three.js needs the browser, and most visits never open the 3D view
+const Fuselage3D = dynamic(() => import("../components/Fuselage3D").then((m) => m.Fuselage3D), { ssr: false, loading: () => <div className="f3d f3d-loading">Loading the 3D aircraft</div> });
 const FILTERS = {
   skin: { label: "Skin cracks", args: { part: "SKIN", condition: "CRACK" } },
   crack: { label: "Any crack", args: { condition: "CRACK" } },
@@ -36,6 +39,7 @@ export default function Board() {
   const [autorun, setAutorun] = useState<Mode | undefined>();
   const [busy, setBusy] = useState(false);
   const [watchOnLoad, setWatchOnLoad] = useState(false);
+  const [shape, setShape] = useState<"map" | "3d">("map");
   // The watcher and the hand-off: fixed methods streamed into the same trace as the agent.
   const runFixed = async (body: { mode: "watch" | "alert"; alertId?: string }) => {
     setBusy(true); setSteps([]);
@@ -43,9 +47,10 @@ export default function Board() {
     setBusy(false);
   };
 
-  // Deep links for demos and screenshots: ?asOf=2010-04-01&filter=crack&cell=737/53/S4L/BS620&run=scripted (or run=watch)
+  // Deep links for demos and screenshots: ?asOf=2010-04-01&filter=crack&cell=737/53/S4L/BS620&run=scripted (or run=watch)&view=3d
   useEffect(() => {
     const q = new URLSearchParams(location.search);
+    if (q.get("view") === "3d") setShape("3d");
     if (q.get("asOf")) setAsOf(q.get("asOf")!);
     const f = q.get("filter");
     if (f && f in FILTERS) setFilter(f as FilterKey);
@@ -118,11 +123,17 @@ export default function Board() {
                 <button key={k} aria-pressed={filter === k} onClick={() => setFilter(k)} data-tip={FILTER_TIPS[k]}>{FILTERS[k].label}</button>
               ))}
             </div>
+            <div className="seg" role="group" aria-label="View">
+              <button aria-pressed={shape === "map"} onClick={() => setShape("map")} data-tip="The fuselage skin unrolled flat: one cell per stringer and 20 inches of body station.">Flat map</button>
+              <button aria-pressed={shape === "3d"} onClick={() => setShape("3d")} data-tip="The same reports on a 3D 737, for seeing where the map's cells sit on the aircraft.">3D aircraft</button>
+            </div>
             <HeatLegend />
             <span className="query-time" data-tip={TERMS.queryTime}>{map.error ? map.error : map.ms !== undefined ? `fleet_map ${map.ms} ms, ${map.rows?.length ?? 0} cells` : "Loading the graph"}</span>
           </div>
-          <FuselageMap cells={map.rows ?? []} lines={lines.rows ?? []} pins={pins} pinLabel={pins.length ? `${SWA812.tail}'s own reports` : undefined} alerts={alertLines}
-            asOf={asOf} selected={selected} onCell={openCell} onPin={openId} />
+          {shape === "3d" ? <Fuselage3D cells={map.rows ?? []} /> : (
+            <FuselageMap cells={map.rows ?? []} lines={lines.rows ?? []} pins={pins} pinLabel={pins.length ? `${SWA812.tail}'s own reports` : undefined} alerts={alertLines}
+              asOf={asOf} selected={selected} onCell={openCell} onPin={openId} />
+          )}
           <TimeSlider asOf={asOf} onChange={setAsOf} stopAt={SWA812.date} prefetch={prefetch}
             marks={[{ date: "2010-03-09", label: "N632SW: 2 cracked clips on S-4L" }, { date: SWA812.date, label: "Southwest 812", hot: true }]} />
           <WatchButton asOf={asOf} busy={busy} onWatch={() => runFixed({ mode: "watch" })} />

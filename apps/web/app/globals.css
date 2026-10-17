@@ -59,6 +59,14 @@ a { color: inherit; }
 button[data-tip] { cursor: pointer; }
 .term-tip { position: fixed; z-index: 60; max-width: 300px; pointer-events: none; background: var(--ink); color: var(--sheet); padding: 8px 11px; border-radius: 2px; font-size: 12.5px; font-weight: 400; line-height: 1.45; letter-spacing: 0; text-transform: none; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18); }
 
+/* 3D aircraft (components/Fuselage3D.tsx): same footprint as the flat map's SVG */
+.f3d { position: relative; aspect-ratio: 1172 / 535; overflow: hidden; }
+.f3d-canvas, .f3d-canvas canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; cursor: grab; }
+.f3d-loading { display: grid; place-items: center; color: var(--graphite); font-size: 13px; }
+.f3d-label { position: absolute; left: 0; top: 0; font-size: 12px; color: var(--ink); background: color-mix(in srgb, var(--film) 88%, transparent); padding: 1px 6px; border-radius: 2px; white-space: nowrap; transition: opacity 200ms ease-out; }
+.f3d-bar { position: absolute; left: 0; bottom: 4px; display: flex; gap: 14px; align-items: center; max-width: 100%; }
+.f3d-bar .go { margin-left: 0; }
+
 /* ---------- time slider ---------- */
 .slider { display: grid; grid-template-columns: auto 1fr auto; gap: 16px; align-items: center; }
 .play { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--ink); background: var(--sheet); cursor: pointer; display: grid; place-items: center; }

@@ -35,6 +35,10 @@ the narration must match what the screen shows on the day; check the figures mar
 | 3:05 | Story 8: Draft, then type a name and reason, Approve; open "The query behind the button" | On that day no known failure mode fit, because the ranking only uses modes known before the date. So the agent drafts one, with its evidence linked in the graph. It cannot approve it: there is no such tool. A person decides, and who, when and why are written to the graph. |
 | 3:25 | Story 9: Cypher, timings, the bug note | Everything here is FalkorDB: multi-hop joins, variable-length paths, shortest paths, full-text search, and date windows that hide everything after the investigation date. Most answers come back in tens of milliseconds. We even found a bug in string range indexes on the way. Black Box: warning signs in maintenance records, before the accident. |
 
+Optional, +10 s before 2:00 (worth it if the video still runs under 4 minutes): on the Board,
+press **3D aircraft**, then **Unroll it into the map**. Narration: "This is the same map,
+wrapped around the aircraft: cut along the bottom and laid flat."
+
 ## After recording
 
 - Story step 8: press Reopen so the drafted mode goes back to "waiting for a person".
