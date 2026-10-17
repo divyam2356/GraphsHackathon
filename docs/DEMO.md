@@ -1,8 +1,9 @@
-# Demo video script (about 3 minutes)
+# Demo video script (about 3 minutes 15 seconds)
 
 The video follows the Story (`/story`), with one stop on the Board for the live, interactive
-part. Narration is about 440 words, at a calm pace. Every number on screen is a live query, so
-the narration must match what the screen shows on the day; check the figures marked ✓ before recording.
+part. Narration is about 500 words, at a calm pace. Every number on screen is a live query, so
+the narration must match what the screen shows on the day; check the figures marked ✓ before recording
+(all ✓ re-checked against the live screens on Oct 17).
 
 ## Before recording
 
@@ -13,6 +14,8 @@ the narration must match what the screen shows on the day; check the figures mar
 - [ ] Story step 8: if the drafted failure mode shows "Confirmed" or "Deferred", press Reopen
       so the recording starts from "waiting for a person".
 - [ ] Board agent panel on **Recorded** (the default). It replays a real Nemotron run.
+- [ ] The run log has the recorded run (`npm run remember -w packages/agent`, once), so the
+      Scripted run's first step recalls it.
 
 ## Script
 
@@ -25,8 +28,9 @@ the narration must match what the screen shows on the day; check the figures mar
 | 1:15 | Story 5: backtest chart, row by row | Then we tried to fool ourselves. Across every NTSB event with earlier reports, the naive test says those reports named the failed system three times more often than chance. Two leaks made that: the accident's own report, and aircraft families that always report the same systems. Close them and it falls to 0.9 ✓, no better than chance. So a system-level match is not a warning sign. What mattered was the exact location and the fleet. |
 | 1:45 | Story 6: schema counts up | That is why the model is built around location: from aircraft model to stringer line to a 20-inch bin, so a question about S-4L rolls up every bin along it. A quarter of a million nodes, half a million edges ✓. |
 | 2:00 | Board: press Investigate (Recorded); drag the slider; click a hot S-4L cell, show the drawer | An agent investigates through our MCP server. It picks the tools; each runs fixed Cypher, and it cannot see past the investigation date. This is a real run of NVIDIA Nemotron on OpenRouter's free tier. Every call shows its query and time, and the records it touches build this evidence graph. When its first answer used causal language, our harness made it rewrite: we report warning signs, never causes. |
-| 2:30 | Story 8: Draft, then type a name and reason, Approve; open "The query behind the button" | The agent can draft a failure mode with its evidence linked in the graph. It cannot approve one: there is no such tool. A person decides, and who, when and why are written to the graph. |
-| 2:50 | Story 9: Cypher, timings, the bug note | Everything here is FalkorDB: multi-hop joins, variable-length paths, shortest paths, full-text search, and date windows that hide everything after the investigation date. Most answers come back in tens of milliseconds. We even found a bug in string range indexes on the way. Black Box: warning signs in maintenance records, before the accident. |
+| 2:25 | Board: switch to Scripted, press Investigate; point at step 1 and the last sentence of the conclusion | It also remembers. Every run is logged in the graph with the reports it kept, and the next run starts there: this one recalls what the Nemotron run kept, and checks that it finds the same reports. |
+| 2:40 | Story 8: Draft, then type a name and reason, Approve; open "The query behind the button" | On that day no known failure mode fit, because the ranking only uses modes known before the date. So the agent drafts one, with its evidence linked in the graph. It cannot approve it: there is no such tool. A person decides, and who, when and why are written to the graph. |
+| 3:00 | Story 9: Cypher, timings, the bug note | Everything here is FalkorDB: multi-hop joins, variable-length paths, shortest paths, full-text search, and date windows that hide everything after the investigation date. Most answers come back in tens of milliseconds. We even found a bug in string range indexes on the way. Black Box: warning signs in maintenance records, before the accident. |
 
 ## After recording
 

@@ -39,7 +39,7 @@ Last updated: Oct 17, morning (Manish).
 | # | Question | Options | Recommendation | Decides | By |
 |---|---|---|---|---|---|
 | D1 | Live deployment? The rules prefer one. | Checked Oct 17: FalkorDB Cloud free = 100 MB RAM (our graph ~200 MB, ~520 MB process), stopped after 1 idle day, deleted after 7: does not fit. Hugging Face Docker Spaces now need PRO ($9/month; our HF account has none). B: Tailscale Funnel from the home PC: free, stable https URL, but the PC must stay on Oct 19–22 (power cut on Oct 17 morning). C: video plus the verified local setup. | B with C as the fallback, if Manish is OK exposing the PC (production build, auto-restart units); otherwise C. | Manish | Oct 17 noon |
-| D2 | Keep entering Track 3 (Company Brain)? | Keep (3 teams, 15 engineers, 2 task cards today), deepen it, or drop it. | Enter Tracks 1 and 2 only, unless someone deepens Track 3 by Oct 17. A thin entry can read as overclaiming. | Both | Oct 17 |
+| D2 | Keep entering Track 3 (Company Brain)? | Keep (3 teams, 15 engineers, 2 task cards today), deepen it, or drop it. | Enter Tracks 1 and 2 only, unless someone deepens Track 3 by Oct 17. A thin entry can read as overclaiming. Track 2 is stronger since Oct 17 (run log + `past_investigations`). | Both | Oct 17 |
 | D3 | Who records and voices the video? | Manish or divyam2356 records; Claude can build a captioned screen capture. | One of us voices it (rule 13 favours visible human work); follow `docs/DEMO.md`. | Both | Oct 16 |
 | D4 | Blog post for the AirPods side prize? | Write it, or skip. | Write it in our own words; `docs/BLOG.md` is an AI draft and must not be submitted as is. Lead with the backtest result. | divyam2356 | Oct 17 |
 | D5 | Who owns what from here (below)? | | Confirm or change the proposed owners. | Both | Oct 16 |
@@ -53,7 +53,7 @@ Manish works with Claude Code; divyam2356 with their own tools.
 - [ ] divyam2356: run it locally from the README, then walk the Story and the Board. Note anything unclear.
 - [ ] divyam2356: research D1. FalkorDB Cloud free tier limits, and where to host the Next app. Note that the
       live agent spawns the MCP server as a child process; Recorded and Scripted modes don't need a model key.
-- [ ] Manish: re-check the rules page and Discord for judging criteria and changes; record them here.
+- [x] Rules page re-checked Oct 17 09:30 IST (Claude): same 18 rules, judging criteria still unpublished. Discord not checked (needs Manish's login).
 - [ ] Manish: decide D3; do a practice run of the video script.
 
 **Oct 17**
