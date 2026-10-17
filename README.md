@@ -122,6 +122,7 @@ npm run backtest -w services/eval -- --days=365 --gap=7 --out=$PWD/apps/web/publ
 | `Location` | 8,483 | hierarchy: model + ATA chapter (zone) → stringer line → 20-inch body-station bin |
 | `System` | 46 | ATA chapters |
 | `FixOrder` | 2 | AD 2011-08-51, superseded by AD 2015-16-08 |
+| `Document`, `Section` | 3, 44 | real public documents about Southwest 812: the emergency AD 2011-08-51 (14 sections), the AD that supersedes it (17) and NTSB brief AAB-13/02 (13); text verbatim, dated by the document |
 | `FailureMode` | 4 | 3 seeded (each with a sourced `known_from` date), 1 drafted by the agent and waiting for a person |
 | `Investigation` | grows | the run log: one per investigation (model or scripted method, investigation date, leads), written by the harness |
 
@@ -130,6 +131,7 @@ npm run backtest -w services/eval -- --days=365 --gap=7 --out=$PWD/apps/web/publ
 (Report)-[:AT]->(Location)-[:WITHIN]->(Location)        bin -> line -> zone
 (Finding)-[:AT]->(Location)   (Location|Finding)-[:IN_SYSTEM]->(System)   (Aircraft)-[:IS_A]->(Model)
 (FixOrder)-[:TARGETS]->(Location)   (FixOrder)-[:SUPERSEDES]->(FixOrder)
+(Document)-[:HAS_SECTION]->(Section)-[:ABOUT]->(Location)   (Document)-[:DESCRIBES]->(FixOrder|Accident)
 written by the agent:  (Report)-[:PRECURSOR_OF]->(Accident)   (Report|Accident)-[:EVIDENCE_FOR]->(FailureMode)
 run log (harness):     (Investigation)-[:ABOUT]->(Accident)   (Investigation)-[:KEPT {confidence, reason}]->(Report)
 ```
@@ -154,10 +156,11 @@ matched every row (1,000 instead of 198 in our repro). We dropped the date index
 
 ### MCP server and agent
 
-- `packages/mcp-server`: 23 domain tools, each a fixed Cypher query with typed arguments.
+- `packages/mcp-server`: 24 domain tools, each a fixed Cypher query with typed arguments.
   Read tools include `past_investigations`, `get_accident`, `prior_reports`, `fleet_reports`,
-  `explain_path` and `similar_reports`; write tools include `record_precursor` and
-  `propose_failure_mode`. There is no approve tool.
+  `explain_path`, `similar_reports` and `cite_documents` (the paragraphs of the loaded ADs and
+  the NTSB brief that name a location, dated before asOf); write tools include `record_precursor`
+  and `propose_failure_mode`. There is no approve tool.
 - **Two agents, one hand-off, through the graph:** on the Board, *Watch the fleet* runs the
   watcher at the slider date: `hotspots` ranks fuselage lines by the rise in skin-crack reports,
   and `raise_alert` stores an `Alert` on the top three, linked to every aircraft behind it. The
@@ -203,6 +206,7 @@ npm run graph:indexes
 npm run ingest:ntsb           # 4,235 events (~10 s)
 npm run ingest:reports        # 225,627 reports (~35 s, ~600 MB in FalkorDB)
 npm run ingest:fixorders && npm run seed:modes && npm run org:gen
+npm run ingest:documents      # 3 documents, 44 sections (the two S-4L ADs + NTSB brief AAB-13/02)
 npm run remember -w packages/agent   # the recorded Nemotron run, into the run log
 npm run dev                   # http://localhost:3001 (Board) and /story
 npm run backtest -w services/eval
@@ -237,7 +241,7 @@ apps/web/               Next.js UI: Board (/), Story (/story), API routes (agent
 packages/graph/         FalkorDB client, all Cypher (queries/cypher.ts), indexes, schema
 packages/mcp-server/    MCP server: the only way the agent touches the graph
 packages/agent/         Agent loop on OpenRouter (agent.ts), recorder (record.ts), CLI flows
-services/ingest/        NTSB, FAA reports, fix orders, seed failure modes
+services/ingest/        NTSB, FAA reports, fix orders, documents (real AD texts + NTSB brief), seed modes
 services/eval/          backtest.ts (the evaluation), all.ts (SWA 812 regression checks)
 services/org-generator/ Northwind Aero, the fictional maintenance company (synthetic: true)
 docs/                   DEFENSE (judge Q&A prep), DEMO (video script), FLOWS, EVALUATION
