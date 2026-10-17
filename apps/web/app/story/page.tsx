@@ -219,7 +219,8 @@ function AskIt() {
   const [sub, setSub] = useState<SubRow[]>([]);
   const [open, setOpen] = useState<Open | null>(null);
   const keysJson = JSON.stringify(steps.reduce<Keys>((k, s) => {
-    if (s.type === "tool_result") for (const f of Object.keys(k) as Array<keyof Keys>) for (const v of s.keys[f]) if (!k[f].includes(v)) k[f].push(v);
+    // older replays carry fewer key fields, so guard each one
+    if (s.type === "tool_result") for (const f of Object.keys(k) as Array<keyof Keys>) for (const v of s.keys?.[f] ?? []) if (!k[f].includes(v)) k[f].push(v);
     return k;
   }, { accidents: [], reports: [], aircraft: [], locations: [], fixorders: [], modes: [], alerts: [], workorders: [] }));
   useEffect(() => {
@@ -231,7 +232,7 @@ function AskIt() {
   const binCalls = new Set(steps.flatMap((s) => (s.type === "tool_call" && s.name === "prior_reports" && s.args.bin ? [s.id] : [])));
   const kept = new Set(steps.flatMap((s) => (s.type === "tool_call" && s.name === "record_precursor" ? [String(s.args.reportId)] : s.type === "tool_result" && binCalls.has(s.id) ? s.keys.reports : [])));
   const answer = [...steps].reverse().find((s) => s.type === "answer");
-  const openId = (id: string) => { const row = sub.find((r) => nodeKey(r.node) === id); setOpen(row ? { kind: "node", node: row.node } : { kind: "missing", id }); };
+  const openId = (id: string) => { const row = sub.find((r) => nodeKey(r.node) === id); setOpen(row ? { kind: "node", node: row.node, asOf: SWA812.date } : { kind: "missing", id }); };
   return (
     <>
       <div className="story-text story-text-wide">
@@ -241,7 +242,7 @@ function AskIt() {
         <AgentPanel asOf={SWA812.date} steps={steps} onStep={(s) => setSteps((p) => [...p, s])} onReset={() => setSteps([])} onOpen={openId} hideAnswer />
       </div>
       <div className="story-visual">
-        <EvidenceGraph rows={sub} kept={kept} focus={open?.kind === "node" ? nodeKey(open.node) : null} onNode={(node) => setOpen({ kind: "node", node })} />
+        <EvidenceGraph rows={sub} kept={kept} focus={open?.kind === "node" ? nodeKey(open.node) : null} onNode={(node) => setOpen({ kind: "node", node, asOf: SWA812.date })} />
       </div>
       {answer && <AnswerBar text={answer.text} onOpen={openId} />}
       <RecordDrawer open={open} onClose={() => setOpen(null)} />

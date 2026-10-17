@@ -62,7 +62,8 @@ export default function Board() {
   // Every key a tool result touched, accumulated; the evidence graph is their subgraph.
   const keys = useMemo(() => {
     const k: Keys = { accidents: [], reports: [], aircraft: [], locations: [], fixorders: [], modes: [], alerts: [], workorders: [] };
-    for (const s of steps) if (s.type === "tool_result") for (const f of Object.keys(k) as Array<keyof Keys>) for (const v of s.keys[f]) if (!k[f].includes(v)) k[f].push(v);
+    // older replays carry fewer key fields, so guard each one
+    for (const s of steps) if (s.type === "tool_result") for (const f of Object.keys(k) as Array<keyof Keys>) for (const v of s.keys?.[f] ?? []) if (!k[f].includes(v)) k[f].push(v);
     return k;
   }, [steps]);
   const keysJson = JSON.stringify(keys);
@@ -79,7 +80,7 @@ export default function Board() {
   }, [steps]);
   const openId = (id: string) => {
     const row = sub.find((r) => nodeKey(r.node) === id || r.node.properties.id === id);
-    if (row) return setOpen({ kind: "node", node: row.node });
+    if (row) return setOpen({ kind: "node", node: row.node, asOf });
     if (parseKey(id)?.station !== undefined) return openCell(id);
     setOpen({ kind: "missing", id });
   };
@@ -142,7 +143,7 @@ export default function Board() {
           <AgentPanel asOf={asOf} steps={steps} onStep={(s) => setSteps((p) => [...p, s])} onReset={() => setSteps([])} onOpen={openId} autorun={autorun} hideAnswer showSteps={false} />
           <section aria-labelledby="graph-title">
             <h2 id="graph-title" className="panel-title">Evidence graph <small>{sub.length ? `${sub.length} nodes this run touched` : ""}</small></h2>
-            <EvidenceGraph rows={sub} kept={kept} focus={open?.kind === "node" ? nodeKey(open.node) : null} onNode={(node) => setOpen({ kind: "node", node })} />
+            <EvidenceGraph rows={sub} kept={kept} focus={open?.kind === "node" ? nodeKey(open.node) : null} onNode={(node) => setOpen({ kind: "node", node, asOf })} />
           </section>
         </div>
         <StepsGrid steps={steps} onOpen={openId} hideAnswer lifts={liftByLine} />
