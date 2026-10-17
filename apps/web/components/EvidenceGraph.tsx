@@ -108,7 +108,7 @@ export function EvidenceGraph({ rows, kept, focus, onNode }: { rows: SubRow[]; k
             </g>
           );
         })}
-        {!g.nodes.length && <text x={x0 + (W * k) / 2} y={y0 + (H * k) / 2} textAnchor="middle" fontSize={13} className="nlabel">The records the agent touches appear here, joined by their edges.</text>}
+        {!g.nodes.length && <text x={x0 + (W * k) / 2} y={y0 + (H * k) / 2} textAnchor="middle" fontSize={13} className="nlabel">Records the run touches appear here, with their edges.</text>}
       </svg>
       <div className="glegend">
         {["Accident", "Report", "Aircraft", "Location", "Finding", "FixOrder", ...["Alert", "WorkOrder"].filter((l) => g.nodes.some((n) => n.label === l))].map((l) => (

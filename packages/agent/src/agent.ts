@@ -90,7 +90,7 @@ async function call(c: Client, name: string, args: Record<string, unknown>, asOf
     type: "tool_result", id, name, ms: Date.now() - t0, isError: Boolean(res.isError),
     rows: Array.isArray(data) ? data.length : data ? 1 : 0, preview: preview(data), keys: keysFrom(name, args, data),
   });
-  return { text, data };
+  return { text, data, isError: Boolean(res.isError) };
 }
 
 type Msg = { role: string; content: string | null; tool_calls?: Array<{ id: string; function: { name: string; arguments: string } }>; tool_call_id?: string };
@@ -188,17 +188,25 @@ async function complete(body: Record<string, unknown>, emit: Emit): Promise<{ mo
   }
 }
 
-/** One MCP session for a fixed method (no model): `go` calls a tool with the time machine enforced. */
+/** One MCP session for a fixed method (no model): `go` calls a tool with the time machine enforced.
+ *  A tool error (e.g. a query timeout) stops the method: a fixed sequence cannot work around it,
+ *  and reading the error as "no rows" would give a wrong answer. */
 async function fixedMethod(asOf: string, emit: Emit, prefix: string) {
   const c = await mcp();
   const { tools } = await c.listTools();
   const schemas = new Map(tools.map((t) => [t.name, t.inputSchema as Record<string, unknown>]));
   let n = 0;
-  return (name: string, args: Record<string, unknown>) => call(c, name, args, asOf, emit, `${prefix}${++n}`, schemas);
+  return async (name: string, args: Record<string, unknown>) => {
+    const r = await call(c, name, args, asOf, emit, `${prefix}${++n}`, schemas);
+    if (r.isError) throw new Error(`${name}: ${r.text}`);
+    return r;
+  };
 }
 const day = (iso: string) => new Date(iso + "T00:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
 /** "737/53/S4L" -> "S-4L" */
 const stringer = (bin: string) => bin.split("/")[2]?.replace(/^S(\d+)([LR])$/, "S-$1$2") ?? bin;
+/** ["a", "b", "c"] -> "a, b and c" */
+const and = (xs: string[]) => (xs.length > 1 ? `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}` : xs[0] ?? "");
 
 /** The same method with no model: a fixed tool sequence for one accident. Labelled "scripted" in the UI. */
 export async function runScripted(evId: string, asOf: string, emit: Emit, opts: { draft?: boolean } = {}): Promise<void> {
@@ -220,24 +228,23 @@ export async function runScripted(evId: string, asOf: string, emit: Emit, opts: 
   if (prior?.[0]) await go("explain_path", { from: prior[prior.length - 1].id, to: evId });
   const what = (p: { part?: string; condition?: string }) => [p.part, p.condition].filter(Boolean).join(" ").toLowerCase() || "a report";
   const parts = prior?.length
-    ? [`${acc.tail} had ${prior.length === 1 ? "one report" : `${prior.length} reports`} at ${line} in the two years before ${day(asOf)}: ${prior.map((p) => `${p.id} (${what(p)}, ${day(p.date)})`).join(", ")}.`]
+    ? [`${acc.tail} had ${prior.length === 1 ? "one report" : `${prior.length} reports`} on ${line} in the two years before ${day(asOf)}: ${prior.map((p) => `${p.id} (${what(p)}, ${day(p.date)})`).join(", ")}.`]
     : [`No reports on ${acc.tail} at ${line ?? "the finding's location"} in the two years before ${day(asOf)}.`];
-  if (fleet?.aircraft) parts.push(`Across the fleet, ${fleet.aircraft} ${acc.family}s reported trouble on that line in the three years before.`);
-  parts.push(orders.length ? `${orders.length} fix order(s) already covered it.` : "No fix order covered that line yet.");
+  const cover = orders.length ? `${orders.length} fix order${orders.length === 1 ? "" : "s"} already covered it` : "no fix order covered it yet";
+  parts.push(fleet?.aircraft ? `Across the fleet, ${fleet.aircraft} ${acc.family}s reported trouble on that line in the three years before, and ${cover}.` : `${cover[0].toUpperCase()}${cover.slice(1)}.`);
   // memory across sessions: compare with what the latest judged run kept
   const judged = past.find((p) => p.kept?.length);
   if (judged) {
     const same = judged.kept.every((k) => prior?.some((p) => p.id === k.report));
     const who = judged.model?.split("/").pop()?.replace(/:free$/, "") ?? judged.mode;
-    parts.push(`An earlier run (${who}, run on ${day(judged.run_at.slice(0, 10))}) kept ${judged.kept.map((k) => `${k.report} (confidence ${k.confidence})`).join(", ")}; ${same ? "this run finds the same reports" : "this run's reports differ"}.`);
+    const conf = [...new Set(judged.kept.map((k) => k.confidence))];
+    const kept = conf.length === 1 ? `${and(judged.kept.map((k) => k.report))} at confidence ${conf[0]}` : and(judged.kept.map((k) => `${k.report} (confidence ${k.confidence})`));
+    parts.push(`An earlier run (${who}, ${day(judged.run_at.slice(0, 10))}) kept ${kept}; ${same ? "this run found the same reports" : "this run found different ones"}.`);
   } else if (past.length) parts.push(`${past.length} earlier run${past.length === 1 ? "" : "s"} on this accident, none with judged reports yet.`);
   if (prior?.length && line) {
-    // Decisive but non-causal: rank what to inspect first by evidence strength.
-    // Never a probability of causation — the NTSB determines causes.
-    const sameTail = `${prior.length} same-tail report${prior.length === 1 ? "" : "s"}`;
-    const fleetEv = fleet?.aircraft ? ` and ${fleet.aircraft} fleet aircraft` : "";
-    const coverage = orders.length ? "a fix order exists, so check compliance first" : "no fix order covers it";
-    parts.push(`Leads worth review: inspect ${line} first (${sameTail}${fleetEv} on that line; ${coverage}).`);
+    // Decisive but non-causal: what to inspect first, never a probability of causation
+    // (the NTSB determines causes). The reasons are the sentences above.
+    parts.push(orders.length ? `Leads worth review: check compliance with the fix order on ${line} first.` : `Leads worth review: inspect ${line} first.`);
   }
   if (opts.draft && prior?.length && line) {
     // the method's last step: does a mode known before asOf fit? If not, check the
@@ -272,9 +279,10 @@ export async function runWatch(asOf: string, emit: Emit, top = 3): Promise<void>
     if (Array.isArray(r) && r.length) raised.push({ ...h, status: String((r[0] as { status?: string }).status ?? "open") });
   }
   const done = raised.filter((h) => h.status !== "open");
+  const lines = raised.map((h, i) => `${stringer(h.bin)} (${h.ac}${i ? "" : " aircraft"}, up from ${h.ac_prev}${i ? "" : " the year before"})`);
   emit({ type: "answer", text: raised.length
-    ? `Watching 737 fuselage skin cracks on ${day(asOf)}: alerts on ${raised.map((h) => `${stringer(h.bin)} (${h.ac} aircraft, up from ${h.ac_prev})`).join(", ")}.${done.length ? ` Already handled: ${done.map((h) => `${stringer(h.bin)} (${h.status})`).join(", ")}.` : ""} Leads worth review, not predictions: most rising lines turn out to be routine. Hand an alert to the investigator to act on it.`
-    : `Watching 737 fuselage skin cracks on ${day(asOf)}: no line rose enough to raise an alert.` });
+    ? `Skin-crack alerts on 737 fuselages, ${day(asOf)}: ${and(lines)}.${done.length ? ` Already handled: ${done.map((h) => `${stringer(h.bin)} (${h.status})`).join(", ")}.` : ""} Most rising lines turn out to be routine, so these are leads, not predictions.`
+    : `No fuselage line's skin-crack reports rose enough for an alert on ${day(asOf)}.` });
 }
 
 /** The investigator, handed an alert: who is behind it (widened to any crack on that line),
@@ -294,16 +302,16 @@ export async function runAlert(alertId: string, asOf: string, emit: Emit): Promi
   const covered = Array.isArray(orders) && orders.length > 0;
   const line = stringer(al.bin);
   const first = named.slice(0, 3).map((r) => r.tail).join(", ");
-  const task = `Inspect the ${line} lap joint: the ${named.length} aircraft with skin-crack reports first (${first}${named.length > 3 ? " and others" : ""}), then the ${wider.length} with other crack reports on that line.`;
+  const task = `Inspect ${line}: first the ${named.length} aircraft with skin-crack reports (${first}${named.length > 3 ? ` and ${named.length - 3} more` : ""})${wider.length ? `, then the ${wider.length} with other cracks on that line` : ""}.`;
   const wo = ((await go("create_work_order", { alertId, team: "Structures", task })).data as Array<{ id: string }> | null)?.[0];
-  const kinds = [...new Set(wider.flatMap((w) => w.what ?? []))].slice(0, 3).join(", ");
+  const kinds = and([...new Set(wider.flatMap((w) => w.what ?? []))].slice(0, 3));
+  const cover = covered ? "a fix order already covers it, so check compliance first" : "no fix order covers it yet";
+  // the task itself is on the work order card below the answer, so it is not repeated here
   emit({ type: "answer", text: [
-    `Alert on ${al.bin} (${day(al.asOf)}): ${named.length} aircraft reported skin cracks on ${line} in the 12 months before.`,
-    wider.length ? `Widening to any crack on that line adds ${wider.length} aircraft (${kinds}).` : "No other crack reports on that line.",
-    fleet?.aircraft ? `Over three years, ${fleet.aircraft} aircraft reported trouble on ${line}.` : "",
-    covered ? "A fix order already covers it, so check compliance first." : `No fix order covers ${line} yet.`,
-    `Leads worth review: ${task}`,
-    wo ? `Work order drafted for the Structures team; a person dispatches it.` : "",
+    `Alert on ${al.bin} (${day(al.asOf)}): ${named.length} aircraft reported skin cracks there in the 12 months before.`,
+    wider.length ? `Counting any crack on that line adds ${wider.length} more (${kinds}).` : "No other crack reports on that line.",
+    fleet?.aircraft ? `Over three years, ${fleet.aircraft} aircraft reported trouble there, and ${cover}.` : `${cover[0].toUpperCase()}${cover.slice(1)}.`,
+    wo ? "A draft work order for the Structures team is below; only a person can dispatch it." : "",
   ].filter(Boolean).join(" ") });
 }
 

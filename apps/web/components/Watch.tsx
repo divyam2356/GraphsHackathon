@@ -19,7 +19,7 @@ export function WatchButton({ asOf, busy, onWatch }: { asOf: string; busy: boole
   return (
     <div className="watch-row">
       <button className="go" onClick={onWatch} disabled={busy}>{busy ? "Working" : "Watch the fleet"}</button>
-      <p className="caption">The watcher ranks fuselage lines by how fast skin-crack reports rose in the 12 months before {fmtDate(asOf)} and raises an alert on the top three. The alerts are stored in the graph, where the investigator picks them up.</p>
+      <p className="caption">The watcher flags the three stringer lines where skin-crack reports rose fastest in the 12 months before {fmtDate(asOf)}, and saves an alert for each in the graph for the investigator to pick up.</p>
     </div>
   );
 }
@@ -39,17 +39,17 @@ export function WatchActions({ steps, busy, onHandOff }: { steps: Step[]; busy: 
     const j = await r.json();
     if (!r.ok) return setErr(j.error);
     const who = by.trim() || "presenter";
-    setDone({ id: order?.id ?? id, cypher: j.cypher, text: decision === "dispatch" ? `Dispatched by ${who} to the ${j.team} team, assigned to ${j.engineer}, the engineer with the fewest open orders. The alert is marked actioned.` : `Alert dismissed by ${who}; its draft work order is cancelled.` });
+    setDone({ id: order?.id ?? id, cypher: j.cypher, text: decision === "dispatch" ? `Dispatched by ${who}. Assigned to ${j.engineer} (${j.team}), who had the fewest open orders. The alert is closed as actioned.` : `Dismissed by ${who}. The draft work order is cancelled.` });
   }
 
   if (order) {
     const settled = done?.id === order.id;
     return (
       <article className="mode-card order-card" aria-live="polite">
-        <p className="mode-kind">Work order, drafted by the investigator through MCP, waiting for a person</p>
+        <p className="mode-kind">Draft work order from the investigator</p>
         <h2>{order.team}: inspection</h2>
         <p className="mode-mech">{order.task}</p>
-        <p className="caption">Linked in the graph to the alert, the line and the {order.aircraft} aircraft it names. The company is fictional (synthetic: true); the reports are real.</p>
+        <p className="caption">Saved in the graph, linked to the alert, the line and the {order.aircraft} aircraft it names. The teams and engineers are made up; the reports are real.</p>
         {!settled ? (
           <div className="decide">
             <label>Your name<input value={by} onChange={(e) => setBy(e.target.value)} placeholder="Reviewer" /></label>
@@ -69,7 +69,7 @@ export function WatchActions({ steps, busy, onHandOff }: { steps: Step[]; busy: 
   if (!alerts.length) return null;
   return (
     <div className="handoff">
-      <p className="caption">Open alerts, dated {fmtDate(alerts[0].asOf)}. Hand one to the investigator:</p>
+      <p className="caption">Hand an alert to the investigator:</p>
       {alerts.map((a) => a.status === "open"
         ? <button key={a.id} className="ghost" disabled={busy} onClick={() => onHandOff(a.id)}>{short(a.bin)}, {a.aircraft} aircraft</button>
         : <span key={a.id} className="caption">{short(a.bin)}: already {a.status}</span>)}

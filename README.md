@@ -137,7 +137,8 @@ matched every row (1,000 instead of 198 in our repro). We dropped the date index
 - **Memory across sessions:** the harness logs every run as an `Investigation` node, and each
   report the model keeps as a `KEPT` edge with its confidence and reason. The next run starts
   with `past_investigations` and says whether it agrees ("An earlier run (nemotron-3-super,
-  run on 15 October 2026) kept SWAA101400, SWAA101399; this run finds the same reports").
+  15 October 2026) kept SWAA101400 and SWAA101399 at confidence 0.8; this run found the same
+  reports").
   Only runs dated on or before the investigation date are visible. Approved failure modes are
   the longer-term memory: confirmed modes rank later investigations (`rank_failure_modes`).
 - `packages/agent`: a tool-calling loop over that MCP server, on OpenRouter. Default model

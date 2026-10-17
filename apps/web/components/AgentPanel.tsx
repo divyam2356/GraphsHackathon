@@ -77,10 +77,11 @@ export function AgentPanel({ asOf, steps, onStep, onReset, onOpen, replayUrl = "
           <button type="submit" className="go" disabled={busy}>{busy ? "Investigating" : "Investigate"}</button>
         </div>
         <p className="ask-note">
-          {mode === "agent" && live?.live && <>The model ({live.model}, free tier) picks MCP tools itself; free models can take minutes. </>}
+          {mode === "agent" && live?.live && <>{live.model} (free tier) picks the MCP tools itself. Free models can take a few minutes. </>}
           {mode === "scripted" && <>The same MCP tools in a fixed order, with no model. </>}
-          {mode === "recorded" && replay && <>A real {replay.mode === "agent" ? `run of ${replay.model}` : "scripted run"}, saved {new Date(replay.recorded).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} and replayed faster. </>}
-          It sees records before {fmtDate(asOf)}.
+          {mode === "recorded" && replay
+            ? <>A real {replay.mode === "agent" ? `run of ${replay.model}` : "scripted run"}, saved {new Date(replay.recorded).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} and replayed faster. It saw records before {fmtDate(replay.asOf)}.</>
+            : <>It sees records before {fmtDate(asOf)}.</>}
         </p>
       </form>
 
@@ -150,7 +151,7 @@ function StepsList({ rows, kept, lifts, onOpen }: { rows: Row[]; kept: Map<strin
             </li>
           );
         })}
-        {!cards.length && !notes.length && <li className="step-empty"><span className="step-n" aria-hidden="true"></span><div className="step-body"><p>Press Investigate. Each tool call appears here with the query behind it, and the records it touches join the evidence graph.</p></div></li>}
+        {!cards.length && !notes.length && <li className="step-empty"><span className="step-n" aria-hidden="true"></span><div className="step-body"><p>Press Investigate. Each tool call appears here with its Cypher query.</p></div></li>}
       </ol>
     </>
   );

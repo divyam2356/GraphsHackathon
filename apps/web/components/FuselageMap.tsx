@@ -154,7 +154,7 @@ export function FuselageMap({ cells, lines = [], pins = [], pinLabel, alerts = [
         })}
         <text x={L + MAPW + GAP} y={T + MAPH + 15} fontSize={10}>0</text>
         <text x={L + MAPW + GAP + BARW} y={T + MAPH + 15} fontSize={10} textAnchor="end">{acMax}</text>
-        <text x={L + MAPW + GAP} y={T + MAPH + 30} fontSize={9.5}>Tick: the year before</text>
+        <text x={L + MAPW + GAP} y={T + MAPH + 30} fontSize={9.5}>Tick: a year earlier</text>
       </svg>
       {tip && <div className="tip" style={{ left: tip.x, top: tip.y }}>{tip.body}</div>}
     </div>

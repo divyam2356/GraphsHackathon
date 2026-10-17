@@ -2,10 +2,10 @@
  "mode": "scripted",
  "asOf": "2011-04-01",
  "question": "Southwest 812 (NTSB ev_id 20110401X24330) lost part of its fuselage skin on 1 April 2011. Were there warning signs in the maintenance records before it?",
- "recorded": "2026-10-17T04:05:16.296Z",
+ "recorded": "2026-10-17T07:53:15.156Z",
  "steps": [
   {
-   "t": 364,
+   "t": 395,
    "step": {
     "type": "tool_call",
     "id": "s1",
@@ -18,14 +18,14 @@
    }
   },
   {
-   "t": 517,
+   "t": 559,
    "step": {
     "type": "tool_result",
     "id": "s1",
     "name": "past_investigations",
-    "ms": 153,
+    "ms": 164,
     "isError": false,
-    "rows": 2,
+    "rows": 5,
     "preview": [
      {
       "id": "replay:2026-10-15T12:43:59.973Z",
@@ -48,8 +48,35 @@
       "leads": "Leads worth review: SWAA101399, SWAA101400."
      },
      {
-      "id": "52d21b43-ac4a-40a0-9970-656809ba4ed3",
-      "run_at": "2026-10-17T04:04:42.789Z",
+      "id": "e8b2c339-2e32-4172-beb7-85bf139d4cdc",
+      "run_at": "2026-10-17T07:52:54.703Z",
+      "mode": "scripted, draft",
+      "model": "fixed method, no model",
+      "asOf": "2011-04-01",
+      "kept": [],
+      "leads": "Leads worth review: inspect 737/53/S4L first. Drafted failure mode e5b6856a-6d9b-480b-ba71-c790bd193e4e (proposed) for a person to review."
+     },
+     {
+      "id": "b83cb236-c1a3-4473-bd4f-69114ebf2325",
+      "run_at": "2026-10-17T07:52:54.158Z",
+      "mode": "scripted",
+      "model": "fixed method, no model",
+      "asOf": "2011-04-01",
+      "kept": [],
+      "leads": "Leads worth review: inspect 737/53/S4L first."
+     },
+     {
+      "id": "ebc20c64-4c54-49dd-8015-0d5bb7792e0d",
+      "run_at": "2026-10-17T07:46:26.042Z",
+      "mode": "scripted",
+      "model": "fixed method, no model",
+      "asOf": "2011-04-01",
+      "kept": [],
+      "leads": "Leads worth review: inspect 737/53/S4L first (2 same-tail reports and 156 fleet aircraft on that line; no fix order covers it)."
+     },
+     {
+      "id": "9f8612a1-77f0-44f3-8ef5-e03ce3496a2e",
+      "run_at": "2026-10-17T07:45:57.655Z",
       "mode": "scripted",
       "model": "fixed method, no model",
       "asOf": "2011-04-01",
@@ -66,12 +93,14 @@
      "aircraft": [],
      "locations": [],
      "fixorders": [],
-     "modes": []
+     "modes": [],
+     "alerts": [],
+     "workorders": []
     }
    }
   },
   {
-   "t": 517,
+   "t": 559,
    "step": {
     "type": "tool_call",
     "id": "s2",
@@ -83,7 +112,7 @@
    }
   },
   {
-   "t": 519,
+   "t": 560,
    "step": {
     "type": "tool_result",
     "id": "s2",
@@ -123,12 +152,14 @@
       "737/53/S4L"
      ],
      "fixorders": [],
-     "modes": []
+     "modes": [],
+     "alerts": [],
+     "workorders": []
     }
    }
   },
   {
-   "t": 519,
+   "t": 560,
    "step": {
     "type": "tool_call",
     "id": "s3",
@@ -143,12 +174,12 @@
    }
   },
   {
-   "t": 559,
+   "t": 618,
    "step": {
     "type": "tool_result",
     "id": "s3",
     "name": "prior_reports",
-    "ms": 40,
+    "ms": 58,
     "isError": false,
     "rows": 2,
     "preview": [
@@ -183,12 +214,14 @@
       "737/53/S4L/BS620"
      ],
      "fixorders": [],
-     "modes": []
+     "modes": [],
+     "alerts": [],
+     "workorders": []
     }
    }
   },
   {
-   "t": 559,
+   "t": 618,
    "step": {
     "type": "tool_call",
     "id": "s4",
@@ -203,12 +236,12 @@
    }
   },
   {
-   "t": 634,
+   "t": 726,
    "step": {
     "type": "tool_result",
     "id": "s4",
     "name": "fleet_reports",
-    "ms": 75,
+    "ms": 108,
     "isError": false,
     "rows": 1,
     "preview": [
@@ -236,12 +269,14 @@
       "737/53/S4L"
      ],
      "fixorders": [],
-     "modes": []
+     "modes": [],
+     "alerts": [],
+     "workorders": []
     }
    }
   },
   {
-   "t": 634,
+   "t": 726,
    "step": {
     "type": "tool_call",
     "id": "s5",
@@ -255,12 +290,12 @@
    }
   },
   {
-   "t": 636,
+   "t": 727,
    "step": {
     "type": "tool_result",
     "id": "s5",
     "name": "fix_orders",
-    "ms": 2,
+    "ms": 1,
     "isError": false,
     "rows": 0,
     "preview": [],
@@ -273,12 +308,14 @@
       "737/53/S4L"
      ],
      "fixorders": [],
-     "modes": []
+     "modes": [],
+     "alerts": [],
+     "workorders": []
     }
    }
   },
   {
-   "t": 636,
+   "t": 727,
    "step": {
     "type": "tool_call",
     "id": "s6",
@@ -292,12 +329,12 @@
    }
   },
   {
-   "t": 637,
+   "t": 729,
    "step": {
     "type": "tool_result",
     "id": "s6",
     "name": "explain_path",
-    "ms": 1,
+    "ms": 2,
     "isError": false,
     "rows": 1,
     "preview": [
@@ -331,15 +368,17 @@
      "aircraft": [],
      "locations": [],
      "fixorders": [],
-     "modes": []
+     "modes": [],
+     "alerts": [],
+     "workorders": []
     }
    }
   },
   {
-   "t": 638,
+   "t": 730,
    "step": {
     "type": "answer",
-    "text": "N632SW had 2 reports at 737/53/S4L in the two years before 1 April 2011: SWAA101400 (stringer clip cracked, 9 March 2010), SWAA101399 (stringer clip cracked, 9 March 2010). Across the fleet, 156 737s reported trouble on that line in the three years before. No fix order covered that line yet. An earlier run (nemotron-3-super-120b-a12b, run on 15 October 2026) kept SWAA101400 (confidence 0.8), SWAA101399 (confidence 0.8); this run finds the same reports. Leads worth review: inspect 737/53/S4L first (2 same-tail reports and 156 fleet aircraft on that line; no fix order covers it)."
+    "text": "N632SW had 2 reports on 737/53/S4L in the two years before 1 April 2011: SWAA101400 (stringer clip cracked, 9 March 2010), SWAA101399 (stringer clip cracked, 9 March 2010). Across the fleet, 156 737s reported trouble on that line in the three years before, and no fix order covered it yet. An earlier run (nemotron-3-super-120b-a12b, 15 October 2026) kept SWAA101400 and SWAA101399 at confidence 0.8; this run found the same reports. Leads worth review: inspect 737/53/S4L first."
    }
   }
  ]

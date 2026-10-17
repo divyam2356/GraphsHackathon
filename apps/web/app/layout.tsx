@@ -11,6 +11,8 @@ export const metadata: Metadata = { title: "Black Box", description: "Warning si
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${ui.variable} ${code.variable} ${serif.variable}`}>
+      {/* Keeps Dark Reader off: its edits break hydration, and recolouring the heat map changes what it says. */}
+      <head><meta name="darkreader-lock" /></head>
       <body>{children}</body>
     </html>
   );

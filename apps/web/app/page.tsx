@@ -109,7 +109,7 @@ export default function Board() {
           <div className="map-head">
             <h1 className="map-title" id="map-title">
               {FILTERS[filter].label} on Boeing 737 Classics
-              <small>Each cell is a location in the graph, coloured by how many aircraft reported there in the 12 months before the date below. Outlines: Southwest 812, NTSB brief AAB-13/02.</small>
+              <small>Each cell is a location node in the graph, coloured by how many aircraft reported it in the 12 months before the date below. The dashed outlines mark where Southwest 812 tore open (NTSB brief AAB-13/02).</small>
             </h1>
             <div className="seg" role="group" aria-label="Which reports">
               {(Object.keys(FILTERS) as FilterKey[]).map((k) => (
@@ -128,7 +128,7 @@ export default function Board() {
         <div className="askrow">
           <AgentPanel asOf={asOf} steps={steps} onStep={(s) => setSteps((p) => [...p, s])} onReset={() => setSteps([])} onOpen={openId} autorun={autorun} hideAnswer showSteps={false} />
           <section aria-labelledby="graph-title">
-            <h2 id="graph-title" className="panel-title">Evidence graph <small>{sub.length ? `${sub.length} nodes the investigation touched, and the edges between them` : ""}</small></h2>
+            <h2 id="graph-title" className="panel-title">Evidence graph <small>{sub.length ? `${sub.length} nodes this run touched` : ""}</small></h2>
             <EvidenceGraph rows={sub} kept={kept} focus={open?.kind === "node" ? nodeKey(open.node) : null} onNode={(node) => setOpen({ kind: "node", node })} />
           </section>
         </div>
