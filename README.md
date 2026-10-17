@@ -240,7 +240,7 @@ packages/agent/         Agent loop on OpenRouter (agent.ts), recorder (record.ts
 services/ingest/        NTSB, FAA reports, fix orders, seed failure modes
 services/eval/          backtest.ts (the evaluation), all.ts (SWA 812 regression checks)
 services/org-generator/ Northwind Aero, the fictional maintenance company (synthetic: true)
-docs/                   GRAPH_MODEL, FLOWS (the original plan), DEFENSE, DEMO
+docs/                   DEFENSE (judge Q&A prep), DEMO (video script), FLOWS, EVALUATION
 ROADMAP.md              decisions, pending decisions and the plan to the deadline
 ```
 

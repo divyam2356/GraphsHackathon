@@ -31,6 +31,7 @@ Last updated: Oct 17, 15:00 IST (Manish + Claude). The plan for the last 29 hour
 | Oct 15 | The evaluation is the backtest over all NTSB events, reported honestly: no per-aircraft signal (0.88× chance). | A fair test, shown in Story step 5. It is stronger than single-case checks that cannot fail. |
 | Oct 15 | Leads ranking (`rank_failure_modes`) and `services/eval/src/all.ts` are not presented as evidence. | Both are built from the SWA 812 answer (seeded mode, keyword rule). |
 | Oct 16 | D6 closed: leads ranking fixed — structure + signature overlap + full-text similarity, all from the graph; verified SWA 812 rank 1 (0.8, clear), door-frame case weak. | The keyword rule could not fail and proved nothing; the fix keeps D6's recommended approach. |
+| Oct 17 | Paperwork cut: no blog post (D4; the AI draft is deleted), no separate HUMAN_LOG (the README's AI disclosure says what we did), and the superseded plan docs (MILESTONES, GRAPH_MODEL) are deleted. | Judges read the README and watch the video; the time goes to Phase 1 and the video. divyam2356 can still write a blog in their own words. (Manish) |
 | Oct 17 | Board explains itself to non-experts: hover tooltips on every aviation and graph term, a labelled case card instead of the question box, and a **3D aircraft** view whose "Unroll" lays the skin flat into the map. | Manish: viewers won't know aircraft. No free 737 model with a usable licence and internal structure was found (searched Oct 17), so the aircraft is drawn in code with three.js (MIT). (Manish + Claude) |
 | Oct 17 | Watch → investigate hand-off (Tracks 1, 2, 3): the watcher stores `Alert`s in the graph on the fastest-rising skin-crack lines; the investigator picks one up, widens it, drafts a `WorkOrder`; only a person dispatches it (UI). 23 MCP tools. | Track 1 asks for actions based on what the graph shows, Track 2 for shared state and hand-offs between agents; `who_fixed` (Track 3) had no data before. (Manish + Claude) |
 | Oct 17 | Memory across sessions (Track 2): the harness logs every run as an `Investigation` (`ABOUT` the accident, `KEPT` reports with confidence); new MCP tool `past_investigations`, called first. The recorded Nemotron run is imported (`npm run remember -w packages/agent`). | Track 2 asks for memory that persists across sessions; before this, judgments were overwritten and never read back. (Manish + Claude) |
@@ -43,7 +44,6 @@ Last updated: Oct 17, 15:00 IST (Manish + Claude). The plan for the last 29 hour
 | D1 | Live deployment? The rules prefer one. | Modal, tested Oct 17: a web endpoint runs FalkorDB + the app with no card, on the free $30/month credit. **Warm** (always on, about $5 through Oct 23, inside the credit) or **sleep when idle** (about $0–1; the first visit waits 10–20 s). Fallback: video plus the verified local setup. FalkorDB Cloud free (100 MB) and Hugging Face Spaces (PRO only) don't fit. | Modal, warm, until judging ends. Nothing is deployed until Manish says yes. | Manish | Oct 18, 12:00 |
 | D2 | Which tracks? | Rules allow any or all; each one entered must be named at submission. | **Decided Oct 17 (Manish): Tracks 1 and 3.** Open: also name Track 2? Memory across sessions and the watcher → investigator hand-off are its key focus items, and entering costs nothing. | Manish | Oct 17 |
 | D3 | Who voices the video? | Manish, divyam2356, or an AI voice (ElevenLabs; the rules don't forbid it). | One of us. Rule 13 can reject projects without visible human contribution, and a human voice is the cheapest proof we understand it. | Both | Oct 17 |
-| D4 | Blog post for the side prize? | Write it, or skip. | Optional. In our own words; `docs/BLOG.md` is an AI draft and must not be submitted as is. | divyam2356 | Oct 18 |
 
 ## Plan to the deadline
 
@@ -66,10 +66,9 @@ all made up; Track 3 asks for "knowledge from docs" and "answers with clear sour
       (fixed Cypher, like the other tools).
 - [ ] Show a location's cited sections in the record drawer.
 - Files: new `services/ingest/src/documents.ts`, appended entries in `cypher.ts` and `tools.ts`,
-  `apps/web/components/RecordDrawer.tsx`. Leave `packages/agent/` to Manish (he wires the tool in).
+  `apps/web/components/RecordDrawer.tsx`. Leave `packages/agent/` to Manish, who wires the tool in.
 - Done when: `cite_documents` for `737/53/S4L` returns nothing at 2011-04-01 (no AD yet) and the
   AD 2011-08-51 inspection paragraph at 2011-05-01; screenshot of the drawer.
-- [ ] Optional: blog draft (D4).
 
 **Manish, with Claude: Track 1 and the rest of Track 3.**
 - [ ] Same-generation fleet: the agent's fleet count uses 737 Classics only, like the map; update
@@ -107,8 +106,3 @@ all made up; Track 3 asks for "knowledge from docs" and "answers with clear sour
 - Bulk airworthiness directives from the Federal Register API (2 loaded today).
 - Making the `algo.labelPropagation` hotspot job meaningful (today it equals grouping by bin).
 - Full FAA report load for all aircraft families (1.19M rows; needs a bigger machine). This is what a fleet-level backtest across families would need.
-
-## Open questions for the organisers
-
-- Judging criteria and weights (unpublished as of Oct 15, 15:50 IST).
-- Can one project win more than one track?

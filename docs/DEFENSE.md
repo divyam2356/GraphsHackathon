@@ -2,8 +2,7 @@
 
 Rule 12: every member must explain the graph model, queries, architecture, decisions.
 Rule 13: pure-AI output with no human contribution/verification can be rejected.
-This file is your study guide — human work (threshold tuning, data cleaning,
-approval decisions, blog rewrite) goes in HUMAN_LOG below.
+This file is your study guide. What we did ourselves is stated in the README's AI disclosure.
 
 ## 30-second pitch
 "Black Box finds warning signs before plane accidents. One FalkorDB graph holds
@@ -98,11 +97,3 @@ Say: "warning signs", "leads worth review", "inspect first."
 - `packages/agent/src/{loop.ts,scoring.ts}` — flows A/B/D/E/F, formula + decision rule
 - `services/{ingest,org-generator,eval}` — pipeline, Northwind Aero, backtests
 - `apps/web` — Board (map, time slider, agent trace, evidence graph), Story (9 steps, approval card), API routes agent/view/decide
-
-## HUMAN_LOG (rule 13 evidence — fill in as you go)
-- [ ] Thresholds (0.6/0.15/0.35) reviewed against backtests by: ___
-- [ ] Fleet counts cleaned (gouge/crease filter) by: ___
-- [ ] Approval / dormant decisions made by a human on: ___
-- [ ] Blog rewritten in own voice by: ___ (do NOT submit the AI draft verbatim)
-- [ ] Demo video recorded by: ___
-- [ ] Full ingest run + row counts verified by: ___

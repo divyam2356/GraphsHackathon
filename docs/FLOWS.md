@@ -3,8 +3,10 @@
 A. **Investigate (cause known):** accident → get_accident → prior_reports (same tail) →
    LLM keep/drop each → fleet_reports → fix_orders + explain_path → record_precursor.
    UI animates path, source on every hop.
-B. **Watch (act):** newest month reports → hotspots (distinct tails vs baseline) →
-   spikes matching confirmed SIGNATURE → Alert → inspection draft → create_work_order.
+B. **Watch (act):** at the slider date, hotspots (skin cracks: aircraft in the last 12 months vs
+   the 12 before) → raise_alert on the top 3 lines. The investigator takes one alert: open_alerts →
+   alert_aircraft (widened to any crack) → fleet_reports → fix_orders → create_work_order (a draft);
+   only a person dispatches it, in the UI.
 C. **Backtests:** see docs/EVALUATION.md.
 D. **Company brain:** why_task TC-53-041 (card→fix order→SUPERSEDES chain→accident/mode);
    who_fixed S-4L; stale_tasks (cards citing replaced orders).
