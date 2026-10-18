@@ -83,7 +83,8 @@ export function stripGovernmentHtml(html: string): string {
   const t = html
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<[^>]+>/g, " ")
-    .replace(/&#(x?[0-9a-fA-F]+);/g, (_, h: string) => String.fromCharCode(parseInt(h.replace(/^x/, "0x"), 16)))
+    .replace(/&#x([0-9a-fA-F]+);/gi, (_, h: string) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (_, d: string) => String.fromCodePoint(Number(d))) // decimal: &#160; is NBSP, not U+0160
     .replace(/\s+/g, " ")
     .trim();
   const at = t.indexOf("39.13 [Amended]");

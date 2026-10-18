@@ -61,7 +61,7 @@ function Documents({ bin, asOf }: { bin: string; asOf?: string }) {
         <div key={r.id} className="doc-section">
           <p className="report-head"><b>{fmtDate(r.date, true)}</b><span>{r.kind}</span></p>
           <p className="doc-head">{r.heading} — <a href={r.url} target="_blank" rel="noreferrer">{r.doc}</a></p>
-          <blockquote className="source">{r.text}</blockquote>
+          <blockquote className="source">{r.text}{r.text.length >= 600 ? " …" : ""}</blockquote>
         </div>
       ))}
     </div>
@@ -77,6 +77,7 @@ function BinView({ binKey, args }: { binKey: string; args: Record<string, unknow
       <p className="drawer-kind">Reports at one location, 12 months to {fmtDate(String(args.asOf), true)}</p>
       <h2 className="drawer-title">{k ? `${stringerName(k.side, k.n)}, BS ${k.station}–${(k.station ?? 0) + BIN - 1}` : binKey}</h2>
       <p className="drawer-meta">{v.loading ? "Loading" : `${rows.length} reports on ${new Set(rows.map((r) => r.tail)).size} aircraft, bin_reports ${v.ms} ms`}</p>
+      <Documents bin={binKey} asOf={String(args.asOf)} />
       <ol className="reports">
         {rows.map((r) => (
           <li key={r.id}>

@@ -376,13 +376,14 @@ export const CYPHER: Record<string, string> = {
   // location or sit inside it: a line also returns sections about its bins and the other
   // way, and everything is dated (section = document date), so $asOf applies to citations:
   // on 2011-04-01 there is no AD yet; on 2011-05-01 the AD 2011-08-51 paragraphs answer.
-  // The zone is never a bridge: upward (a bin seeing its line) is one WITHIN hop and only
-  // for bins; otherwise every 53-chapter section would answer for every stringer.
+  // The zone is never a bridge: upward (a bin seeing its line) is one WITHIN hop, only
+  // for bins and only to a line (a station-only bin's parent is the zone); otherwise every
+  // 53-chapter section would answer for every stringer.
   cite_documents: `
     MATCH (t:Location {bin:$bin})
     MATCH (s:Section) WHERE s.date < $asOf
     MATCH (s)-[:ABOUT]->(loc:Location)
-    WHERE (loc)-[:WITHIN*0..2]->(t) OR (t.level = "bin" AND (t)-[:WITHIN]->(loc))
+    WHERE (loc)-[:WITHIN*0..2]->(t) OR (t.level = "bin" AND loc.level = "line" AND (t)-[:WITHIN]->(loc))
     MATCH (d:Document)-[:HAS_SECTION]->(s)
     RETURN DISTINCT d.id AS doc, d.kind AS kind, d.title AS title, d.url AS url,
       s.id AS id, s.heading AS heading, s.date AS date,
