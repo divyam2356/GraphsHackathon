@@ -430,33 +430,35 @@ export const CYPHER: Record<string, string> = {
   // link two lines of the family/chapter by CO_CRACKED when aircraft with cracks on both make a
   // Jaccard >= $minJaccard (default 0.35) of those with cracks on either, at least $minAircraft
   // (5) of them, in the 12 months before $asOf; then algo.WCC groups the linked lines and the
-  // query returns the group of $bin (a line key), direct partners first. Mirror lines are the
-  // usual partners (S-8L with S-8R): it says what to inspect together, not why lines crack.
+  // query returns the group of $bin's line (a bin key counts as its line), direct partners
+  // first. Mirror lines are the usual partners (S-8L with S-8R): it says what to inspect
+  // together, not why lines crack.
   cracks_together: `
     OPTIONAL MATCH ()-[old:CO_CRACKED]->() DELETE old
-    WITH count(*) AS _
+    WITH count(*) AS _, split($bin, '/') AS k
+    WITH k[0] + '/' + k[1] + '/' + k[2] AS target
     MATCH (line:Location {level:'line', family:$family, chapter:coalesce($chapter, '53')})
     MATCH (r:Report)-[:AT]->(:Location)-[:WITHIN*0..1]->(line)
     WHERE r.date < $asOf AND r.date >= toString(date($asOf) - duration({days: coalesce($windowDays, 365)}))
       AND r.condition CONTAINS 'CRACK'
     MATCH (r)-[:ON]->(a:Aircraft)
-    WITH DISTINCT line, a WHERE $variants IS NULL OR a.variant IN $variants
-    WITH line, collect(a) AS acs
-    WITH collect({l: line, acs: acs}) AS lines
+    WITH DISTINCT target, line, a WHERE $variants IS NULL OR a.variant IN $variants
+    WITH target, line, collect(a) AS acs
+    WITH target, collect({l: line, acs: acs}) AS lines
     UNWIND lines AS x UNWIND lines AS y
-    WITH x, y WHERE id(x.l) < id(y.l)
-    WITH x.l AS l1, y.l AS l2, size([a IN x.acs WHERE a IN y.acs]) AS both, size(x.acs) AS n1, size(y.acs) AS n2
-    WITH l1, l2, both, toFloat(both) / (n1 + n2 - both) AS jac
+    WITH target, x, y WHERE id(x.l) < id(y.l)
+    WITH target, x.l AS l1, y.l AS l2, size([a IN x.acs WHERE a IN y.acs]) AS both, size(x.acs) AS n1, size(y.acs) AS n2
+    WITH target, l1, l2, both, toFloat(both) / (n1 + n2 - both) AS jac
     WHERE both >= coalesce($minAircraft, 5) AND jac >= coalesce($minJaccard, 0.35)
     CREATE (l1)-[:CO_CRACKED {jaccard: round(jac * 100) / 100, aircraft: both, asOf: $asOf}]->(l2)
     // the new edges travel in the query: a MATCH on CO_CRACKED planned before the type existed sees none
-    WITH collect({a: l1.bin, b: l2.bin, j: round(jac * 100) / 100, n: both}) AS edges
+    WITH target, collect({a: l1.bin, b: l2.bin, j: round(jac * 100) / 100, n: both}) AS edges
     CALL algo.WCC({nodeLabels: ['Location'], relationshipTypes: ['CO_CRACKED']}) YIELD node, componentId
-    WITH edges, collect({bin: node.bin, c: componentId}) AS comp
-    WITH edges, comp, [x IN comp WHERE x.bin = $bin][0].c AS mine
+    WITH target, edges, collect({bin: node.bin, c: componentId}) AS comp
+    WITH target, edges, comp, [x IN comp WHERE x.bin = target][0].c AS mine
     UNWIND comp AS x
-    WITH edges, x WHERE x.c = mine AND x.bin <> $bin
-    WITH x.bin AS line, [e IN edges WHERE (e.a = $bin AND e.b = x.bin) OR (e.b = $bin AND e.a = x.bin)][0] AS e
+    WITH target, edges, x WHERE x.c = mine AND x.bin <> target
+    WITH x.bin AS line, [e IN edges WHERE (e.a = target AND e.b = x.bin) OR (e.b = target AND e.a = x.bin)][0] AS e
     RETURN line, e IS NOT NULL AS direct, e.j AS jaccard, e.n AS aircraft
     ORDER BY direct DESC, jaccard DESC, line`,
   // Why a decision exists: walk back from a work order (alert, team ownership, cited document

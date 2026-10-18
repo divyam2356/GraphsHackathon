@@ -125,6 +125,8 @@ npm run backtest -w services/eval -- --days=365 --gap=7 --out=$PWD/apps/web/publ
 | `Document`, `Section` | 3, 44 | real public documents about Southwest 812: the emergency AD 2011-08-51 (14 sections), the AD that supersedes it (17) and NTSB brief AAB-13/02 (13); text verbatim, dated by the document |
 | `FailureMode` | 4 | 3 seeded (each with a sourced `known_from` date), 1 drafted by the agent and waiting for a person |
 | `Investigation` | grows | the run log: one per investigation (model or scripted method, investigation date, leads), written by the harness |
+| `Alert`, `WorkOrder` | grow | the watcher's alerts and the investigator's draft work orders; only a person dispatches or dismisses |
+| `Team`, `Engineer`, `TaskCard`, `Decision` | 3, 15, 2, 1 | Northwind Aero, the made-up maintenance company (`synthetic: true`) |
 
 ```
 (Report)-[:ON]->(Aircraft)<-[:INVOLVED]-(Accident)-[:FOUND]->(Finding)
@@ -132,8 +134,14 @@ npm run backtest -w services/eval -- --days=365 --gap=7 --out=$PWD/apps/web/publ
 (Finding)-[:AT]->(Location)   (Location|Finding)-[:IN_SYSTEM]->(System)   (Aircraft)-[:IS_A]->(Model)
 (FixOrder)-[:TARGETS]->(Location)   (FixOrder)-[:SUPERSEDES]->(FixOrder)
 (Document)-[:HAS_SECTION]->(Section)-[:ABOUT]->(Location)   (Document)-[:DESCRIBES]->(FixOrder|Accident)
+(FailureMode)-[:SIGNATURE]->(Location)   (FailureMode)-[:FOR]->(Model)   (FailureMode)-[:MERGED_INTO]->(FailureMode)
 written by the agent:  (Report)-[:PRECURSOR_OF]->(Accident)   (Report|Accident)-[:EVIDENCE_FOR]->(FailureMode)
 run log (harness):     (Investigation)-[:ABOUT]->(Accident)   (Investigation)-[:KEPT {confidence, reason}]->(Report)
+hand-off:              (Alert)-[:AT]->(Location)   (Alert)-[:FOR]->(Aircraft)   (WorkOrder)-[:FROM]->(Alert)
+                       (WorkOrder)-[:AT]->(Location)   (WorkOrder)-[:ON]->(Aircraft)   (WorkOrder)-[:CITES]->(Section)
+company (synthetic):   (Team)-[:OWNS]->(System)   (Engineer)-[:MEMBER_OF]->(Team)   (Engineer)-[:ASSIGNED]->(WorkOrder)
+                       (Engineer)-[:WORKED_ON {date}]->(Location)   (TaskCard)-[:CITES]->(FixOrder)   (Decision)-[:BASED_ON]->(FixOrder)
+algorithm (per call):  (Location)-[:CO_CRACKED {jaccard, aircraft, asOf}]->(Location)   rebuilt by cracks_together
 ```
 
 The two sources were never meant to be read together. They meet at the aircraft (tail and

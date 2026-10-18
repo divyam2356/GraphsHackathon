@@ -246,7 +246,7 @@ export async function runScripted(evId: string, asOf: string, emit: Emit, opts: 
     : [`No reports on ${acc.tail} at ${line ?? "the finding's location"} in the two years before ${day(asOf)}.`];
   const cover = orders.length ? `${orders.length} fix order${orders.length === 1 ? "" : "s"} already covered it` : "no fix order covered it yet";
   parts.push(fleet?.aircraft ? `Across the fleet, ${fleet.aircraft} ${gen?.name ?? `${acc.family}s`} reported trouble on that line in the three years before, and ${cover}.` : `${cover[0].toUpperCase()}${cover.slice(1)}.`);
-  if (line && together.some((t) => t.direct)) parts.push(`On the same aircraft, cracks on ${stringer(line)} came with cracks on ${partners(together)}.`);
+  if (line && together.some((t) => t.direct)) parts.push(`Aircraft with cracks on ${stringer(line)} also had cracks on ${partners(together)}.`);
   if (line) parts.push(docs.length ? `Official documents on ${stringer(line)} by then: ${cites(docs)}.` : `No official document in the graph covers ${stringer(line)} before ${day(asOf)}.`);
   // memory across sessions: compare with what the latest judged run kept
   const judged = past.find((p) => p.kept?.length);
@@ -333,7 +333,7 @@ export async function runAlert(alertId: string, asOf: string, emit: Emit): Promi
     `Alert on ${al.bin} (${day(al.asOf)}): ${named.length} aircraft reported skin cracks there in the 12 months before.`,
     wider.length ? `Counting any crack on that line adds ${wider.length} more (${kinds}).` : "No other crack reports on that line.",
     fleet?.aircraft ? `Over three years, ${fleet.aircraft} aircraft reported trouble there, and ${cover}.` : `${cover[0].toUpperCase()}${cover.slice(1)}.`,
-    together.some((t) => t.direct) ? `On the same aircraft, cracks on ${line} come with cracks on ${partners(together)}.` : "",
+    together.some((t) => t.direct) ? `Aircraft with cracks on ${line} also had cracks on ${partners(together)}.` : "",
     docs.length ? `Official documents on ${line} by then: ${cites(docs)}.` : `No official document in the graph covers ${line} yet.`,
     wo ? `A draft work order for the ${wo.team ?? "owning"} team (it owns that part of the aircraft in the graph) is below; only a person can dispatch it.` : "",
   ].filter(Boolean).join(" ") });

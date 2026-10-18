@@ -221,7 +221,7 @@ li.step-answer { border-top: 2px solid var(--ink); padding-top: 12px; }
 .trend { display: block; width: 100%; height: auto; }
 .trend text { font-family: var(--ui); fill: var(--graphite); }
 .chart-loading { color: var(--graphite); }
-.schema { margin: 0; }
+.schema { margin: 0; min-width: 0; } /* a grid item: without it the figure grows to its 640 px scroll box on phones */
 .schema svg { display: block; width: 100%; height: auto; }
 .schema .nlabel { fill: var(--ink); font-family: var(--ui); paint-order: stroke; stroke: var(--film); stroke-width: 4px; stroke-linejoin: round; }
 .schema .elabel { fill: var(--graphite); font-family: var(--ui); paint-order: stroke; stroke: var(--film); stroke-width: 4px; stroke-linejoin: round; }
