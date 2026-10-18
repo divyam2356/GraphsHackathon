@@ -2,6 +2,8 @@
 
 **Warning signs in maintenance records, before the accident.**
 
+**[Demo video (6 min)](https://youtu.be/knjB0BusVGM)** · **[Live app](https://storagedivyam--blackbox-serve.us-east.modal.run)** (Board; the guided Story is at `/story`)
+
 Black Box joins public NTSB accident data and FAA maintenance reports in one FalkorDB graph,
 so an investigator (or an agent) can ask: before this accident, did the aircraft or its fleet
 report trouble at that spot?
@@ -216,6 +218,8 @@ matched every row (1,000 instead of 198 in our repro). We dropped the date index
 ![Story step 8: a drafted failure mode waiting for a person](docs/img/story-approval.jpg)
 
 ## Run it
+
+Or use the live app above, which runs the same graph on Modal ([deploy/README.md](deploy/README.md)).
 
 Needs Docker and Node (tested on Node 26); the data download also needs curl, unzip and
 [uv](https://docs.astral.sh/uv/).
