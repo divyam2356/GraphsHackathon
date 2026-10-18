@@ -1,7 +1,6 @@
-# Modal deployment (D1) — how to run it
+# Modal deployment: how to run it
 
-The deploy is assigned to divyam2356 (ROADMAP.md **D1**, by Oct 18, 15:00). Everything is prepared
-here; what is left is one browser login, then three commands.
+One browser login, then three commands.
 
 ## One-time setup (needs a Modal account — the free $30/month credit, no card)
 

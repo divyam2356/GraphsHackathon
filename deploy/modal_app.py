@@ -1,4 +1,4 @@
-# Black Box on Modal (D1, ROADMAP.md): one warm container runs FalkorDB + the app.
+# Black Box on Modal: one warm container runs FalkorDB + the app.
 # - The graph ships in the RDB (`deploy/dump.rdb` -> Modal Volume). No data download,
 #   no ingest at boot: redis-server loads the dump from --dir /rdb (63 MB, seconds).
 # - The API tolerates a missing .env ("explicit env wins"), so we set only FALKORDB_URL and
