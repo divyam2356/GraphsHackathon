@@ -2,8 +2,8 @@
 # - The graph ships in the RDB (`deploy/dump.rdb` -> Modal Volume). No data download,
 #   no ingest at boot: redis-server loads the dump from --dir /rdb (63 MB, seconds).
 # - The API tolerates a missing .env ("explicit env wins"), so we set only FALKORDB_URL and
-#   FALKORDB_GRAPH. No OPENROUTER_API_KEY -> the Live model mode is off on the public site
-#   (what D1 says: the recorded/scripted runs from the same URL are the demo).
+#   FALKORDB_GRAPH. The OpenRouter key comes from the Modal secret `blackbox-openrouter`, which
+#   turns Live model mode on (c1dcbd9); without it the recorded/scripted runs are the demo.
 # - Warm (min_containers=1) at 1 CPU core + 2 GiB: about $1.5 a day (~$8 through Oct 23),
 #   inside the free $30/month credit. To sleep instead, remove `min_containers=1` (a first
 #   visit then waits for the container and the Redis load, about 10-20 s).

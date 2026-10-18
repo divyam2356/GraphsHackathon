@@ -7,3 +7,4 @@ data/vectors/
 *.mdb
 *.csv
 *.tsbuildinfo
+__pycache__/
