@@ -37,8 +37,12 @@ check with `modal app list`). Open it in a private window (the Phase-2 checklist
   flags as `docker-compose.yml`) + `next start`, 1 CPU core + 2 GiB: about $1.5 a day (~$8
   through Oct 23) on the free credit.
   Remove `min_containers=1` in `modal_app.py` to sleep-when-idle (visits wait 10–20 s).
-- No secrets: the image never contains `.env`, so no OpenRouter key is published; the Live
-  model mode turns itself off and the public site runs the Recorded/Scripted/Watch runs.
+- Secrets: the image never contains `.env`. The OpenRouter key lives in Modal's secret store
+  (`modal secret create blackbox-openrouter LLM_API_KEY=sk-or-...`) and is injected at runtime
+  (the `secrets=[...]` line in `modal_app.py`), so Live model mode works on the public site.
+  Note: `openrouter/free` models cap at about 50 requests/day — the Recorded/Scripted/Watch
+  flows never call the API. To turn Live mode off publicly, delete the secret.
+  The key value is not in git or the image either way.
 - `dump.rdb` is gitignored (it is the data, not source).
 
 ## Notes

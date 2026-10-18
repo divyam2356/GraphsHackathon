@@ -53,6 +53,9 @@ image = (
     image=image,
     volumes={"/rdb": GRAPH_VOLUME},
     env={"FALKORDB_URL": "redis://127.0.0.1:6379", "FALKORDB_GRAPH": "blackbox"},
+    # the OpenRouter key lives in Modal's secret store (never in the image or git);
+    # delete the secret or drop this line to turn Live model mode off on the public site
+    secrets=[modal.Secret.from_name("blackbox-openrouter")],
     # FalkorDB holds ~390 MB with the graph loaded (docker stats, Oct 18) + next start:
     # (request, limit) pairs, billed on the request when idle
     memory=(2048, 4096),
