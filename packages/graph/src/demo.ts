@@ -16,8 +16,9 @@ export const DEMO = {
   fixOrders: [
     // AD 2015-16-08 (FR 2015-20372, effective 2015-09-29) supersedes emergency AD 2011-08-51
     // (issued 2011-04-05: eddy current inspections of the S-4L and S-4R lap joints, BS 360–908).
-    { ad: "AD-2015-16-08", date: "2015-08-25", family: "737", bin: "737/53/S4L", replaces: ["AD-2011-08-51"] },
-    { ad: "AD-2011-08-51", date: "2011-04-05", family: "737", bin: "737/53/S4L", replaces: [] },
+    // bin: the line the accident tore open; also: the other lines the AD text orders inspected.
+    { ad: "AD-2015-16-08", date: "2015-08-25", family: "737", bin: "737/53/S4L", also: ["737/53/S4R"], replaces: ["AD-2011-08-51"] },
+    { ad: "AD-2011-08-51", date: "2011-04-05", family: "737", bin: "737/53/S4L", also: ["737/53/S4R"], replaces: [] },
   ],
   failureModes: [
     // known_from: the first public record of the mode. Leads ranking only offers a mode to

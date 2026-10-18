@@ -17,9 +17,9 @@ if (db) {
     await db.query(
       `MERGE (x:FixOrder {ad_no:$ad}) SET x.date=$date
        MERGE (m:Model {family:$fam}) MERGE (x)-[:APPLIES_TO]->(m)
-       MERGE (l:Location {bin:$bin}) MERGE (x)-[:TARGETS]->(l)
+       FOREACH (b IN $bins | MERGE (l:Location {bin:b}) MERGE (x)-[:TARGETS]->(l))
        FOREACH (o IN $replaces | MERGE (p:FixOrder {ad_no:o}) MERGE (x)-[:SUPERSEDES]->(p))`,
-      { ad: f.ad, date: f.date, fam: f.family, bin: f.bin, replaces: f.replaces });
+      { ad: f.ad, date: f.date, fam: f.family, bins: [f.bin, ...f.also], replaces: f.replaces });
   }
 }
 await db?.close();

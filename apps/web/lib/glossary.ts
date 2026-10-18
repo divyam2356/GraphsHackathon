@@ -23,11 +23,12 @@ export const TERMS = {
   aircraftPerCell: "How many different aircraft reported a matching defect in that cell in the 12 months before the date.",
   aircraftPerLine: "Aircraft that reported something on each stringer line in the 12 months before the date. The tick is the same count a year earlier; orange is the rise.",
   fleetLift: "Aircraft on this line in the last 12 months divided by the 12 months before. Above 1 means rising.",
-  fleet: "The run compares N632SW with every Boeing 737 in the FAA reports: US airlines, two-thirds of the reports from Southwest. The map shows only the 737 Classics (-300, -400, -500).",
+  fleet: "The run compares N632SW with the other 737 Classics (-300, -400, -500) in the FAA reports, the same aircraft the map shows. US airlines only.",
   queryTime: "The graph query behind the map, and how long FalkorDB took to answer it.",
   cypher: "Cypher is the query language of the graph database (FalkorDB). Each tool runs one fixed query.",
   leads: "The system points at what to inspect first. Only the NTSB decides causes.",
   panel: "The panel that tore open on Southwest 812. The NTSB found it had been installed badly when the aircraft was built.",
+  section: "A paragraph of an official document in the graph (an FAA fix order or the NTSB brief), dated by its document, so the time machine applies to it too.",
 };
 
 /** What each Board filter counts. */
@@ -70,11 +71,13 @@ export const TOOL_TIPS: Record<string, string> = {
   add_support: "Adds a new case as evidence to an existing failure pattern.",
   record_observation: "Logs a mechanic's observation on an aircraft.",
   create_work_order: "Drafts a work order for a team. Only a person can dispatch it.",
+  cite_documents: "Paragraphs of the official documents (FAA fix orders, the NTSB brief) about this location, dated before the investigation date.",
 };
 
 /** Tooltip for a record id in an answer: what kind of record it is. */
 export function idTip(id: string): string {
   if (/^\d{8}X\d{5}$/.test(id)) return `NTSB event ${id}. Click to open.`;
+  if (id.includes("#")) return `Document section ${id}: a paragraph of an official document. Click to open.`;
   if (/^AD-/.test(id)) return `Fix order ${id}. Click to open.`;
   const loc = id.match(/^737\/53(?:\/S(\d+)([LR]))?(?:\/BS(\d+))?$/);
   if (loc) return `Location: Boeing 737, fuselage${loc[1] ? `, stringer S-${loc[1]}${loc[2]}` : ""}${loc[3] ? `, body station ${loc[3]}` : ""}. Click to open.`;

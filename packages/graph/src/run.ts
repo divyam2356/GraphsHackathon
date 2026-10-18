@@ -85,7 +85,11 @@ function demo(name: string, a: Record<string, unknown>): unknown {
     case "get_accident": return DEMO.accidents.find((x) => x.ev_id === a.ev_id) ?? DEMO.accidents[0];
     case "prior_reports": return DEMO.priorReports.filter((r) => !a.tail || r.tail === a.tail);
     case "fleet_reports": return [{ bin: a.bin, note: DEMO.fleetNote }];
-    case "fix_orders": return DEMO.fixOrders.filter((f) => !a.asOf || f.date <= String(a.asOf));
+    case "fix_orders": {
+      const bin = a.bin ? String(a.bin) : null; // same rule as the query: the target, inside it, or around it
+      const hit = (b: string) => !bin || b === bin || b.startsWith(bin + "/") || bin.startsWith(b + "/");
+      return DEMO.fixOrders.filter((f) => (!a.asOf || f.date <= String(a.asOf)) && [f.bin, ...f.also].some(hit));
+    }
     case "rank_failure_modes": return DEMO.failureModes.filter((m) => m.status === "confirmed" && ("known_from" in m ? m.known_from ?? "9999" : "9999") < String(a.asOf));
     case "failure_mode_candidates": return DEMO.failureModes.filter((m) => m.status !== "confirmed");
     case "why_task": return DEMO.org.taskCards;

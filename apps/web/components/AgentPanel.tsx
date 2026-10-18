@@ -21,7 +21,7 @@ type Row = { kind: "tool"; call: Call; result?: Result } | { kind: "note" | "ans
 
 const ASK = "Were there warning signs in the maintenance records before it?";
 export const DEFAULT_QUESTION = `Southwest 812 (NTSB ev_id ${SWA812.evId}) lost part of its fuselage skin on 1 April 2011. ${ASK}`;
-const ID = /(SWAA\d+|[A-Z]{4}\d{6}|\d{8}X\d{5}|AD-\d{4}-\d{2}-\d{2}|737\/53(?:\/S\d+[LR])?(?:\/BS\d+)?)/g;
+const ID = /(SWAA\d+|[A-Z]{4}\d{6}|\d{8}X\d{5}|AD-\d{4}-\d{2}-\d{2}(?:#[a-z])?|NTSB-AAB-\d{2}-\d{2}#\d+|737\/53(?:\/S\d+[LR])?(?:\/BS\d+)?)/g;
 
 /** Replays a recorded run, keeping its rhythm (gaps clamped so it never stalls). */
 export async function playReplay(r: Replay, onStep: (s: Step) => void, signal: AbortSignal, speed = 1) {
@@ -78,7 +78,10 @@ export function AgentPanel({ asOf, steps, onStep, onReset, onOpen, replayUrl = "
           <dt>Part</dt>
           <dd>Crown skin at the <Term tip={TERMS.lapJoint}>lap joint</Term> on <Term tip={TERMS.stringer}>stringer S-4L</Term>, <Term tip={TERMS.bodyStation}>body station</Term> {SWA812.rupture.from}–{SWA812.rupture.to}</dd>
           <dt>Fleet</dt>
-          <dd><Term tip={TERMS.fleet}>Every Boeing 737</Term> in the FAA maintenance reports</dd>
+          {/* the recorded run predates the same-generation rule: it counted every 737, and its answer says so */}
+          <dd>{mode === "recorded"
+            ? <>Every Boeing 737 in the FAA maintenance reports (the recording counted all generations)</>
+            : <>The other <Term tip={TERMS.fleet}>737 Classics</Term> in the FAA maintenance reports</>}</dd>
           <dt>Records</dt>
           <dd><Term tip={TERMS.timeMachine}>Dated before {fmtDate(mode === "recorded" && replay ? replay.asOf : asOf)}</Term></dd>
           <dt>Question</dt>

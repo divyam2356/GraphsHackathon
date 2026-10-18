@@ -56,8 +56,8 @@ stringer. The graph can be checked against a known answer.
 - **Locations are parsed from free text.** 68% of the 737 reports name a stringer and a body
   station, and those are the ones on the map; 32% give only the zone.
 - **The map shows the 737 Classics** (737-300, -400 and -500: 619 aircraft), the generation
-  Southwest 812 belonged to, so like is compared with like. The agent's fleet count currently
-  includes every 737 generation.
+  Southwest 812 belonged to, so like is compared with like. The agent's fleet counts and the
+  watcher use the same generation (the aircraft's own; the Classics for N632SW).
 - **Light aircraft rarely file reports.** Only 270 of the 4,235 NTSB events have any FAA report
   on the same aircraft before the event, which limits the backtest.
 - **The company layer is made up.** Teams, engineers, task cards and work orders are synthetic

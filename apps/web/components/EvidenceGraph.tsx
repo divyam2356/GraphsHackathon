@@ -34,6 +34,10 @@ function nodeName(n: GraphNode): string {
     case "Finding": return p.cause_factor === "C" ? "Cause finding" : "Finding";
     case "Alert": return `Alert ${String(p.bin).split("/")[2]?.replace(/^S(\d+)([LR])/, "S-$1$2") ?? ""}`;
     case "WorkOrder": return `Work order (${p.status})`;
+    case "Section": { // "AD-2011-08-51#g" -> "AD 2011-08-51 (g)"; brief sections by heading
+      const [doc, sec] = String(p.id).split("#");
+      return doc.startsWith("AD-") ? `AD ${doc.slice(3)} (${sec})` : `NTSB brief, ${String(p.heading ?? sec).toLowerCase()}`;
+    }
     default: return nodeKey(n);
   }
 }
@@ -105,7 +109,7 @@ export function EvidenceGraph({ rows, kept, focus, onNode }: { rows: SubRow[]; k
           return (
             <g key={n.id} transform={`translate(${n.x},${n.y}) scale(${ks})`} className="gnode" onClick={() => node && onNode?.(node)} tabIndex={0}
               onKeyDown={(e) => { if (e.key === "Enter" && node) onNode?.(node); }} aria-label={`${n.label} ${n.name}`}
-              data-tip={`${["Alert", "WorkOrder", "Finding"].includes(n.label) ? n.name : `${LEGEND[n.label] ?? n.label} ${n.key}`}. Click to open.`}>
+              data-tip={`${["Alert", "WorkOrder", "Finding", "Section"].includes(n.label) ? n.name : `${LEGEND[n.label] ?? n.label} ${n.key}`}. Click to open.`}>
               <Shape label={n.label} hot={hot} small={!named(n)} />
               {on && <circle r={15} fill="none" stroke="var(--ink)" strokeWidth={1.4} strokeDasharray="3 2" />}
               {named(n) && <text x={11} y={4} fontSize={11} fontWeight={n.label === "Accident" || hot ? 700 : 400} className="nlabel">{n.name}</text>}
@@ -115,7 +119,7 @@ export function EvidenceGraph({ rows, kept, focus, onNode }: { rows: SubRow[]; k
         {!g.nodes.length && <text x={x0 + (W * k) / 2} y={y0 + (H * k) / 2} textAnchor="middle" fontSize={13} className="nlabel">Records the run touches appear here, with their edges.</text>}
       </svg>
       <div className="glegend">
-        {["Accident", "Report", "Aircraft", "Location", "Finding", "FixOrder", ...["Alert", "WorkOrder"].filter((l) => g.nodes.some((n) => n.label === l))].map((l) => (
+        {["Accident", "Report", "Aircraft", "Location", "Finding", "FixOrder", ...["Alert", "WorkOrder", "Section"].filter((l) => g.nodes.some((n) => n.label === l))].map((l) => (
           <span key={l} className="term" data-tip={LEGEND_TIPS[l]}><svg width="16" height="16" viewBox="-8 -8 16 16"><Shape label={l} small /></svg>{LEGEND[l]}</span>
         ))}
         <span className="term" data-tip={TERMS.precursor}><svg width="16" height="16" viewBox="-8 -8 16 16"><Shape label="Report" hot small /></svg>Earlier report at the same location</span>
@@ -148,8 +152,8 @@ function placeEdgeLabels(g: { nodes: N[]; links: E[] }, named: (n: N) => boolean
   return out;
 }
 
-const LEGEND: Record<string, string> = { Accident: "NTSB event", Report: "Maintenance report", Aircraft: "Aircraft", Location: "Location", Finding: "NTSB finding", FixOrder: "Fix order (AD)", Alert: "Alert (watcher)", WorkOrder: "Work order" };
-const LEGEND_TIPS: Record<string, string> = { Accident: TERMS.ntsb, Report: TERMS.report, Aircraft: TERMS.tail, Location: TERMS.location, Finding: TERMS.finding, FixOrder: TERMS.ad, Alert: TERMS.alert, WorkOrder: TERMS.workOrder };
+const LEGEND: Record<string, string> = { Accident: "NTSB event", Report: "Maintenance report", Aircraft: "Aircraft", Location: "Location", Finding: "NTSB finding", FixOrder: "Fix order (AD)", Alert: "Alert (watcher)", WorkOrder: "Work order", Section: "Document section" };
+const LEGEND_TIPS: Record<string, string> = { Accident: TERMS.ntsb, Report: TERMS.report, Aircraft: TERMS.tail, Location: TERMS.location, Finding: TERMS.finding, FixOrder: TERMS.ad, Alert: TERMS.alert, WorkOrder: TERMS.workOrder, Section: TERMS.section };
 
 function Shape({ label, hot, small }: { label: string; hot?: boolean; small?: boolean }) {
   const k = small ? 0.75 : 1;
@@ -162,6 +166,7 @@ function Shape({ label, hot, small }: { label: string; hot?: boolean; small?: bo
     case "FixOrder": return <rect x={-8 * k} y={-5 * k} width={16 * k} height={10 * k} fill="var(--sheet)" stroke="var(--ink)" strokeWidth={1.4} strokeDasharray="2.5 1.5" />;
     case "Alert": return <path d={`M0,${-9 * k} L${8 * k},${6 * k} L${-8 * k},${6 * k} Z`} fill="var(--sheet)" stroke="var(--signal)" strokeWidth={2} />;
     case "WorkOrder": return <rect x={-7 * k} y={-7 * k} width={14 * k} height={14 * k} fill="var(--ink)" />;
+    case "Section": return <path d={`M${-5 * k},${-7 * k} h${7 * k} l${3 * k},${3 * k} v${11 * k} h${-10 * k} Z`} fill="var(--sheet)" stroke="var(--ink)" strokeWidth={1.3} />;
     default: return <circle r={5 * k} fill="var(--alclad)" />;
   }
 }

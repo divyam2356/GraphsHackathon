@@ -22,15 +22,15 @@ person decides, never the machine."
 **The story that proves it (your only example):** "Southwest 812, April 2011 — a
 hole opened in the fuselage. A year earlier, the *same plane* had two reports of
 cracked clips at stringer S-4L, the exact line that later tore. Across the fleet,
-156 planes reported trouble on that same line. Our tool finds all three facts in
+145 planes of the same generation (737 Classics) reported trouble on that same line. Our tool finds all three facts in
 seconds. The official investigators still determine the cause — we only surface
 leads worth a look."
 
 **What happens when you press Investigate (5 steps, in order):**
 1. It pulls the accident: which plane, what broke, where.
 2. It pulls that plane's old reports at the same spot (2 found, March 2010).
-3. It checks the whole fleet at that spot (156 planes — a pattern, not bad luck).
-4. It checks whether a fix order already covers it (none did — unaddressed).
+3. It checks the same generation of the fleet at that spot (145 737 Classics — a pattern, not bad luck).
+4. It checks whether a fix order or an official document already covers it (none did before 1 April 2011 — the emergency AD came four days later).
 5. It draws the path report → plane → accident, writes down what it kept, and a
    person reviews. Every step shows its query and time on screen.
 

@@ -20,6 +20,7 @@ const SCHEMA_EDGES: Array<[string, string, string]> = [
   ["Engineer", "MEMBER_OF", "Team"], ["TaskCard", "CITES", "FixOrder"], ["Decision", "BASED_ON", "FixOrder"],
   ["Document", "HAS_SECTION", "Section"], ["Section", "ABOUT", "Location"],
   ["Document", "DESCRIBES", "FixOrder"], ["Document", "DESCRIBES", "Accident"],
+  ["WorkOrder", "CITES", "Section"],
 ];
 
 export const CYPHER: Record<string, string> = {
@@ -43,10 +44,13 @@ export const CYPHER: Record<string, string> = {
       AND ($bin IS NULL OR (l)-[:WITHIN*0..2]->(:Location {bin:$bin}))
     RETURN r.id AS id, r.date AS date, r.text AS text, l.bin AS bin, r.part AS part, r.condition AS condition
     ORDER BY r.date DESC LIMIT 50`,
+  // $variants: the aircraft's own generation (e.g. the Classics for a 737-300), like the map;
+  // null counts every variant of the family.
   fleet_reports: `
     MATCH (r:Report)-[:AT]->(:Location)-[:WITHIN*0..2]->(:Location {bin:$bin})
     WHERE $from <= r.date < $to
     MATCH (r)-[:ON]->(ac:Aircraft)
+    WHERE $variants IS NULL OR ac.variant IN $variants
     RETURN count(r) AS reports, count(DISTINCT ac) AS aircraft, collect(DISTINCT ac.variant) AS variants,
       min(r.date) AS first, max(r.date) AS last`,
   hotspots: `
@@ -60,11 +64,12 @@ export const CYPHER: Record<string, string> = {
     WHERE r.date < $asOf AND r.date >= toString(date($asOf) - duration({days: 2 * coalesce($windowDays, 365)}))
       AND ($part IS NULL OR r.part = $part) AND ($condition IS NULL OR r.condition CONTAINS $condition)
     MATCH (r)-[:ON]->(a:Aircraft)
+    WHERE $variants IS NULL OR a.variant IN $variants
     WITH line, a, r.date >= toString(date($asOf) - duration({days: coalesce($windowDays, 365)})) AS recent
     WITH line, count(DISTINCT CASE WHEN recent THEN a END) AS ac, count(DISTINCT CASE WHEN NOT recent THEN a END) AS ac_prev
     WHERE ac >= coalesce($minAircraft, 5)
     RETURN line.bin AS bin, ac, ac_prev, round(100.0 * (ac + 1) / (ac_prev + 1)) / 100 AS lift
-    ORDER BY lift DESC, ac DESC LIMIT 25`,
+    ORDER BY lift DESC, ac DESC, bin LIMIT 25`,
   // Keyword similarity (full-text index) until real embeddings are loaded; then swap to
   // CALL db.idx.vector.queryNodes('Report', 'embedding', $k, vecf32($vec)).
   similar_reports: `
@@ -73,12 +78,16 @@ export const CYPHER: Record<string, string> = {
     MATCH (r)-[:ON]->(a:Aircraft), (r)-[:AT]->(l:Location)
     RETURN r.id AS id, r.date AS date, r.text AS text, a.tail AS tail, a.variant AS variant, l.bin AS bin, score
     ORDER BY score DESC LIMIT 25`,
+  // Only orders that target the location asked about, a location inside it, or the line it
+  // sits on (location keys nest by prefix: 737/53 > 737/53/S4L > 737/53/S4L/BS660).
   fix_orders: `
     MATCH (f:FixOrder)-[:APPLIES_TO]->(:Model {family:$family})
     WHERE $asOf IS NULL OR f.date <= $asOf
-    OPTIONAL MATCH (f)-[:TARGETS]->(l:Location)
+    OPTIONAL MATCH (f)-[:TARGETS]->(t:Location)
+    WITH f, [b IN collect(t.bin) WHERE $bin IS NULL OR b = $bin OR b STARTS WITH ($bin + '/') OR $bin STARTS WITH (b + '/')] AS hit
+    WHERE $bin IS NULL OR size(hit) > 0
     OPTIONAL MATCH (f)-[:SUPERSEDES*1..5]->(old:FixOrder)
-    RETURN f.ad_no AS ad, f.date AS date, l.bin AS bin, collect(DISTINCT old.ad_no) AS replaces`,
+    RETURN f.ad_no AS ad, f.date AS date, hit[0] AS bin, collect(DISTINCT old.ad_no) AS replaces`,
   explain_path: `
     // Endpoints by indexed key (an unlabelled OR scan of 250k nodes cost ~80 ms).
     CALL { MATCH (x:Report {id:$from}) RETURN x UNION MATCH (x:Accident {ev_id:$from}) RETURN x
@@ -154,29 +163,32 @@ export const CYPHER: Record<string, string> = {
     MATCH (line:Location {bin:$bin})
     MERGE (al:Alert {bin:$bin, asOf:$asOf})
       ON CREATE SET al.id = randomUUID(), al.status = 'open', al.reason = $reason, al.part = $part,
-        al.condition = $condition, al.raised_on = toString(date())
+        al.condition = $condition, al.variants = $variants, al.raised_on = toString(date())
     MERGE (al)-[:AT]->(line)
     WITH al, line
     OPTIONAL MATCH (r:Report)-[:AT]->(:Location)-[:WITHIN*0..1]->(line)
     WHERE r.date < $asOf AND r.date >= toString(date($asOf) - duration({days: coalesce($windowDays, 365)}))
       AND ($part IS NULL OR r.part = $part) AND ($condition IS NULL OR r.condition CONTAINS $condition)
-    OPTIONAL MATCH (r)-[:ON]->(a:Aircraft)
+    OPTIONAL MATCH (r)-[:ON]->(a:Aircraft) WHERE $variants IS NULL OR a.variant IN $variants
     WITH al, collect(DISTINCT a) AS acs
     FOREACH (a IN acs | MERGE (al)-[:FOR]->(a))
     RETURN al.id AS id, al.bin AS bin, al.asOf AS asOf, al.status AS status, size(acs) AS aircraft`,
   open_alerts: `
     MATCH (al:Alert {status:'open'}) WHERE al.asOf <= $asOf
     OPTIONAL MATCH (al)-[:FOR]->(a:Aircraft)
-    RETURN al.id AS id, al.bin AS bin, al.asOf AS asOf, al.reason AS reason, count(a) AS aircraft
+    RETURN al.id AS id, al.bin AS bin, al.asOf AS asOf, al.reason AS reason, al.variants AS variants, count(a) AS aircraft
     ORDER BY al.asOf DESC, aircraft DESC LIMIT 10`,
   // The investigator's view of one alert: the aircraft it names (most reports first), then the
-  // others with a matching report on the same line in the window (e.g. any crack, not only skin).
+  // others with a matching report on the same line in the window (e.g. any crack, not only skin),
+  // of the same generation the alert was raised for.
   alert_aircraft: `
     MATCH (al:Alert {id:$id})-[:AT]->(line:Location)
     MATCH (r:Report)-[:AT]->(:Location)-[:WITHIN*0..1]->(line)
     WHERE r.date < al.asOf AND r.date >= toString(date(al.asOf) - duration({days: coalesce($windowDays, 365)}))
       AND ($condition IS NULL OR r.condition CONTAINS $condition)
     MATCH (r)-[:ON]->(a:Aircraft)
+    // filter after WITH: as a WHERE on the MATCH, the planner starts from Aircraft (1 s timeout)
+    WITH al, a, r WHERE al.variants IS NULL OR a.variant IN al.variants
     OPTIONAL MATCH (al)-[f:FOR]->(a)
     WITH al, a, f IS NOT NULL AS named, count(r) AS reports, max(r.date) AS last,
       collect(DISTINCT toLower(trim(coalesce(r.part, '') + ' ' + coalesce(r.condition, ''))))[0..3] AS what
@@ -203,7 +215,8 @@ export const CYPHER: Record<string, string> = {
     CREATE (o:Observation {id:randomUUID(), text:$text, date:$date})-[:ON]->(t)
     CREATE (o)-[:AT]->(l) RETURN o.id AS id`,
   // A draft inspection order for an alert (one per alert), at the alert's line and on the
-  // aircraft it names. Only a draft: a person dispatches it in the UI (dispatch_work_order).
+  // aircraft it names, citing the document sections ($cites) it relies on. Only a draft: a
+  // person dispatches it in the UI (dispatch_work_order).
   create_work_order: `
     MATCH (al:Alert {id:$alertId})-[:AT]->(l:Location)
     MERGE (w:WorkOrder {alert:$alertId})
@@ -211,6 +224,10 @@ export const CYPHER: Record<string, string> = {
         w.synthetic = true, w.drafted_on = toString(date())
     MERGE (w)-[:FROM]->(al)
     MERGE (w)-[:AT]->(l)
+    WITH w, al
+    OPTIONAL MATCH (s:Section) WHERE s.id IN coalesce($cites, []) AND s.date < al.asOf
+    WITH w, al, collect(s) AS ss
+    FOREACH (s IN ss | MERGE (w)-[:CITES]->(s))
     WITH w, al
     OPTIONAL MATCH (al)-[:FOR]->(a:Aircraft)
     WITH w, collect(a) AS acs

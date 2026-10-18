@@ -13,6 +13,7 @@ export function buildServer(query: (name: string, args: unknown) => Promise<unkn
   const s = new McpServer({ name: "blackbox", version: "0.1.0" });
   const asOf = z.string().describe("ISO date YYYY-MM-DD. Time-machine cutoff: only records dated before it are visible");
   const bin = z.string().describe('Location key: "737/53" (model family/ATA chapter, 53 = fuselage), "737/53/S4L" (stringer 4 left), "737/53/S4L/BS620" (20-inch body-station bin). Results roll up to any level');
+  const variants = z.array(z.string()).optional().describe('Count only these variants: the aircraft\'s own generation, e.g. ["737-300","737-400","737-500"] (the Classics) for a 737-300. Omit for every variant');
   const tool = (name: string, description: string, shape: z.ZodRawShape) =>
     s.tool(name, description, shape, async (a) => ({ content: [{ type: "text", text: JSON.stringify(await query(name, a)) }] }));
 
@@ -25,10 +26,10 @@ export function buildServer(query: (name: string, args: unknown) => Promise<unkn
     { ev_id: z.string().describe("NTSB ev_id, e.g. 20110401X24330"), asOf });
   tool("prior_reports", "FAA maintenance reports (Service Difficulty Reports) filed on one aircraft before asOf, newest first, optionally only at or inside a location. Use it to find warning signs on the same plane.",
     { tail: z.string().describe("US tail number, e.g. N632SW"), bin: bin.optional(), asOf, windowDays: z.number().default(730).describe("look-back window in days") });
-  tool("fleet_reports", "How many reports and distinct aircraft of the whole fleet reported trouble at a location in a date range. Use it to see whether a plane's problem was fleet-wide.",
-    { family: z.string().describe("model family, e.g. 737"), bin, from: z.string().describe("ISO date, inclusive"), to: z.string().describe("ISO date, exclusive") });
+  tool("fleet_reports", "How many reports and distinct aircraft of the fleet reported trouble at a location in a date range. Use it to see whether a plane's problem was fleet-wide; pass variants to compare with the same generation.",
+    { family: z.string().describe("model family, e.g. 737"), bin, from: z.string().describe("ISO date, inclusive"), to: z.string().describe("ISO date, exclusive"), variants });
   tool("hotspots", "Rising locations for a model family: distinct aircraft reporting in the last window before asOf vs the window before. Filter part='SKIN', condition='CRACK' to rank structural damage.",
-    { family: z.string(), asOf, chapter: z.string().optional().describe("ATA chapter, e.g. 53"), part: z.string().optional(), condition: z.string().optional(), windowDays: z.number().optional() });
+    { family: z.string(), asOf, chapter: z.string().optional().describe("ATA chapter, e.g. 53"), part: z.string().optional(), condition: z.string().optional(), windowDays: z.number().optional(), variants });
   tool("similar_reports", "Keyword-similar maintenance reports across the fleet (full-text index), before asOf.",
     { text: z.string(), asOf: asOf.optional() });
   tool("fix_orders", "FAA airworthiness directives (fix orders) for a model family issued up to asOf, with the location they target and the orders they replace.",
@@ -56,14 +57,15 @@ export function buildServer(query: (name: string, args: unknown) => Promise<unkn
   tool("record_precursor", "Save a judged warning sign: this report preceded this accident, with confidence 0-1 and a one-line reason.",
     { reportId: z.string(), accidentId: z.string(), confidence: z.number(), reason: z.string(), asOf, runId: z.string().optional().describe("set by the harness; leave empty") });
   tool("raise_alert", "Open an alert on a stringer line that is rising across the fleet (from hotspots). Links every aircraft that reported there in the window under the same part/condition filter. One alert per line and date. A lead worth review, not a prediction.",
-    { bin, asOf, reason: z.string(), part: z.string().optional(), condition: z.string().optional(), windowDays: z.number().optional() });
+    { bin, asOf, reason: z.string(), part: z.string().optional(), condition: z.string().optional(), windowDays: z.number().optional(), variants });
   tool("propose_failure_mode", "Draft a NEW failure mode when no known or dormant mode fits. It stays 'proposed' until a human approves it.",
     { draft: z.object({ name: z.string(), system: z.string(), mechanism: z.string() }), evidence: z.array(z.string()).describe("report ids / ev_ids supporting it") });
   tool("add_support", "Attach new evidence (a case) to an existing dormant or proposed failure mode instead of creating a duplicate.",
     { caseId: z.string(), modeId: z.string() });
   tool("record_observation", "Log a mechanic's observation on an aircraft at a location.",
     { tail: z.string(), bin, text: z.string(), date: z.string() });
-  tool("create_work_order", "Draft an inspection work order for an alert, for a team of the (fictional) maintenance company, on the aircraft the alert names. Only a draft: a person dispatches it in the UI; you cannot.",
-    { alertId: z.string(), team: z.string().describe("Structures, Propulsion or Avionics"), task: z.string().describe("what to inspect, where, and which aircraft first") });
+  tool("create_work_order", "Draft an inspection work order for an alert, for a team of the (fictional) maintenance company, on the aircraft the alert names, citing the document sections it relies on. Only a draft: a person dispatches it in the UI; you cannot.",
+    { alertId: z.string(), team: z.string().describe("Structures, Propulsion or Avionics"), task: z.string().describe("what to inspect, where, and which aircraft first"),
+      cites: z.array(z.string()).optional().describe("section ids from cite_documents, e.g. AD-2011-08-51#g") });
   return s;
 }

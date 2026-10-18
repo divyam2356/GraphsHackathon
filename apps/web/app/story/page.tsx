@@ -222,7 +222,7 @@ function AskIt() {
     // older replays carry fewer key fields, so guard each one
     if (s.type === "tool_result") for (const f of Object.keys(k) as Array<keyof Keys>) for (const v of s.keys?.[f] ?? []) if (!k[f].includes(v)) k[f].push(v);
     return k;
-  }, { accidents: [], reports: [], aircraft: [], locations: [], fixorders: [], modes: [], alerts: [], workorders: [] }));
+  }, { accidents: [], reports: [], aircraft: [], locations: [], fixorders: [], modes: [], alerts: [], workorders: [], sections: [] }));
   useEffect(() => {
     const keys = JSON.parse(keysJson) as Keys;
     if (!Object.values(keys).some((v) => v.length)) return setSub([]);

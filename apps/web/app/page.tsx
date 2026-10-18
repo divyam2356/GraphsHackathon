@@ -61,7 +61,7 @@ export default function Board() {
 
   // Every key a tool result touched, accumulated; the evidence graph is their subgraph.
   const keys = useMemo(() => {
-    const k: Keys = { accidents: [], reports: [], aircraft: [], locations: [], fixorders: [], modes: [], alerts: [], workorders: [] };
+    const k: Keys = { accidents: [], reports: [], aircraft: [], locations: [], fixorders: [], modes: [], alerts: [], workorders: [], sections: [] };
     // older replays carry fewer key fields, so guard each one
     for (const s of steps) if (s.type === "tool_result") for (const f of Object.keys(k) as Array<keyof Keys>) for (const v of s.keys?.[f] ?? []) if (!k[f].includes(v)) k[f].push(v);
     return k;
