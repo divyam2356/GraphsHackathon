@@ -129,6 +129,9 @@ history at 1c72143.)
 
 ### Phase 3: record and submit (Oct 18, 15:00 → 20:00)
 - [ ] Claude: re-capture the footage after the freeze and render the video in code; both of us record our voice lines from the two-voice script, then Claude mixes them in.
+      Oct 18, 12:40 (Claude): footage captured after the freeze; three cuts rendered with captions and quiet music
+      (studio, paper, editorial; outside the repo). Waiting for the voice takes: one file per line, L00-L12 plus L06b
+      (the 3D aircraft, now a row in `docs/DEMO.md`); with them the cut re-times itself to the voices.
 - [ ] Both: one practice round of `docs/DEFENSE.md`.
 - [ ] Video and deploy links in the README; final read of the Limits section.
 - [ ] Submit by 20:00 IST (hard close 23:59), naming every track entered. One of us submits; Claude doesn't.
