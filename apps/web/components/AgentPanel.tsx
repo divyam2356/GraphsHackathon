@@ -92,16 +92,16 @@ export function AgentPanel({ asOf, steps, onStep, onReset, onOpen, replayUrl = "
         <div className="ask-row">
           <div className="seg" role="group" aria-label="How to run">
             <button type="button" aria-pressed={mode === "agent"} aria-disabled={!live?.live} onClick={() => live?.live && setMode("agent")}
-              data-tip={live?.live ? `${MODE_TIPS.agent} Model: ${live.model}.` : `${MODE_TIPS.agent} ${MODE_TIPS.agentOff}`}>Live model</button>
+              data-tip={live?.live ? MODE_TIPS.agent : `${MODE_TIPS.agent} ${MODE_TIPS.agentOff}`}>Live model</button>
             <button type="button" aria-pressed={mode === "scripted"} onClick={() => setMode("scripted")} data-tip={MODE_TIPS.scripted}>Scripted</button>
             <button type="button" aria-pressed={mode === "recorded"} onClick={() => setMode("recorded")} data-tip={MODE_TIPS.recorded}>Recorded</button>
           </div>
           <button type="submit" className="go" disabled={busy}>{busy ? "Investigating" : "Investigate"}</button>
         </div>
         <p className="ask-note">
-          {mode === "agent" && live?.live && <>{live.model} (free tier) picks the MCP tools itself. Free models can take a few minutes.</>}
+          {mode === "agent" && live?.live && <>A free-tier model picks the MCP tools itself. Free models can take a few minutes.</>}
           {mode === "scripted" && <>The same MCP tools in a fixed order, with no model.</>}
-          {mode === "recorded" && replay && <>A real {replay.mode === "agent" ? `run of ${replay.model}` : "scripted run"}, saved {new Date(replay.recorded).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} and replayed faster.</>}
+          {mode === "recorded" && replay && <>A real {replay.mode === "agent" ? "agent run" : "scripted run"}, saved {new Date(replay.recorded).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} and replayed faster.</>}
         </p>
       </form>
 

@@ -31,7 +31,7 @@
       "id": "replay:2026-10-15T12:43:59.973Z",
       "run_at": "2026-10-15T12:43:59.973Z",
       "mode": "agent",
-      "model": "nvidia/nemotron-3-super-120b-a12b:free",
+      "model": "the free agent model",
       "asOf": "2011-04-01",
       "kept": [
        {
@@ -378,7 +378,7 @@
    "t": 730,
    "step": {
     "type": "answer",
-    "text": "N632SW had 2 reports on 737/53/S4L in the two years before 1 April 2011: SWAA101400 (stringer clip cracked, 9 March 2010), SWAA101399 (stringer clip cracked, 9 March 2010). Across the fleet, 156 737s reported trouble on that line in the three years before, and no fix order covered it yet. An earlier run (nemotron-3-super-120b-a12b, 15 October 2026) kept SWAA101400 and SWAA101399 at confidence 0.8; this run found the same reports. Leads worth review: inspect 737/53/S4L first."
+    "text": "N632SW had 2 reports on 737/53/S4L in the two years before 1 April 2011: SWAA101400 (stringer clip cracked, 9 March 2010), SWAA101399 (stringer clip cracked, 9 March 2010). Across the fleet, 156 737s reported trouble on that line in the three years before, and no fix order covered it yet. An earlier run (15 October 2026) kept SWAA101400 and SWAA101399 at confidence 0.8; this run found the same reports. Leads worth review: inspect 737/53/S4L first."
    }
   }
  ]

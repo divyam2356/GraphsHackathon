@@ -1,6 +1,6 @@
 {
  "mode": "agent",
- "model": "nvidia/nemotron-3-super-120b-a12b:free",
+ "model": "the free agent model",
  "asOf": "2011-04-01",
  "question": "Southwest 812 (NTSB ev_id 20110401X24330) lost part of its fuselage skin on 1 April 2011. Were there warning signs in the maintenance records before it?",
  "recorded": "2026-10-15T12:43:59.973Z",
@@ -9,7 +9,7 @@
    "t": 7388,
    "step": {
     "type": "note",
-    "text": "Model: nvidia/nemotron-3-super-120b-a12b:free"
+    "text": "Live model run"
    }
   },
   {

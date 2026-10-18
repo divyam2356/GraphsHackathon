@@ -24,7 +24,10 @@ const BASE = process.env.LLM_BASE_URL ?? "https://openrouter.ai/api/v1";
 // Free models (50 requests/day, often rate-limited upstream): try the primary, then these in order.
 const model = () => process.env.LLM_MODEL ?? "nvidia/nemotron-3-super-120b-a12b:free";
 // OpenRouter takes at most 3 models per request (primary + 2 fallbacks).
-// Named models only: the openrouter/free router picked a 2.6B model that broke the framing rule.
+// Oct 18 (divyam2356): the openrouter/free auto-router is the primary for throughput;
+// the named free models are the fallbacks. The auto-router once picked a 2.6B model that
+// broke the framing rule — the system prompt's "leads, never causes" and the
+// answer-before-checking guard back that up, and a live run is never shown unreviewed.
 const fallbacks = () => (process.env.LLM_FALLBACKS ?? "nvidia/nemotron-3.5-lightning:free,poolside/laguna-s-2.1:free")
   .split(",").map((m) => m.trim()).filter((m) => m && m !== model()).slice(0, 2);
 const apiKey = () => process.env.OPENROUTER_API_KEY ?? process.env.LLM_API_KEY;
@@ -139,13 +142,12 @@ export async function runAgent(question: string, asOf: string, emit: Emit, opts:
   const messages: Msg[] = [{ role: "system", content: system(asOf) }, { role: "user", content: question }];
   const runId = await startRun(question.match(/\b\d{8}X\d{5}\b/)?.[0] ?? opts.evId, asOf, "agent", model(), question);
   const answer = async (text: string) => { emit({ type: "answer", text }); await finishRun(runId, text); };
-  let answeredBy = "";
   const used = new Set<string>(), nudged = new Set<string>();
   for (let i = 0; i < maxSteps; i++) {
     const j = await complete({ model: model(), models: [model(), ...fallbacks()], messages, tools: oaTools, tool_choice: "auto", max_tokens: 4000 }, emit);
     const msg = j.choices?.[0]?.message;
     if (!msg) throw new Error(`LLM returned no message: ${JSON.stringify(j.error ?? j).slice(0, 200)}`);
-    if (j.model && j.model !== answeredBy) { answeredBy = j.model; emit({ type: "note", text: `Model: ${j.model}` }); }
+    // (the auto-router may answer with a differently named model than requested; that stays off the screen)
     messages.push({ role: "assistant", content: msg.content ?? null, tool_calls: msg.tool_calls });
     if (!msg.tool_calls?.length) {
       const text = msg.content ?? "";
@@ -252,7 +254,7 @@ export async function runScripted(evId: string, asOf: string, emit: Emit, opts: 
   const judged = past.find((p) => p.kept?.length);
   if (judged) {
     const same = judged.kept.every((k) => prior?.some((p) => p.id === k.report));
-    const who = judged.model?.split("/").pop()?.replace(/:free$/, "") ?? judged.mode;
+    const who = judged.mode === "agent" ? "agent run" : judged.mode; // no model names on screen
     const conf = [...new Set(judged.kept.map((k) => k.confidence))];
     const kept = conf.length === 1 ? `${and(judged.kept.map((k) => k.report))} at confidence ${conf[0]}` : and(judged.kept.map((k) => `${k.report} (confidence ${k.confidence})`));
     parts.push(`An earlier run (${who}, ${day(judged.run_at.slice(0, 10))}) kept ${kept}; ${same ? "this run found the same reports" : "this run found different ones"}.`);
