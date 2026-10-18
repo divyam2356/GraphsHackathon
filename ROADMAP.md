@@ -84,9 +84,8 @@ Key focus items are quoted from the rules page (checked Oct 17). "Gap" says who 
 
 **divyam2356, with your own agent: Track 3, real documents in the graph.** Today the company layer is
 all made up; Track 3 asks for "knowledge from docs" and "answers with clear sources".
-**Full brief for your agent: [`docs/briefs/track3-documents.md`](docs/briefs/track3-documents.md)**
-(files, existing code to reuse, milestones, constraints, done-when, challenger check). Prompt:
-"Read ROADMAP.md, then docs/briefs/track3-documents.md, and execute it."
+(The brief and its report lived in `docs/briefs/`, deleted Oct 18 once read; they are in the git
+history at 1c72143.)
 - [x] 23a6c69 Load the texts of AD 2011-08-51, AD 2015-16-08 (Federal Register) and NTSB brief AAB-13/02 as
       `Document` → `Section` nodes (US government works, public domain). Link each section to the
       `Location`s it names (reuse `locationChain` in `services/ingest/src/normalize.ts`) and to its
@@ -99,7 +98,7 @@ all made up; Track 3 asks for "knowledge from docs" and "answers with clear sour
   `apps/web/components/RecordDrawer.tsx`. Leave `packages/agent/` to Manish, who wires the tool in.
 - Done when: `cite_documents` for `737/53/S4L` returns nothing at 2011-04-01 (no AD yet) and the
   AD 2011-08-51 inspection paragraph at 2011-05-01; screenshot of the drawer. **Verified (report:
-  `docs/briefs/track3-report.md`); drawer screenshot taken Oct 18. Review fixes in c163eb8: map cells
+  `docs/briefs/track3-report.md` at 1c72143); drawer screenshot taken Oct 18. Review fixes in c163eb8: map cells
   show the documents too, a station-only bin no longer returns every section.**
 
 **Manish, with Claude: Track 1 and the rest of Track 3.**
@@ -112,17 +111,18 @@ all made up; Track 3 asks for "knowledge from docs" and "answers with clear sour
 - [x] 513915b (added Oct 18) Graph algorithm as a tool: `cracks_together` (`algo.WCC`); S-4L's top partner
       on 1 Jan 2011 was S-4R; the work order adds the direct partners.
 - [x] MCP Inspector 2.9.0 runs our server and `cracks_together` answers there; the clip is captured with the video.
-- [ ] Fresh-clone setup test, including a production build (`next build`). Oct 18: ingest steps OK; it
-      found `npm run remember -w packages/agent` failing on a fresh clone (fixed); build re-running.
+- [x] 808f9f4 Fresh-clone setup test, including `next build`: passes; it found `npm run remember -w packages/agent`
+      failing on a fresh clone (fixed in 808f9f4).
 
 **Both of us (human work: what the README says we did, so make it true):**
 - [ ] Use the app yourself: Board (Scripted run; Watch → hand-off → Dispatch; 3D aircraft → Unroll), Story.
 - [ ] Check 2–3 facts against the sources (e.g. SWAA101399 against NTSB brief AAB-13/02; the 9 → 18 → 31 counts).
 - [ ] Each pick one Cypher query and explain it out loud (`docs/DEFENSE.md`).
-- [ ] Settle D2 today.
+- [x] Settle D2 today (Oct 17: Tracks 1 and 3).
 
 ### Phase 2: freeze and verify (Oct 18, 12:00 → 15:00)
-- [ ] Claude: rules page re-check; secret scan of the new commits; fresh-clone run; delete `docs/briefs/` once its report is read.
+- [x] Claude (done early, Oct 18 09:30): rules re-checked (same 18 rules, 7,749 registered); gitleaks v8.24.3 over all
+      65 commits: no leaks; fresh-clone run passes (808f9f4, incl. `next build`); `docs/briefs/` deleted. Re-scan if commits land before going public.
 - [ ] divyam2356: deploy (D1); open the link in a private window.
 - [ ] divyam2356: make the repo public.
 - [ ] Reset the demo state (`docs/DEMO.md`, "Before recording").
