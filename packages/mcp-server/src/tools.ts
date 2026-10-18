@@ -54,6 +54,8 @@ export function buildServer(query: (name: string, args: unknown) => Promise<unkn
     { bin, asOf });
   tool("cracks_together", "Graph algorithm: stringer lines whose cracks come on the same aircraft, as of asOf. Links two lines when the aircraft with crack reports on both are at least minJaccard (default 0.35) of those with cracks on either, in the 12 months before, then groups the linked lines with weakly connected components (algo.WCC). Returns the group of the line asked about, direct partners first with their Jaccard and shared aircraft. Use it to decide which lines to inspect together; it says nothing about why they crack.",
     { family: z.string(), bin: z.string().describe('a stringer line key, e.g. "737/53/S4L"'), asOf, variants, minJaccard: z.number().optional() });
+  tool("why", "Why a decision exists: from a work order (the alert that raised it, the team that owns the location, the document sections it cites, the engineer it went to and why) or a failure mode (its evidence, merges, known_from) back to its records and the person who decided, with when and the reason they gave.",
+    { id: z.string().describe("a work order id or a failure mode id") });
 
   // Write / action (agent memory + org actions). A human approves failure modes in the UI.
   tool("record_precursor", "Save a judged warning sign: this report preceded this accident, with confidence 0-1 and a one-line reason.",

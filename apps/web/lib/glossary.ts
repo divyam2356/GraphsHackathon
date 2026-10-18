@@ -28,6 +28,7 @@ export const TERMS = {
   cypher: "Cypher is the query language of the graph database (FalkorDB). Each tool runs one fixed query.",
   leads: "The system points at what to inspect first. Only the NTSB decides causes.",
   panel: "The panel that tore open on Southwest 812. The NTSB found it had been installed badly when the aircraft was built.",
+  whyTool: "An MCP tool: it walks back from a decision (a work order, a failure mode) to the records behind it and the person who made it.",
   section: "A paragraph of an official document in the graph (an FAA fix order or the NTSB brief), dated by its document, so the time machine applies to it too.",
 };
 
@@ -73,6 +74,7 @@ export const TOOL_TIPS: Record<string, string> = {
   create_work_order: "Drafts a work order for a team. Only a person can dispatch it.",
   cite_documents: "Paragraphs of the official documents (FAA fix orders, the NTSB brief) about this location, dated before the investigation date.",
   cracks_together: "A graph algorithm (connected components) over lines whose cracks come on the same aircraft: what to inspect together.",
+  why: "Walks back from a decision to the records behind it and the person who made it.",
 };
 
 /** Tooltip for a record id in an answer: what kind of record it is. */

@@ -7,10 +7,12 @@ import { useState } from "react";
 import type { Step } from "../lib/api";
 import { fmtDate } from "../lib/fuselage";
 import { TERMS } from "../lib/glossary";
+import { useView } from "../lib/useView";
 import { Term } from "./Tip";
 
 interface AlertRow { id: string; bin: string; asOf: string; status: string; aircraft: number }
 interface OrderRow { id: string; status: string; team: string; owns?: string | null; task: string; aircraft: number }
+interface WhyRow { who: string | null; at: string | null; reason: string | null; chain: Array<{ step: string; id: string; note: string }> }
 const short = (bin: string) => bin.split("/")[2]?.replace(/^S(\d+)([LR])$/, "S-$1$2") ?? bin;
 /** Result rows of every call to one tool in a run. */
 const rowsOf = <T,>(steps: Step[], name: string): T[] =>
@@ -26,6 +28,19 @@ export function WatchButton({ asOf, busy, onWatch }: { asOf: string; busy: boole
   );
 }
 
+/** The why tool's trace for a decided work order: alert, line, team, engineer, cited sections, the person. */
+function Why({ id }: { id: string }) {
+  const v = useView<WhyRow[]>("why", { id });
+  const w = v.rows?.[0];
+  if (!w) return <p className="caption">{v.loading ? "Tracing" : "Nothing to trace"}</p>;
+  return (
+    <ol className="why">
+      {w.chain.map((c, i) => <li key={i}><b>{c.step}</b> {c.id}{c.note ? `: ${c.note}` : ""}</li>)}
+      {w.who && <li><b>decided by</b> {w.who}{w.at ? `, ${fmtDate(w.at.slice(0, 10), true)}` : ""}{w.reason ? `: "${w.reason}"` : ""}</li>}
+    </ol>
+  );
+}
+
 /** After a watch: hand an alert over. After a hand-off: the draft work order and the person's decision. */
 export function WatchActions({ steps, busy, onHandOff }: { steps: Step[]; busy: boolean; onHandOff: (alertId: string) => void }) {
   const alerts = rowsOf<AlertRow>(steps, "raise_alert");
@@ -34,6 +49,7 @@ export function WatchActions({ steps, busy, onHandOff }: { steps: Step[]; busy: 
   const [by, setBy] = useState("");
   const [done, setDone] = useState<{ id: string; text: string; cypher?: string } | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [whyOpen, setWhyOpen] = useState(false);
 
   async function decide(decision: "dispatch" | "dismiss", id: string) {
     setErr(null);
@@ -66,6 +82,7 @@ export function WatchActions({ steps, busy, onHandOff }: { steps: Step[]; busy: 
           <div className="decided"><p>{done!.text}</p></div>
         )}
         {err && <p className="step-error">{err}</p>}
+        {settled && <details onToggle={(e) => setWhyOpen(e.currentTarget.open)}><summary>Why this order? (the <Term tip={TERMS.whyTool}>why</Term> tool)</summary>{whyOpen && <Why id={order.id} />}</details>}
         {settled && done?.cypher && <details><summary>The query behind the button (not available to the agent)</summary><pre>{done.cypher.replace(/^ {4}/gm, "")}</pre></details>}
       </article>
     );

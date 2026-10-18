@@ -459,4 +459,36 @@ export const CYPHER: Record<string, string> = {
     WITH x.bin AS line, [e IN edges WHERE (e.a = $bin AND e.b = x.bin) OR (e.b = $bin AND e.a = x.bin)][0] AS e
     RETURN line, e IS NOT NULL AS direct, e.j AS jaccard, e.n AS aircraft
     ORDER BY direct DESC, jaccard DESC, line`,
+  // Why a decision exists: walk back from a work order (alert, team ownership, cited document
+  // sections, the engineer and why) or a failure mode (its evidence, a merge, known_from) to the
+  // records behind it and the person who decided. One row: kind, what, status, who, when, why, chain.
+  why: `
+    CALL {
+      MATCH (w:WorkOrder {id:$id})
+      OPTIONAL MATCH (w)-[:FROM]->(al:Alert)
+      OPTIONAL MATCH (al)-[:FOR]->(a:Aircraft)
+      WITH w, al, count(a) AS ac
+      OPTIONAL MATCH (w)-[:AT]->(l:Location)
+      OPTIONAL MATCH (:Team {name: w.team})-[:OWNS]->(sys:System {chapter: l.chapter})
+      OPTIONAL MATCH (e:Engineer)-[:ASSIGNED]->(w)
+      OPTIONAL MATCH (w)-[:CITES]->(s:Section)
+      WITH w, al, ac, l, sys, e, collect(s.id) AS cites
+      RETURN 'work order' AS kind, w.task AS what, w.status AS status, w.dispatched_by AS who, w.dispatched_at AS at, w.decision_reason AS reason,
+        [x IN [
+          CASE WHEN al IS NULL THEN null ELSE {step: 'raised by the watcher', id: 'as of ' + al.asOf, note: coalesce(al.reason, toString(ac) + ' aircraft')} END,
+          CASE WHEN l IS NULL THEN null ELSE {step: 'at', id: l.bin, note: ''} END,
+          {step: 'team', id: w.team, note: CASE WHEN sys IS NULL THEN 'named by the investigator' ELSE 'owns ' + toLower(sys.name) + ' (ATA ' + sys.chapter + ')' END},
+          CASE WHEN e IS NULL THEN null ELSE {step: 'assigned to', id: e.name, note: coalesce(w.assigned_why, '')} END
+        ] WHERE x IS NOT NULL] + [c IN cites | {step: 'cites', id: c, note: ''}] AS chain
+      UNION ALL
+      MATCH (m:FailureMode {id:$id})
+      OPTIONAL MATCH (x)-[:EVIDENCE_FOR]->(m)
+      WITH m, collect(CASE WHEN x IS NULL THEN null ELSE {step: 'evidence', id: coalesce(x.id, x.ev_id), note: labels(x)[0] + ' ' + coalesce(x.date, '')} END) AS ev
+      OPTIONAL MATCH (m)-[:MERGED_INTO]->(n:FailureMode)
+      RETURN 'failure mode' AS kind, m.name AS what, m.status AS status, coalesce(m.approved_by, m.decided_by) AS who,
+        coalesce(m.approved_at, m.decided_at) AS at, m.decision_reason AS reason,
+        ev + CASE WHEN n IS NULL THEN [] ELSE [{step: 'merged into', id: n.id, note: n.name}] END
+           + [{step: 'known from', id: coalesce(m.known_from, 'not yet'), note: coalesce(m.origin, '')}] AS chain
+    }
+    RETURN kind, what, status, who, at, reason, chain`,
 };

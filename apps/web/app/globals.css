@@ -300,6 +300,8 @@ li.step-answer { border-top: 2px solid var(--ink); padding-top: 12px; }
 .decide select { padding: 7px 10px; border: 1px solid var(--alclad); border-radius: 2px; background: var(--sheet); max-width: 100%; }
 .ghost { padding: 7px 16px; border-radius: 4px; border: 1px solid var(--ink); background: none; cursor: pointer; }
 .decided { border-top: 1px solid var(--alclad); padding-top: 12px; }
+.why { margin: 8px 0 4px; padding-left: 20px; font-size: 13.5px; line-height: 1.5; }
+.why b { font-weight: 600; margin-right: 4px; }
 .decided p { margin: 0 0 6px; font-family: var(--text); font-size: 16px; }
 .story-text .go { margin: 6px 0 0; }
 

@@ -157,7 +157,7 @@ matched every row (1,000 instead of 198 in our repro). We dropped the date index
 
 ### MCP server and agent
 
-- `packages/mcp-server`: 25 domain tools, each a fixed Cypher query with typed arguments.
+- `packages/mcp-server`: 26 domain tools, each a fixed Cypher query with typed arguments.
   Read tools include `past_investigations`, `get_accident`, `prior_reports`, `fleet_reports`,
   `explain_path`, `similar_reports` and `cite_documents` (the paragraphs of the loaded ADs and
   the NTSB brief that name a location, dated before asOf); write tools include `record_precursor`
@@ -181,7 +181,10 @@ matched every row (1,000 instead of 198 in our repro). We dropped the date index
   the line's ATA chapter (Structures owns the fuselage, 53), citing the AD paragraphs it relies on
   (`CITES` a `Section`). Only a person can dispatch it (UI). Dispatch goes to the team member who
   knows the line: the most earlier jobs on it before the alert's date (`WORKED_ON`, a made-up
-  history), then the fewest orders; the card says which and why, and `who_fixed` reads it back. On 1 January 2011 the watcher put S-4L second (17 aircraft, up from 7).
+  history), then the fewest orders; the card says which and why, and `who_fixed` reads it back.
+  `why {id}` walks any work order or failure mode back to its alert or evidence, the team that
+  owns it, the engineer and why, the document sections it cites, and the person who decided, when
+  and with what reason (the card's "Why this order?"). On 1 January 2011 the watcher put S-4L second (17 aircraft, up from 7).
   N632SW was not among those 17: its reports were clip cracks, which only the investigator's
   wider view includes. Alerts are leads worth review; most rising lines turn out to be routine.
 - **Memory across sessions:** the harness logs every run as an `Investigation` node, and each
