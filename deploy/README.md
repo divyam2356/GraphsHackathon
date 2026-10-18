@@ -18,7 +18,7 @@ commands (`redis-cli SAVE`, `docker cp`) before `volume put`.
 
 ```powershell
 & "$env:USERPROFILE\.local\bin\modal.exe" volume create blackbox-graph
-& "$env:USERPROFILE\.local\bin\modal.exe" volume put blackbox-graph dump.rdb /data/dump.rdb
+& "$env:USERPROFILE\.local\bin\modal.exe" volume put blackbox-graph dump.rdb /dump.rdb   # volume root = /data in the container
 ```
 
 ## Deploy
@@ -28,13 +28,14 @@ commands (`redis-cli SAVE`, `docker cp`) before `volume put`.
 ```
 
 The first deploy builds the image (npm ci + next build, ~5 min), then the container starts,
-Redis loads the graph, and Modal prints the public URL (`https://blackbox-serve.modal.run`,
+Redis loads the graph, and Modal prints the public URL (`https://<workspace>--blackbox-serve.modal.run`,
 check with `modal app list`). Open it in a private window (the Phase-2 checklist line).
 
 ## What it is
 
 - One warm container (`min_containers=1`): `redis-server` (FalkorDB v4.14.6, the same launch
-  flags as `docker-compose.yml`) + `next start`. About $5 through Oct 23 on the free credit.
+  flags as `docker-compose.yml`) + `next start`, 1 CPU core + 2 GiB: about $1.5 a day (~$8
+  through Oct 23) on the free credit.
   Remove `min_containers=1` in `modal_app.py` to sleep-when-idle (visits wait 10–20 s).
 - No secrets: the image never contains `.env`, so no OpenRouter key is published; the Live
   model mode turns itself off and the public site runs the Recorded/Scripted/Watch runs.

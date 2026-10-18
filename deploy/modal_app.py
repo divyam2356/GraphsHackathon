@@ -4,19 +4,22 @@
 # - The API tolerates a missing .env ("explicit env wins"), so we set only FALKORDB_URL and
 #   FALKORDB_GRAPH. No OPENROUTER_API_KEY -> the Live model mode is off on the public site
 #   (what D1 says: the recorded/scripted runs from the same URL are the demo).
-# - Warm (min_containers=1): about $5 through Oct 23, inside the free $30/month credit.
-#   To sleep instead, remove `min_containers=1` (a first visit then waits for the container
-#   and the Redis load, about 10-20 s).
-# Setup steps: see deploy/README.md (token, volume, deploy).
+# - Warm (min_containers=1) at 1 CPU core + 2 GiB: about $1.5 a day (~$8 through Oct 23),
+#   inside the free $30/month credit. To sleep instead, remove `min_containers=1` (a first
+#   visit then waits for the container and the Redis load, about 10-20 s).
+# Setup steps: see deploy/README.md (token, volume, deploy). Any working directory works:
+# the repo root is found from this file.
 import subprocess
 import time
 import urllib.request
+from pathlib import Path
 
 import modal
 
 app = modal.App("blackbox")
 
-GRAPH_VOLUME = modal.Volume.from_name("blackbox-graph", create_if_missing=True)  # holds /data/dump.rdb
+GRAPH_VOLUME = modal.Volume.from_name("blackbox-graph", create_if_missing=True)  # holds dump.rdb at its root
+REPO = Path(__file__).resolve().parents[1]  # deploy/.. ; only read on the machine that deploys
 
 image = (
     # the same FalkorDB release every README number was measured on (v4.14.6)
@@ -27,10 +30,12 @@ image = (
         "apt-get install -y --no-install-recommends nodejs",
     )
     # repo source only: no .env (no key on the public site), no data/ (700 MB - the graph
-    # is preloaded in the volume), no node_modules/.next (installed and built inside Modal)
+    # is preloaded in the volume), no node_modules/.next (installed and built inside Modal).
+    # copy=True: Modal only allows build steps (npm ci, next build) after copied files.
     .add_local_dir(
-        ".",
+        REPO,
         remote_path="/repo",
+        copy=True,
         ignore=[".git", "node_modules", "**/node_modules", "data", ".next", "**/.next", ".env", "deploy/dump.rdb"],
     )
     .run_commands("cd /repo && npm ci", "cd /repo/apps/web && npm run build")
@@ -41,11 +46,10 @@ image = (
     image=image,
     volumes={"/data": GRAPH_VOLUME},
     env={"FALKORDB_URL": "redis://127.0.0.1:6379", "FALKORDB_GRAPH": "blackbox"},
-    # the graph is ~600 MB in memory at rest (README): ask for 4 GB, cap at 8
-    memory_request=4096,
-    memory_limit=8192,
-    cpu_request=2.0,
-    cpu_limit=4.0,
+    # FalkorDB holds ~390 MB with the graph loaded (docker stats, Oct 18) + next start:
+    # (request, limit) pairs, billed on the request when idle
+    memory=(2048, 4096),
+    cpu=(1.0, 4.0),
     min_containers=1,  # warm; remove to sleep when idle
     timeout=900,
 )
@@ -59,21 +63,18 @@ def serve():
         "--save", "60", "100",  # periodic RDB so visitor-written WorkOrders/Alerts survive restarts
     ])
 
-    # redis-cli --modules? not sure: ping first -- then swallow the failure carefully
-    up = False
-    for _ in range(240):  # the module loads the whole dump before answering PING
+    # PING answers "Connection refused" until Redis listens and "LOADING" while it reads
+    # the dump; only PONG means the graph is ready
+    for _ in range(240):
         try:
-            out = subprocess.run(
-                ["redis-cli", "ping"], capture_output=True, text=True, timeout=60,
-                env={"PATH": "/usr/local/bin:/usr/bin:/bin"},
-            )
+            out = subprocess.run(["redis-cli", "ping"], capture_output=True, text=True, timeout=10)
             if out.stdout.strip() == "PONG":
-                up = True
                 break
-        except Exception:
-            time.sleep(1)
-    if not up:
-        raise RuntimeError("FalkorDB did not come up in 240 s (check the volume has dump.rdb)")
+        except subprocess.TimeoutExpired:
+            pass
+        time.sleep(1)
+    else:
+        raise RuntimeError("FalkorDB did not come up in 240 s (check the volume has dump.rdb at its root)")
 
     subprocess.Popen(["npx", "next", "start", "-p", "3001"], cwd="/repo/apps/web")
     for _ in range(120):
@@ -82,5 +83,6 @@ def serve():
                 if resp.status == 200:
                     return  # Modal keeps the container and proxies the request through
         except Exception:
-            time.sleep(2)
+            pass
+        time.sleep(2)
     raise RuntimeError("the web app did not answer on 3001")
