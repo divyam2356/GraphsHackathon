@@ -324,7 +324,7 @@ export async function runAlert(alertId: string, asOf: string, emit: Emit): Promi
   const line = stringer(al.bin);
   const first = named.slice(0, 3).map((r) => r.tail).join(", ");
   const task = `Inspect ${line}: first the ${named.length} aircraft with skin-crack reports (${first}${named.length > 3 ? ` and ${named.length - 3} more` : ""})${wider.length ? `, then the ${wider.length} with other cracks on that line` : ""}.${also.length ? ` Then ${and(also.map((t) => stringer(t.line)))}, where the same aircraft also crack.` : ""}${adSecs.length ? ` Check compliance with ${and(adSecs.map((d) => d.id))}.` : ""}`;
-  const wo = ((await go("create_work_order", { alertId, team: "Structures", task, ...(adSecs.length ? { cites: adSecs.map((d) => d.id) } : {}) })).data as Array<{ id: string }> | null)?.[0];
+  const wo = ((await go("create_work_order", { alertId, task, ...(adSecs.length ? { cites: adSecs.map((d) => d.id) } : {}) })).data as Array<{ id: string; team?: string }> | null)?.[0];
   const kinds = and([...new Set(wider.flatMap((w) => w.what ?? []))].slice(0, 3));
   const cover = covered ? "a fix order already covers it, so check compliance first" : "no fix order covers it yet";
   // the task itself is on the work order card below the answer, so it is not repeated here
@@ -334,7 +334,7 @@ export async function runAlert(alertId: string, asOf: string, emit: Emit): Promi
     fleet?.aircraft ? `Over three years, ${fleet.aircraft} aircraft reported trouble there, and ${cover}.` : `${cover[0].toUpperCase()}${cover.slice(1)}.`,
     together.some((t) => t.direct) ? `On the same aircraft, cracks on ${line} come with cracks on ${partners(together)}.` : "",
     docs.length ? `Official documents on ${line} by then: ${cites(docs)}.` : `No official document in the graph covers ${line} yet.`,
-    wo ? "A draft work order for the Structures team is below; only a person can dispatch it." : "",
+    wo ? `A draft work order for the ${wo.team ?? "owning"} team (it owns that part of the aircraft in the graph) is below; only a person can dispatch it.` : "",
   ].filter(Boolean).join(" ") });
 }
 

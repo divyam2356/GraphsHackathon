@@ -2,7 +2,7 @@ import { runTool } from "@blackbox/graph/src/run";
 import { CYPHER } from "@blackbox/graph/queries/cypher";
 // A person's decisions. Failure modes: approve -> confirmed, defer -> dormant, reopen ->
 // proposed (demo reset), merge -> folded into another mode. Work orders: dispatch a draft
-// (assigned to the least-loaded engineer). Alerts: dismiss. UI only: the MCP server never
+// (assigned to the team member with the most earlier jobs on that line, then the fewest orders). Alerts: dismiss. UI only: the MCP server never
 // exposes these, so the agent can draft modes and work orders but cannot decide them.
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

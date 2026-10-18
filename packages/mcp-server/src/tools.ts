@@ -46,7 +46,7 @@ export function buildServer(query: (name: string, args: unknown) => Promise<unkn
     { asOf });
   tool("alert_aircraft", "The aircraft behind one alert: those it names (most reports first), then others with a matching report on the same line in the window. Pass condition 'CRACK' to widen from skin cracks to any crack.",
     { id: z.string().describe("alert id from open_alerts or raise_alert"), condition: z.string().optional(), windowDays: z.number().optional() });
-  tool("who_fixed", "Engineers of the (fictional) maintenance company assigned to work orders at a location.", { bin });
+  tool("who_fixed", "Who knows a location: engineers of the (fictional) maintenance company with work orders there or earlier jobs on it (made-up history), most first.", { bin, asOf: asOf.optional() });
   tool("why_task", "Why a (fictional) maintenance task card exists: the fix order it cites and the orders that one replaced.",
     { task_id: z.string() });
   tool("stale_tasks", "Task cards that still cite a fix order that has since been replaced.", {});
@@ -67,7 +67,7 @@ export function buildServer(query: (name: string, args: unknown) => Promise<unkn
   tool("record_observation", "Log a mechanic's observation on an aircraft at a location.",
     { tail: z.string(), bin, text: z.string(), date: z.string() });
   tool("create_work_order", "Draft an inspection work order for an alert, for a team of the (fictional) maintenance company, on the aircraft the alert names, citing the document sections it relies on. Only a draft: a person dispatches it in the UI; you cannot.",
-    { alertId: z.string(), team: z.string().describe("Structures, Propulsion or Avionics"), task: z.string().describe("what to inspect, where, and which aircraft first"),
+    { alertId: z.string(), team: z.string().optional().describe("omit it: the team that owns the line's ATA chapter in the graph gets it (Structures owns the fuselage)"), task: z.string().describe("what to inspect, where, and which aircraft first"),
       cites: z.array(z.string()).optional().describe("section ids from cite_documents, e.g. AD-2011-08-51#g") });
   return s;
 }

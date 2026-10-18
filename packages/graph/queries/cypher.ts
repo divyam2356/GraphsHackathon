@@ -16,7 +16,7 @@ const SCHEMA_EDGES: Array<[string, string, string]> = [
   ["Report", "EVIDENCE_FOR", "FailureMode"], ["Accident", "EVIDENCE_FOR", "FailureMode"], ["Report", "PRECURSOR_OF", "Accident"],
   ["FailureMode", "MERGED_INTO", "FailureMode"], ["Investigation", "ABOUT", "Accident"], ["Investigation", "KEPT", "Report"],
   ["Alert", "AT", "Location"], ["Alert", "FOR", "Aircraft"], ["WorkOrder", "FROM", "Alert"], ["WorkOrder", "AT", "Location"],
-  ["WorkOrder", "ON", "Aircraft"], ["Engineer", "ASSIGNED", "WorkOrder"],
+  ["WorkOrder", "ON", "Aircraft"], ["Engineer", "ASSIGNED", "WorkOrder"], ["Team", "OWNS", "System"], ["Engineer", "WORKED_ON", "Location"],
   ["Engineer", "MEMBER_OF", "Team"], ["TaskCard", "CITES", "FixOrder"], ["Decision", "BASED_ON", "FixOrder"],
   ["Document", "HAS_SECTION", "Section"], ["Section", "ABOUT", "Location"],
   ["Document", "DESCRIBES", "FixOrder"], ["Document", "DESCRIBES", "Accident"],
@@ -215,37 +215,48 @@ export const CYPHER: Record<string, string> = {
     CREATE (o:Observation {id:randomUUID(), text:$text, date:$date})-[:ON]->(t)
     CREATE (o)-[:AT]->(l) RETURN o.id AS id`,
   // A draft inspection order for an alert (one per alert), at the alert's line and on the
-  // aircraft it names, citing the document sections ($cites) it relies on. Only a draft: a
-  // person dispatches it in the UI (dispatch_work_order).
+  // aircraft it names, citing the document sections ($cites) it relies on, for the team that
+  // OWNS the line's ATA chapter unless $team names one. Only a draft: a person dispatches it in
+  // the UI (dispatch_work_order).
   create_work_order: `
     MATCH (al:Alert {id:$alertId})-[:AT]->(l:Location)
+    OPTIONAL MATCH (own:Team)-[:OWNS]->(sys:System {chapter: l.chapter})
+    WITH al, l, coalesce($team, own.name) AS team, sys.name AS owns
     MERGE (w:WorkOrder {alert:$alertId})
-      ON CREATE SET w.id = randomUUID(), w.team = $team, w.task = $task, w.status = 'draft',
+      ON CREATE SET w.id = randomUUID(), w.team = team, w.task = $task, w.status = 'draft',
         w.synthetic = true, w.drafted_on = toString(date())
     MERGE (w)-[:FROM]->(al)
     MERGE (w)-[:AT]->(l)
-    WITH w, al
+    WITH w, al, owns
     OPTIONAL MATCH (s:Section) WHERE s.id IN coalesce($cites, []) AND s.date < al.asOf
-    WITH w, al, collect(s) AS ss
+    WITH w, al, owns, collect(s) AS ss
     FOREACH (s IN ss | MERGE (w)-[:CITES]->(s))
-    WITH w, al
+    WITH w, al, owns
     OPTIONAL MATCH (al)-[:FOR]->(a:Aircraft)
-    WITH w, collect(a) AS acs
+    WITH w, owns, collect(a) AS acs
     FOREACH (a IN acs | MERGE (w)-[:ON]->(a))
-    RETURN w.id AS id, w.status AS status, w.team AS team, w.task AS task, size(acs) AS aircraft`,
-  // UI only, never MCP tools: a person dispatches a draft (assigned to the least-loaded engineer
-  // on its team; the alert becomes actioned) or dismisses an open alert (its draft is cancelled).
+    RETURN w.id AS id, w.status AS status, w.team AS team, owns, w.task AS task, size(acs) AS aircraft`,
+  // UI only, never MCP tools: a person dispatches a draft or dismisses an open alert (its draft
+  // is cancelled). Dispatch goes to the team member who knows the line: most earlier jobs on it
+  // (WORKED_ON history before the alert's date, plus orders assigned there), then the fewest
+  // orders; the alert becomes actioned. Why is stored on the order and returned for the card.
   dispatch_work_order: `
-    MATCH (w:WorkOrder {id:$id}) WHERE w.status = 'draft'
-    MATCH (e:Engineer)-[:MEMBER_OF]->(t:Team) WHERE t.name = w.team
-    OPTIONAL MATCH (e)-[:ASSIGNED]->(prev:WorkOrder)
-    WITH w, e, count(prev) AS load ORDER BY load ASC, e.name LIMIT 1
-    MERGE (e)-[:ASSIGNED]->(w)
-    SET w.status = 'dispatched', w.dispatched_by = $by, w.dispatched_at = $at, w.decision_reason = $reason
-    WITH w, e
+    MATCH (w:WorkOrder {id:$id})-[:AT]->(l:Location) WHERE w.status = 'draft'
     OPTIONAL MATCH (w)-[:FROM]->(al:Alert)
+    WITH w, l, al
+    MATCH (e:Engineer)-[:MEMBER_OF]->(t:Team) WHERE t.name = w.team
+    OPTIONAL MATCH (e)-[h:WORKED_ON]->(l) WHERE h.date < coalesce(al.asOf, '9999-12-31')
+    WITH w, l, al, e, count(h) AS history
+    OPTIONAL MATCH (e)-[:ASSIGNED]->(o:WorkOrder)-[:AT]->(l)
+    WITH w, al, e, history, count(o) AS here
+    WITH w, al, e, history + here AS known
+    OPTIONAL MATCH (e)-[:ASSIGNED]->(prev:WorkOrder)
+    WITH w, al, e, known, count(prev) AS load ORDER BY known DESC, load ASC, e.name LIMIT 1
+    MERGE (e)-[:ASSIGNED]->(w)
+    SET w.status = 'dispatched', w.dispatched_by = $by, w.dispatched_at = $at, w.decision_reason = $reason,
+      w.assigned_why = CASE WHEN known > 0 THEN 'earlier jobs on this line: ' + toString(known) ELSE 'fewest orders on the team' END
     SET al.status = 'actioned'
-    RETURN w.id AS id, w.status AS status, w.team AS team, e.name AS engineer`,
+    RETURN w.id AS id, w.status AS status, w.team AS team, e.name AS engineer, known, load`,
   dismiss_alert: `
     MATCH (al:Alert {id:$id}) WHERE al.status = 'open'
     SET al.status = 'dismissed', al.decided_by = $by, al.decided_at = $at, al.decision_reason = $reason
@@ -253,9 +264,17 @@ export const CYPHER: Record<string, string> = {
     OPTIONAL MATCH (w:WorkOrder)-[:FROM]->(al) WHERE w.status = 'draft'
     SET w.status = 'cancelled'
     RETURN al.id AS id, al.status AS status`,
+  // Who knows a location: orders assigned there plus the (made-up) job history before $asOf.
+  // Each branch returns the job too: with only e, the variable-length hop folded two orders
+  // on the same line into one row.
   who_fixed: `
-    MATCH (e:Engineer)-[:ASSIGNED]->(:WorkOrder)-[:AT]->(:Location)-[:WITHIN*0..2]->(:Location {bin:$bin})
-    RETURN e.name AS engineer, count(*) AS jobs ORDER BY jobs DESC LIMIT 10`,
+    CALL {
+      MATCH (e:Engineer)-[:ASSIGNED]->(w:WorkOrder)-[:AT]->(:Location)-[:WITHIN*0..2]->(:Location {bin:$bin}) RETURN e, w.id AS job
+      UNION ALL
+      MATCH (e:Engineer)-[h:WORKED_ON]->(l:Location)-[:WITHIN*0..2]->(:Location {bin:$bin})
+      WHERE $asOf IS NULL OR h.date < $asOf RETURN e, l.bin + ' ' + h.date AS job
+    }
+    RETURN e.name AS engineer, count(*) AS jobs ORDER BY jobs DESC, engineer LIMIT 10`,
   why_task: `
     MATCH (t:TaskCard {id:$task_id})-[:CITES]->(f:FixOrder)
     OPTIONAL MATCH (f)-[:SUPERSEDES*1..5]->(old:FixOrder)

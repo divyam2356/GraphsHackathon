@@ -60,7 +60,7 @@ stringer. The graph can be checked against a known answer.
   watcher use the same generation (the aircraft's own; the Classics for N632SW).
 - **Light aircraft rarely file reports.** Only 270 of the 4,235 NTSB events have any FAA report
   on the same aircraft before the event, which limits the backtest.
-- **The company layer is made up.** Teams, engineers, task cards and work orders are synthetic
+- **The company layer is made up.** Teams, engineers, their job history, task cards and work orders are synthetic
   and marked `synthetic: true`; the maintenance and accident records are real.
 
 ## The case: Southwest 812
@@ -177,10 +177,11 @@ matched every row (1,000 instead of 198 in our repro). We dropped the date index
   investigator picks an alert up from the graph (`open_alerts`), widens it to any crack on that
   line (`alert_aircraft`), checks three years of fleet reports of the same generation, the lines
   that crack on the same aircraft (`cracks_together`), the fix orders and the official documents
-  (`cite_documents`), then drafts a `WorkOrder` for the (fictional) Structures team
-  (`create_work_order`), citing the AD paragraphs it relies on (`CITES` a `Section`). Only a person can
-  dispatch it (UI); dispatch assigns the engineer with the fewest open orders, which is what
-  `who_fixed` reads back. On 1 January 2011 the watcher put S-4L second (17 aircraft, up from 7).
+  (`cite_documents`), then drafts a `WorkOrder` (`create_work_order`) for the team that `OWNS`
+  the line's ATA chapter (Structures owns the fuselage, 53), citing the AD paragraphs it relies on
+  (`CITES` a `Section`). Only a person can dispatch it (UI). Dispatch goes to the team member who
+  knows the line: the most earlier jobs on it before the alert's date (`WORKED_ON`, a made-up
+  history), then the fewest orders; the card says which and why, and `who_fixed` reads it back. On 1 January 2011 the watcher put S-4L second (17 aircraft, up from 7).
   N632SW was not among those 17: its reports were clip cracks, which only the investigator's
   wider view includes. Alerts are leads worth review; most rising lines turn out to be routine.
 - **Memory across sessions:** the harness logs every run as an `Investigation` node, and each

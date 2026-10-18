@@ -10,7 +10,7 @@ import { TERMS } from "../lib/glossary";
 import { Term } from "./Tip";
 
 interface AlertRow { id: string; bin: string; asOf: string; status: string; aircraft: number }
-interface OrderRow { id: string; status: string; team: string; task: string; aircraft: number }
+interface OrderRow { id: string; status: string; team: string; owns?: string | null; task: string; aircraft: number }
 const short = (bin: string) => bin.split("/")[2]?.replace(/^S(\d+)([LR])$/, "S-$1$2") ?? bin;
 /** Result rows of every call to one tool in a run. */
 const rowsOf = <T,>(steps: Step[], name: string): T[] =>
@@ -41,7 +41,9 @@ export function WatchActions({ steps, busy, onHandOff }: { steps: Step[]; busy: 
     const j = await r.json();
     if (!r.ok) return setErr(j.error);
     const who = by.trim() || "presenter";
-    setDone({ id: order?.id ?? id, cypher: j.cypher, text: decision === "dispatch" ? `Dispatched by ${who}. Assigned to ${j.engineer} (${j.team}), who had the fewest open orders. The alert is closed as actioned.` : `Dismissed by ${who}. The draft work order is cancelled.` });
+    // dispatch says why this engineer: earlier jobs on the line first, then the fewest orders
+    const why = j.known ? `who knows this line best: ${j.known} earlier job${j.known === 1 ? "" : "s"} on it (made-up history)` : "who had the fewest orders (nobody on the team had worked on this line)";
+    setDone({ id: order?.id ?? id, cypher: j.cypher, text: decision === "dispatch" ? `Dispatched by ${who}. Assigned to ${j.engineer} (${j.team}), ${why}. The alert is closed as actioned.` : `Dismissed by ${who}. The draft work order is cancelled.` });
   }
 
   if (order) {
@@ -51,7 +53,7 @@ export function WatchActions({ steps, busy, onHandOff }: { steps: Step[]; busy: 
         <p className="mode-kind"><Term tip={TERMS.workOrder}>Draft work order</Term> from the investigator</p>
         <h2>{order.team}: inspection</h2>
         <p className="mode-mech">{order.task}</p>
-        <p className="caption">Saved in the graph, linked to the alert, the line and the {order.aircraft} aircraft it names. The teams and engineers are made up; the reports are real.</p>
+        <p className="caption">Saved in the graph, linked to the alert, the line and the {order.aircraft} aircraft it names.{order.owns ? ` ${order.team} gets it because the team owns the ${order.owns.toLowerCase()} in the graph.` : ""} The teams and engineers are made up; the reports are real.</p>
         {!settled ? (
           <div className="decide">
             <label>Your name<input value={by} onChange={(e) => setBy(e.target.value)} placeholder="Reviewer" /></label>
