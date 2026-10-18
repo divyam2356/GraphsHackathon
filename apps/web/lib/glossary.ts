@@ -72,6 +72,7 @@ export const TOOL_TIPS: Record<string, string> = {
   record_observation: "Logs a mechanic's observation on an aircraft.",
   create_work_order: "Drafts a work order for a team. Only a person can dispatch it.",
   cite_documents: "Paragraphs of the official documents (FAA fix orders, the NTSB brief) about this location, dated before the investigation date.",
+  cracks_together: "A graph algorithm (connected components) over lines whose cracks come on the same aircraft: what to inspect together.",
 };
 
 /** Tooltip for a record id in an answer: what kind of record it is. */

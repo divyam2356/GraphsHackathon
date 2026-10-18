@@ -49,8 +49,8 @@ Rules:
 - Location keys: "737/53" = 737 fuselage (ATA chapter 53), "737/53/S4L" = stringer 4 left, "737/53/S4L/BS620" = body stations 620-639 on that stringer. A query at a line includes the bins inside it.
 - A join is not evidence by itself: keep a report only if it is the same system and the same location or mechanism as the finding. Drop unrelated reports and reports that describe the event itself.
 
-Method for an accident: past_investigations first (what earlier runs kept; check those reports and say in one sentence whether you agree), get_accident, then prior_reports on the same tail (at the finding's location, and once without a location), judge each report, then fleet_reports at that line for the 3 years before with variants = the aircraft's generation (Classics: 737-300, 737-400, 737-500; NGs: 737-600 to 737-900), then fix_orders and cite_documents at that line (official documents dated before the investigation date; cite a section by its id, e.g. AD-2011-08-51#g), then explain_path from the strongest warning sign to the accident, then record_precursor for each report you keep (confidence 0-1, one-line reason).
-For an alert from the watcher: open_alerts, alert_aircraft (condition CRACK to widen), fleet_reports with the alert's variants, fix_orders, cite_documents at the alert's line, then create_work_order with cites = the AD section ids it relies on; a person dispatches it, you cannot.
+Method for an accident: past_investigations first (what earlier runs kept; check those reports and say in one sentence whether you agree), get_accident, then prior_reports on the same tail (at the finding's location, and once without a location), judge each report, then fleet_reports at that line for the 3 years before with variants = the aircraft's generation (Classics: 737-300, 737-400, 737-500; NGs: 737-600 to 737-900), then cracks_together at that line (a graph algorithm: the lines whose cracks come on the same aircraft, to inspect together), then fix_orders and cite_documents at that line (official documents dated before the investigation date; cite a section by its id, e.g. AD-2011-08-51#g), then explain_path from the strongest warning sign to the accident, then record_precursor for each report you keep (confidence 0-1, one-line reason).
+For an alert from the watcher: open_alerts, alert_aircraft (condition CRACK to widen), fleet_reports with the alert's variants, cracks_together at the alert's line (add its direct partners to the task), fix_orders, cite_documents at the alert's line, then create_work_order with cites = the AD section ids it relies on; a person dispatches it, you cannot.
 For a new pattern no known mode fits: failure_mode_candidates first, add_support if one fits, otherwise propose_failure_mode. A human approves it in the UI; you cannot.
 
 Answer in under 180 words, plain sentences. Cite record ids exactly as the tools return them (report ids like SWAA101399, ev_ids, AD numbers, document section ids like AD-2011-08-51#g, location keys) so the interface can link them. End with one line starting "Leads worth review:". Just before it, add a "Conclusion (leads worth review, not causes):" paragraph that ranks what to inspect first, ordered by evidence strength (same-tail reports at the finding's location first, then fleet-wide lines, noting whether a fix order covers them). Never state or imply a probability that anything caused the accident.`;
@@ -230,10 +230,11 @@ export async function runScripted(evId: string, asOf: string, emit: Emit, opts: 
   const line = at?.split("/").slice(0, 3).join("/");
   const prior = (await go("prior_reports", { tail: acc.tail, bin: line, asOf, windowDays: 730 })).data as Array<{ id: string; date: string; part?: string; condition?: string }>;
   const gen = generationOf(acc.variant);
-  let fleet: { aircraft?: number } | undefined, orders: unknown[] = [], docs: Cited[] = [];
+  let fleet: { aircraft?: number } | undefined, orders: unknown[] = [], docs: Cited[] = [], together: Together[] = [];
   if (line) {
     const from = `${Number(asOf.slice(0, 4)) - 3}${asOf.slice(4)}`;
     fleet = ((await go("fleet_reports", { family: acc.family, bin: line, from, to: asOf, variants: gen?.variants })).data as Array<{ aircraft?: number }>)?.[0];
+    together = ((await go("cracks_together", { family: acc.family, bin: line, asOf, variants: gen?.variants })).data as Together[]) ?? [];
     orders = ((await go("fix_orders", { family: acc.family, bin: line, asOf })).data as unknown[]) ?? [];
     docs = ((await go("cite_documents", { bin: line, asOf })).data as Cited[]) ?? [];
   }
@@ -244,6 +245,7 @@ export async function runScripted(evId: string, asOf: string, emit: Emit, opts: 
     : [`No reports on ${acc.tail} at ${line ?? "the finding's location"} in the two years before ${day(asOf)}.`];
   const cover = orders.length ? `${orders.length} fix order${orders.length === 1 ? "" : "s"} already covered it` : "no fix order covered it yet";
   parts.push(fleet?.aircraft ? `Across the fleet, ${fleet.aircraft} ${gen?.name ?? `${acc.family}s`} reported trouble on that line in the three years before, and ${cover}.` : `${cover[0].toUpperCase()}${cover.slice(1)}.`);
+  if (line && together.some((t) => t.direct)) parts.push(`On the same aircraft, cracks on ${stringer(line)} came with cracks on ${partners(together)}.`);
   if (line) parts.push(docs.length ? `Official documents on ${stringer(line)} by then: ${cites(docs)}.` : `No official document in the graph covers ${stringer(line)} before ${day(asOf)}.`);
   // memory across sessions: compare with what the latest judged run kept
   const judged = past.find((p) => p.kept?.length);
@@ -257,7 +259,8 @@ export async function runScripted(evId: string, asOf: string, emit: Emit, opts: 
   if (prior?.length && line) {
     // Decisive but non-causal: what to inspect first, never a probability of causation
     // (the NTSB determines causes). The reasons are the sentences above.
-    parts.push(orders.length ? `Leads worth review: check compliance with the fix order on ${line} first.` : `Leads worth review: inspect ${line} first.`);
+    const next = together.find((t) => t.direct)?.line;
+    parts.push(orders.length ? `Leads worth review: check compliance with the fix order on ${line} first.` : `Leads worth review: inspect ${line} first${next ? `, then ${next}` : ""}.`);
   }
   if (opts.draft && prior?.length && line) {
     // the method's last step: does a mode known before asOf fit? If not, check the
@@ -311,6 +314,8 @@ export async function runAlert(alertId: string, asOf: string, emit: Emit): Promi
   const named = rows.filter((r) => r.named), wider = rows.filter((r) => !r.named);
   const from = `${Number(asOf.slice(0, 4)) - 3}${asOf.slice(4)}`;
   const fleet = ((await go("fleet_reports", { family: "737", bin: al.bin, from, to: asOf, variants: al.variants ?? undefined })).data as Array<{ aircraft?: number }> | null)?.[0];
+  const together = ((await go("cracks_together", { family: "737", bin: al.bin, asOf, variants: al.variants ?? undefined })).data as Together[] | null) ?? [];
+  const also = together.filter((t) => t.direct).slice(0, 2);
   const orders = (await go("fix_orders", { family: "737", bin: al.bin, asOf })).data;
   const covered = Array.isArray(orders) && orders.length > 0;
   // the fix order's own paragraphs about this line (dated before asOf) are what the work order cites
@@ -318,7 +323,7 @@ export async function runAlert(alertId: string, asOf: string, emit: Emit): Promi
   const adSecs = docs.filter((d) => d.kind === "AD").slice(0, 3);
   const line = stringer(al.bin);
   const first = named.slice(0, 3).map((r) => r.tail).join(", ");
-  const task = `Inspect ${line}: first the ${named.length} aircraft with skin-crack reports (${first}${named.length > 3 ? ` and ${named.length - 3} more` : ""})${wider.length ? `, then the ${wider.length} with other cracks on that line` : ""}.${adSecs.length ? ` Check compliance with ${and(adSecs.map((d) => d.id))}.` : ""}`;
+  const task = `Inspect ${line}: first the ${named.length} aircraft with skin-crack reports (${first}${named.length > 3 ? ` and ${named.length - 3} more` : ""})${wider.length ? `, then the ${wider.length} with other cracks on that line` : ""}.${also.length ? ` Then ${and(also.map((t) => stringer(t.line)))}, where the same aircraft also crack.` : ""}${adSecs.length ? ` Check compliance with ${and(adSecs.map((d) => d.id))}.` : ""}`;
   const wo = ((await go("create_work_order", { alertId, team: "Structures", task, ...(adSecs.length ? { cites: adSecs.map((d) => d.id) } : {}) })).data as Array<{ id: string }> | null)?.[0];
   const kinds = and([...new Set(wider.flatMap((w) => w.what ?? []))].slice(0, 3));
   const cover = covered ? "a fix order already covers it, so check compliance first" : "no fix order covers it yet";
@@ -327,6 +332,7 @@ export async function runAlert(alertId: string, asOf: string, emit: Emit): Promi
     `Alert on ${al.bin} (${day(al.asOf)}): ${named.length} aircraft reported skin cracks there in the 12 months before.`,
     wider.length ? `Counting any crack on that line adds ${wider.length} more (${kinds}).` : "No other crack reports on that line.",
     fleet?.aircraft ? `Over three years, ${fleet.aircraft} aircraft reported trouble there, and ${cover}.` : `${cover[0].toUpperCase()}${cover.slice(1)}.`,
+    together.some((t) => t.direct) ? `On the same aircraft, cracks on ${line} come with cracks on ${partners(together)}.` : "",
     docs.length ? `Official documents on ${line} by then: ${cites(docs)}.` : `No official document in the graph covers ${line} yet.`,
     wo ? "A draft work order for the Structures team is below; only a person can dispatch it." : "",
   ].filter(Boolean).join(" ") });
@@ -334,6 +340,12 @@ export async function runAlert(alertId: string, asOf: string, emit: Emit): Promi
 
 interface Past { run_at: string; mode: string; model?: string; asOf: string; kept: Array<{ report: string; confidence: number; reason?: string }>; leads?: string }
 interface Cited { doc: string; kind: string; id: string; heading: string; date: string }
+interface Together { line: string; direct: boolean; jaccard: number | null; aircraft: number | null }
+/** cracks_together rows -> "S-4R (37 aircraft cracked on both, Jaccard 0.41) and S-10R (0.39); the same group also holds S-8L" */
+const partners = (rows: Together[]) => {
+  const direct = rows.filter((t) => t.direct).slice(0, 3), group = rows.filter((t) => !t.direct);
+  return `${and(direct.map((t, i) => `${stringer(t.line)} (${i ? "" : `${t.aircraft} aircraft cracked on both, Jaccard `}${Number(t.jaccard).toFixed(2)})`))}${group.length ? `; the same group also holds ${and(group.slice(0, 4).map((t) => stringer(t.line)))}` : ""}`;
+};
 /** cite_documents rows -> "AD-2011-08-51#e (Unsafe Condition), ... and 2 more" */
 const cites = (docs: Cited[]) => and([...docs.slice(0, 3).map((d) => d.heading.length > 40 || d.heading.startsWith("Paragraph") ? d.id : `${d.id} (${d.heading.toLowerCase()})`),
   ...(docs.length > 3 ? [`${docs.length - 3} more`] : [])]);
@@ -373,6 +385,7 @@ export function keysFrom(name: string, args: Record<string, unknown>, data: unkn
     else if (name === "alert_aircraft") { if (r.named) add(k.aircraft, r.aircraft); chain(r.bin); }
     else if (name === "create_work_order") add(k.workorders, r.id);
     else if (name === "cite_documents") add(k.sections, r.id);
+    else if (name === "cracks_together") chain(r.line);
     else if (name === "explain_path") {
       for (const h of (r.hops as Array<{ labels: string[]; id: string }> | undefined) ?? []) {
         const l = h.labels[0];

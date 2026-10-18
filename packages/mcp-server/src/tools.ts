@@ -52,6 +52,8 @@ export function buildServer(query: (name: string, args: unknown) => Promise<unkn
   tool("stale_tasks", "Task cards that still cite a fix order that has since been replaced.", {});
   tool("cite_documents", "Sections of the loaded official documents (the FAA airworthiness directives for the S-4L/S-4R lap joints and the NTSB accident brief AAB-13/02) that name the location or sit inside it, dated before asOf, oldest first. Use it to cite the paragraph behind a fix order or the NTSB's words about a location. Returns doc, kind, title, url, section id, heading, date and the text (first 600 characters).",
     { bin, asOf });
+  tool("cracks_together", "Graph algorithm: stringer lines whose cracks come on the same aircraft, as of asOf. Links two lines when the aircraft with crack reports on both are at least minJaccard (default 0.35) of those with cracks on either, in the 12 months before, then groups the linked lines with weakly connected components (algo.WCC). Returns the group of the line asked about, direct partners first with their Jaccard and shared aircraft. Use it to decide which lines to inspect together; it says nothing about why they crack.",
+    { family: z.string(), bin: z.string().describe('a stringer line key, e.g. "737/53/S4L"'), asOf, variants, minJaccard: z.number().optional() });
 
   // Write / action (agent memory + org actions). A human approves failure modes in the UI.
   tool("record_precursor", "Save a judged warning sign: this report preceded this accident, with confidence 0-1 and a one-line reason.",

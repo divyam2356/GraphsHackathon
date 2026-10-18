@@ -56,7 +56,9 @@ Say: "warning signs", "leads worth review", "inspect first."
 
 ## Likely judge questions
 1. "Where does FalkorDB do real work?" — Multi-hop joins across two public sources,
-   the location hierarchy (`WITHIN*0..2`), `algo.SPpaths` evidence paths, full-text search,
+   the location hierarchy (`WITHIN*0..2`), `algo.SPpaths` evidence paths, `algo.WCC` over
+   lines that crack on the same aircraft (`cracks_together`: S-4L's top partner on 1 Jan 2011 was
+   S-4R, but mirror lines usually are, so it is "inspect together", not a discovery), full-text search,
    date/duration time machine. Kill FalkorDB and the agent has no evidence (no fixture
    fallback unless DEMO=1). Be straight: no vector index is loaded, and the labelPropagation
    hotspot job reduces to grouping by bin.

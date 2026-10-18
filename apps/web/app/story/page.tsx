@@ -395,6 +395,11 @@ function BuiltOn() {
 }) YIELD path
 WITH path WHERE all(n IN nodes(path)[1..-1]
   WHERE n.date IS NULL OR n.date < $asOf)`}</pre></section>
+        <section><h2>Lines that crack together</h2><pre>{`// link lines whose cracks come on the
+// same aircraft (Jaccard >= 0.35), then:
+CALL algo.WCC({nodeLabels: ['Location'],
+  relationshipTypes: ['CO_CRACKED']})
+YIELD node, componentId`}</pre></section>
         <section><h2>Search the mechanics&apos; write-ups</h2><pre>{`CALL db.idx.fulltext.queryNodes('Report', $text)
 YIELD node AS r, score
 WHERE r.date < $asOf`}</pre></section>

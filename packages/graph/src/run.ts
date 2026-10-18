@@ -104,6 +104,8 @@ function demo(name: string, a: Record<string, unknown>): unknown {
       const bin = String(a.bin ?? "");
       return rows.filter((r) => r.date < String(a.asOf) && (r.doc === "AD-2011-08-51" ? /^737\/53\/S4[LR]\b/ : /^737\/53\/S4L\b/).test(bin));
     }
+    case "cracks_together": // the real answer for S-4L on 1 April 2011 (Classics), fixtured
+      return String(a.bin) === "737/53/S4L" ? [{ line: "737/53/S4R", direct: true, jaccard: 0.41, aircraft: 37 }, { line: "737/53/S10R", direct: true, jaccard: 0.39, aircraft: 37 }] : [];
     default: return { demo: true, tool: name, note: "no fixture for this tool; run against FalkorDB" };
   }
 }

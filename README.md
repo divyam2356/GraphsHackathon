@@ -146,7 +146,8 @@ WHERE r.date < $asOf AND r.date >= toString(date($asOf) - duration({days: $windo
 
 FalkorDB features in use: variable-length paths over the location hierarchy, `algo.SPpaths` for
 the shortest evidence path between a report and an accident (all shortest paths, keeping one that
-only passes through records before the investigation date), the full-text index on report text,
+only passes through records before the investigation date), `algo.WCC` for the lines that crack
+together (below), the full-text index on report text,
 date and duration functions for the time machine, and `UNION ALL` typed counts for the schema view.
 View queries run in tens of milliseconds; the heaviest (`fleet_map`, cold) takes about 0.3 s.
 All Cypher lives in `packages/graph/queries/cypher.ts`.
@@ -156,17 +157,28 @@ matched every row (1,000 instead of 198 in our repro). We dropped the date index
 
 ### MCP server and agent
 
-- `packages/mcp-server`: 24 domain tools, each a fixed Cypher query with typed arguments.
+- `packages/mcp-server`: 25 domain tools, each a fixed Cypher query with typed arguments.
   Read tools include `past_investigations`, `get_accident`, `prior_reports`, `fleet_reports`,
   `explain_path`, `similar_reports` and `cite_documents` (the paragraphs of the loaded ADs and
   the NTSB brief that name a location, dated before asOf); write tools include `record_precursor`
   and `propose_failure_mode`. There is no approve tool.
+- **A graph algorithm as a tool, `cracks_together`:** one query links two stringer lines with a
+  `CO_CRACKED` edge when the aircraft with crack reports on both are at least 35% (Jaccard) of
+  those with cracks on either, in the 12 months before the date, then `algo.WCC` groups the linked
+  lines. On 1 January 2011, three months before Southwest 812, S-4L's strongest partner was S-4R
+  (35 Classics cracked on both, Jaccard 0.40), then S-10R and S-10L; the AD issued after the
+  accident ordered S-4L and S-4R inspected together. Be careful with that: mirror lines are the
+  usual partners (8 of the 12 linked lines that day had their mirror on top, the rest the next
+  stringer), so it says what to inspect together, not why lines crack. The investigator adds the
+  direct partners to the work order.
 - **Two agents, one hand-off, through the graph:** on the Board, *Watch the fleet* runs the
   watcher at the slider date: `hotspots` ranks fuselage lines by the rise in skin-crack reports,
   and `raise_alert` stores an `Alert` on the top three, linked to every aircraft behind it. The
   investigator picks an alert up from the graph (`open_alerts`), widens it to any crack on that
-  line (`alert_aircraft`), checks three years of fleet reports and the fix orders, then drafts a
-  `WorkOrder` for the (fictional) Structures team (`create_work_order`). Only a person can
+  line (`alert_aircraft`), checks three years of fleet reports of the same generation, the lines
+  that crack on the same aircraft (`cracks_together`), the fix orders and the official documents
+  (`cite_documents`), then drafts a `WorkOrder` for the (fictional) Structures team
+  (`create_work_order`), citing the AD paragraphs it relies on (`CITES` a `Section`). Only a person can
   dispatch it (UI); dispatch assigns the engineer with the fewest open orders, which is what
   `who_fixed` reads back. On 1 January 2011 the watcher put S-4L second (17 aircraft, up from 7).
   N632SW was not among those 17: its reports were clip cracks, which only the investigator's
