@@ -14,7 +14,7 @@ a7f2976). The Modal deploy prep had four blockers, fixed in ce9da7d. From here: 
 - [x] README with setup and graph model (verified on a fresh clone, Oct 15)
 - [x] Cypher and algorithms explained (README "How it works", Story step 9)
 - [ ] Demo video, linked in the README (script ready: `docs/DEMO.md`)
-- [ ] Live deployment, or full local setup (local setup done and verified; deploy pending decision D1)
+- [x] Live deployment (Oct 18 13:5x IST): Modal, `deploy/` (divyam2356). URL: https://storagedivyam--blackbox-serve.us-east.modal.run ; the graph RDB ships in the volume, Track 3 documents verified through the wire (`cite_documents` 10 rows), local setup stays as the fallback (fq fixes: volume at /rdb, image ENTRYPOINT/CMD blanked)
 - [x] Tracks: 1 and 3 (decided Oct 17, Manish). Not Track 2.
 - [x] AI use disclosed (README)
 - [ ] Both of us can explain the graph model, queries and decisions (rule 12): run it locally, read `docs/DEFENSE.md`
@@ -123,7 +123,7 @@ history at 1c72143.)
 ### Phase 2: freeze and verify (Oct 18, 12:00 → 15:00)
 - [x] Claude (done early, Oct 18 09:30): rules re-checked (same 18 rules, 7,749 registered); gitleaks v8.24.3 over all
       65 commits: no leaks; fresh-clone run passes (808f9f4, incl. `next build`); `docs/briefs/` deleted. Re-scan if commits land before going public.
-- [ ] divyam2356: deploy (D1); open the link in a private window.
+- [x] divyam2356: deploy (D1), Oct 18: https://storagedivyam--blackbox-serve.us-east.modal.run answers (board 200, `cite_documents` 10 rows over the wire, kernel graph loaded from the volume). Private-window check + drawer screenshot still to do by a person before recording.
 - [ ] divyam2356: make the repo public.
 - [ ] Reset the demo state (`docs/DEMO.md`, "Before recording").
 

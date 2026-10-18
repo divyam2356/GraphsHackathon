@@ -18,7 +18,7 @@ commands (`redis-cli SAVE`, `docker cp`) before `volume put`.
 
 ```powershell
 & "$env:USERPROFILE\.local\bin\modal.exe" volume create blackbox-graph
-& "$env:USERPROFILE\.local\bin\modal.exe" volume put blackbox-graph dump.rdb /dump.rdb   # volume root = /data in the container
+& "$env:USERPROFILE\.local\bin\modal.exe" volume put blackbox-graph dump.rdb /dump.rdb   # mounted at /rdb in the container
 ```
 
 ## Deploy

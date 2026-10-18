@@ -1,6 +1,6 @@
 # Black Box on Modal (D1, ROADMAP.md): one warm container runs FalkorDB + the app.
 # - The graph ships in the RDB (`deploy/dump.rdb` -> Modal Volume). No data download,
-#   no ingest at boot: redis-server loads the dump from --dir /data (63.7 MB, seconds).
+#   no ingest at boot: redis-server loads the dump from --dir /rdb (63 MB, seconds).
 # - The API tolerates a missing .env ("explicit env wins"), so we set only FALKORDB_URL and
 #   FALKORDB_GRAPH. No OPENROUTER_API_KEY -> the Live model mode is off on the public site
 #   (what D1 says: the recorded/scripted runs from the same URL are the demo).
@@ -19,6 +19,8 @@ import modal
 app = modal.App("blackbox")
 
 GRAPH_VOLUME = modal.Volume.from_name("blackbox-graph", create_if_missing=True)  # holds dump.rdb at its root
+# mounted at /rdb, not /data: the FalkorDB image has files baked into /data, and Modal
+# refuses to mount a volume over a non-empty path ("cannot mount volume on non-empty path").
 REPO = Path(__file__).resolve().parents[1]  # deploy/.. ; only read on the machine that deploys
 
 image = (
@@ -39,12 +41,17 @@ image = (
         ignore=[".git", "node_modules", "**/node_modules", "data", ".next", "**/.next", ".env", "deploy/dump.rdb"],
     )
     .run_commands("cd /repo && npm ci", "cd /repo/apps/web && npm run build")
+    # this image's ENTRYPOINT/CMD start its own Redis (empty dir) + browser on 3000 and
+    # never exec our function ("Runner has been initializing for too long" + boot only
+    # its services: modal captures the container, ours never launched). Blank them so the
+    # container's main process is the function we define below.
+    .dockerfile_commands("ENTRYPOINT []", "CMD []")
 )
 
 
 @app.function(
     image=image,
-    volumes={"/data": GRAPH_VOLUME},
+    volumes={"/rdb": GRAPH_VOLUME},
     env={"FALKORDB_URL": "redis://127.0.0.1:6379", "FALKORDB_GRAPH": "blackbox"},
     # FalkorDB holds ~390 MB with the graph loaded (docker stats, Oct 18) + next start:
     # (request, limit) pairs, billed on the request when idle
@@ -57,7 +64,7 @@ image = (
 def serve():
     # the image's own launch line (var/lib/falkordb/bin/run.sh), minus TLS and the browser UI
     subprocess.Popen([
-        "redis-server", "--protected-mode", "no", "--dir", "/data",
+        "redis-server", "--protected-mode", "no", "--dir", "/rdb",
         "--loadmodule", "/var/lib/falkordb/bin/falkordb.so",
         "THREAD_COUNT", "2", "TIMEOUT", "1000", "MAX_QUEUED_QUERIES", "25", "RESULTSET_SIZE", "10000",
         "--save", "60", "100",  # periodic RDB so visitor-written WorkOrders/Alerts survive restarts
