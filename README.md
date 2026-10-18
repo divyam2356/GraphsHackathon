@@ -161,7 +161,7 @@ View queries run in tens of milliseconds; the heaviest (`fleet_map`, cold) takes
 All Cypher lives in `packages/graph/queries/cypher.ts`.
 
 **A FalkorDB bug we hit (v4.14.6):** with a range index on a string property, `r.date < '2011-04-01'`
-matched every row (1,000 instead of 198 in our repro). We dropped the date indexes and recomputed every number.
+matched every row (1,000 instead of 198 in our repro). We dropped the date indexes and recomputed every number. It is tracked upstream as [FalkorDB#3128](https://github.com/FalkorDB/FalkorDB/issues/3128) (open; checked Oct 18: still in v4.22.1, fixed in the v6 Rust engine), and `toString(r.date) < $asOf` avoids it.
 
 ### MCP server and agent
 
