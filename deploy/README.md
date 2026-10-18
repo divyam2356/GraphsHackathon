@@ -38,7 +38,7 @@ check with `modal app list`). Open it in a private window (the Phase-2 checklist
   through Oct 23) on the free credit.
   Remove `min_containers=1` in `modal_app.py` to sleep-when-idle (visits wait 10–20 s).
 - Secrets: the image never contains `.env`. The OpenRouter key lives in Modal's secret store
-  (`modal secret create blackbox-openrouter LLM_API_KEY=sk-or-...`) and is injected at runtime
+  (`modal secret create blackbox-openrouter LLM_API_KEY=<your-key>`) and is injected at runtime
   (the `secrets=[...]` line in `modal_app.py`), so Live model mode works on the public site.
   Note: `openrouter/free` models cap at about 50 requests/day — the Recorded/Scripted/Watch
   flows never call the API. To turn Live mode off publicly, delete the secret.
