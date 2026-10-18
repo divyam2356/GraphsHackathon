@@ -4,9 +4,9 @@ Shared plan for Graph Hacks. **Submissions close Oct 18, 11:59 PM IST** (aim to 
 that day). Both of us edit this file: tick boxes as things land, and when you settle a pending
 decision, move it to "Decided" with the date and your name.
 
-Last updated: Oct 17, 18:40 IST (divyam2356 + Claude). Track 3 documents landed (commits 23a6c69,
-6fc6e84, e734493, report in docs/briefs/track3-report.md). Order from here: your items in Phase 1
-then the video. The plan for the last hours is under "Plan to the deadline".
+Last updated: Oct 18, 09:25 IST (Manish + Claude). Phase 1 is done on both sides: Track 3 documents
+(divyam2356, reviewed and fixed in c163eb8) and Manish + Claude's items (8830d07, 513915b, 3f10765,
+a7f2976). The Modal deploy prep had four blockers, fixed in ce9da7d. From here: freeze, deploy, video.
 
 ## Submission checklist (rules 10–13)
 
@@ -44,7 +44,7 @@ then the video. The plan for the last hours is under "Plan to the deadline".
 
 | # | Question | Options | Recommendation | Decides | By |
 |---|---|---|---|---|---|
-| D1 | Live deployment? The rules prefer one; not required (rule 10: deployment *or* full local setup). | Modal, tested Oct 17: a web endpoint runs FalkorDB + the app with no card, on the free $30/month credit. Warm (about $5 through Oct 23, inside the credit) or sleep when idle (first visit waits 10–20 s). FalkorDB Cloud free (100 MB) and Hugging Face Spaces (PRO only) don't fit. | **Oct 17 (Manish): divyam2356 handles the deploy.** Suggest Modal, warm, with the Live model mode off on the public site (no OpenRouter key exposed). | divyam2356 | Oct 18, 15:00 |
+| D1 | Live deployment? The rules prefer one; not required (rule 10: deployment *or* full local setup). | Modal, tested Oct 17: a web endpoint runs FalkorDB + the app with no card, on the free $30/month credit. Warm at 1 CPU + 2 GiB (about $1.5 a day) or sleep when idle (first visit waits 10–20 s). FalkorDB Cloud free (100 MB) and Hugging Face Spaces (PRO only) don't fit. | **Oct 17 (Manish): divyam2356 handles the deploy.** Prep in `deploy/` (51e0633). Pull ce9da7d first (four blockers fixed), take the dump after the demo reset, `volume put ... /dump.rdb`. Live model mode is off on the public site (no key). | divyam2356 | Oct 18, 15:00 |
 | D3 | The video | | **Decided Oct 17 (Manish): Manish + Claude make the video in code (`common/videokit`, captions carry the narration, no dramatic music). Both of us voice it: Claude writes a two-voice script from `docs/DEMO.md`. Improvements come first.** | Both | Oct 18 |
 
 ## Tracks: what the judges look for, and where we stand
@@ -56,20 +56,20 @@ Key focus items are quoted from the rules page (checked Oct 17). "Gap" says who 
 | Key focus | What we have | Gap |
 |---|---|---|
 | Multi-hop reasoning | `explain_path`: report → aircraft → accident in up to 4 hops, only through records dated before the investigation date. Location hierarchy bin → line → zone. The hand-off chains five tools. | — |
-| Graph queries and algorithms as agent tools | 23 MCP tools, each a fixed Cypher query: shortest path, full-text search, date windows. | Only one algorithm (shortest path). `why` tool if time (Manish). |
-| Tool selection through MCP | The live model picks the tools itself (the Recorded Nemotron run). Works from any MCP client. | Show it outside our app: MCP Inspector clip (Manish). |
+| Graph queries and algorithms as agent tools | 26 MCP tools, each a fixed Cypher query: shortest paths (`algo.SPpaths`), connected components (`algo.WCC` in `cracks_together`), full-text search, date windows. | — |
+| Tool selection through MCP | The live model picks the tools itself (the Recorded Nemotron run). Works from any MCP client: verified in MCP Inspector 2.9.0 (`cracks_together` answers there). | Clip captured with the video. |
 | Actions based on what the graph shows | The watcher raises `Alert`s, the investigator drafts `WorkOrder`s, a person dispatches. The agent drafts failure modes; a person approves. | — |
-| Explainable results | Every call shows its Cypher, rows and time; the evidence graph; tooltips; leads, never causes. | The fleet count mixes 737 generations: Classics only (Manish). |
+| Explainable results | Every call shows its Cypher, rows and time; the evidence graph; tooltips; leads, never causes; fleet counts use the aircraft's own generation like the map; `why` traces any decision. | — |
 
 **Track 3: Company Brain** ("people, teams, projects, documents, and decisions in one graph")
 
 | Key focus | What we have | Gap |
 |---|---|---|
-| Knowledge from docs, tickets and chats in one graph | 225,627 maintenance reports (the airline's defect tickets) and NTSB findings, joined by aircraft and location. | **No documents.** The two FAA fix orders and the NTSB brief as linked sections (divyam2356). |
-| Who owns what, and who knows what | 3 teams and 15 engineers (made up); `who_fixed` from assignments. | Teams own ATA chapters; dispatch prefers the engineer who knows the line (Manish). |
-| Tracing decisions back to their source | Every decision stores who, why and when; `why_task`: task card → fix order → the order it replaced. | Cite the paragraph behind a fix order (divyam2356); `why` tool if time (Manish). |
-| Keeping knowledge current | `stale_tasks` (cards citing a replaced order); `reoffer_candidates` (deferred modes with new evidence); the time machine. | Dated documents, so citations follow the time machine (divyam2356). |
-| Answers with clear sources | Record ids link to the source record; the drawer quotes it in full. | Answers cite document sections (divyam2356 builds, Manish wires in). |
+| Knowledge from docs, tickets and chats in one graph | 225,627 maintenance reports (the airline's defect tickets), NTSB findings, and 3 official documents (44 dated sections) linked to the locations they name. | — |
+| Who owns what, and who knows what | Teams `OWNS` ATA chapters and get the work orders; 15 engineers with a made-up job history (`WORKED_ON`); dispatch goes to who knows the line; `who_fixed`. | — |
+| Tracing decisions back to their source | Every decision stores who, why and when; work orders `CITES` the AD paragraphs; `why` walks any work order or failure mode back; `why_task`. | — |
+| Keeping knowledge current | `stale_tasks`; `reoffer_candidates`; the time machine, documents included (no AD paragraphs before 5 April 2011). | — |
+| Answers with clear sources | Record and section ids link to the source; the drawer quotes it; answers and work orders cite sections (`cite_documents`). | — |
 
 ## Plan to the deadline
 
@@ -99,19 +99,21 @@ all made up; Track 3 asks for "knowledge from docs" and "answers with clear sour
   `apps/web/components/RecordDrawer.tsx`. Leave `packages/agent/` to Manish, who wires the tool in.
 - Done when: `cite_documents` for `737/53/S4L` returns nothing at 2011-04-01 (no AD yet) and the
   AD 2011-08-51 inspection paragraph at 2011-05-01; screenshot of the drawer. **Verified (report:
-  `docs/briefs/track3-report.md`); drawer screenshot still to capture.**
+  `docs/briefs/track3-report.md`); drawer screenshot taken Oct 18. Review fixes in c163eb8: map cells
+  show the documents too, a station-only bin no longer returns every section.**
 
 **Manish, with Claude: Track 1 and the rest of Track 3.**
-- [ ] Same-generation fleet: the agent's fleet count uses 737 Classics only, like the map; update
-      the numbers that change in the README, Story and `docs/DEMO.md`. (Track 1, correctness)
-- [ ] Who owns what and who knows what: `Team OWNS System` (ATA chapter) picks the team; dispatch
-      prefers the engineer with earlier work orders on that line (made-up history, marked
-      `synthetic`), and the card says why. (Track 3)
-- [ ] Wire `cite_documents` into the scripted method and the agent's instructions once it lands.
-- [ ] If time: a `why` tool that walks back from a work order or an approved mode to its evidence
-      and the person who decided. (Tracks 1 and 3)
-- [ ] A 10-second clip of our MCP server answering in MCP Inspector, for the video. (Track 1)
-- [ ] Tonight: fresh-clone setup test, including a production build (`next build`).
+- [x] 8830d07 Same-generation fleet: fleet counts and the watcher use the aircraft's generation (145
+      737 Classics, was 156 of every 737). Also fixed: `fix_orders` ignored its location.
+- [x] 3f10765 Who owns what and who knows what: `Team OWNS System` picks the team; dispatch goes to
+      the engineer with the most earlier jobs on the line (made-up `WORKED_ON` history), and the card says why.
+- [x] 8830d07 `cite_documents` in the scripted method, the alert hand-off (work orders `CITES` sections) and the prompt.
+- [x] a7f2976 `why` tool: work order or failure mode → its sources and the person who decided.
+- [x] 513915b (added Oct 18) Graph algorithm as a tool: `cracks_together` (`algo.WCC`); S-4L's top partner
+      on 1 Jan 2011 was S-4R; the work order adds the direct partners.
+- [x] MCP Inspector 2.9.0 runs our server and `cracks_together` answers there; the clip is captured with the video.
+- [ ] Fresh-clone setup test, including a production build (`next build`). Oct 18: ingest steps OK; it
+      found `npm run remember -w packages/agent` failing on a fresh clone (fixed); build re-running.
 
 **Both of us (human work: what the README says we did, so make it true):**
 - [ ] Use the app yourself: Board (Scripted run; Watch → hand-off → Dispatch; 3D aircraft → Unroll), Story.

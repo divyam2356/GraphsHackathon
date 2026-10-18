@@ -4,12 +4,14 @@ import "@blackbox/graph/src/env";
 // Run once after the seed step; running again adds nothing (same id).
 //   npx tsx packages/agent/src/remember.ts apps/web/public/replays/swa812-agent.json
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { runTool } from "@blackbox/graph/src/run";
 import type { Step } from "./agent";
 
 interface Replay { mode: string; model?: string; asOf: string; question: string; recorded: string; steps: Array<{ t: number; step: Step }> }
 
-const file = process.argv[2] ?? "apps/web/public/replays/swa812-agent.json";
+// default from this file, not the working directory: `npm run remember -w packages/agent` runs in packages/agent
+const file = process.argv[2] ?? join(import.meta.dirname, "../../../apps/web/public/replays/swa812-agent.json");
 const r = JSON.parse(readFileSync(file, "utf8")) as Replay;
 const calls = r.steps.map((s) => s.step).filter((s) => s.type === "tool_call");
 const evId = r.question.match(/\b\d{8}X\d{5}\b/)?.[0];

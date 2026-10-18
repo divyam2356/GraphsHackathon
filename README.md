@@ -242,9 +242,12 @@ SWA 812 fixture instead of FalkorDB; it is off by default and never used for the
   became known with AD 2011-08-51 on 5 April 2011, so the honest answer is "no known mode,
   draft a new one for a person" (Story step 8). With 2 confirmed modes it is not evaluated.
 - `similar_reports` uses the full-text index; no embeddings are loaded.
-- Fix orders: the two S-4L ADs only. Company layer (Track 3): 3 teams, 15 engineers, 2 task cards,
-  1 decision and the work orders people dispatch, all `synthetic: true`, reachable through the
-  `who_fixed`, `why_task` and `stale_tasks` tools.
+- Fix orders: the two S-4L ADs only, and three documents (those two ADs and the NTSB brief).
+  Company layer (Track 3): 3 teams owning ATA chapters, 15 engineers with a made-up job history
+  on the fuselage lines, 2 task cards, 1 decision and the work orders people dispatch, all
+  `synthetic: true`, reachable through the `who_fixed`, `why`, `why_task` and `stale_tasks` tools.
+- `cracks_together` rebuilds its `CO_CRACKED` edges on every call (one write query, so two calls
+  never mix), and its 0.35 Jaccard threshold is a choice, not fitted.
 - The watcher is a fixed method (no model), and its alerts are not backtested: the rise ranking
   is shown for one case (S-4L, 1 January 2011).
 - The hotspot job's `algo.labelPropagation` over same-bin edges reduces to grouping by bin.
